@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0d0f" />
+    <meta
+      name="description"
+      content="Draft visualisation for Singapore-MRTracker rail network data."
+    />
+    <title>MRTracker / Network view</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" type="module"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to network view</a>
+
+    <header class="masthead">
+      <a class="brand" href="#" aria-label="MRTracker home">
+        <span class="brand-mark" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </span>
+        <span>MRTracker</span>
+      </a>
+      <nav class="view-tabs" aria-label="Views">
+        <button class="tab is-active" type="button" data-view="network">Network</button>
+        <button class="tab" type="button" data-view="board">Board</button>
+      </nav>
+      <div class="sync-state" aria-live="polite">
+        <span class="pulse" aria-hidden="true"></span>
+        <span><b>Preview data</b><small id="last-updated">Updated just now</small></span>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Singapore rail / live overview</p>
+          <h1 id="page-title">The network,<br /><em>at a glance.</em></h1>
+        </div>
+        <div class="hero-summary">
+          <div class="service-pill"><span></span><b id="service-label">All services normal</b></div>
+          <p id="service-copy">No active disruptions across the monitored MRT and LRT lines.</p>
+        </div>
+      </section>
+
+      <section class="stats" aria-label="Network summary">
+        <article><span>Lines monitored</span><strong id="line-count">—</strong><small>MRT + LRT</small></article>
+        <article><span>Stations shown</span><strong id="station-count">—</strong><small>Preview subset</small></article>
+        <article><span>Next service</span><strong id="next-service">—</strong><small>Selected station</small></article>
+        <article><span>High crowd</span><strong id="crowd-count">—</strong><small>Stations shown</small></article>
+      </section>
+
+      <section class="workspace" data-panel="network" aria-label="Interactive network visualisation">
+        <aside class="control-panel">
+          <div class="panel-heading">
+            <span>Lines</span>
+            <button id="reset-lines" type="button">Show all</button>
+          </div>
+          <div id="line-filters" class="line-filters"></div>
+          <div class="legend">
+            <span><i class="dot low"></i>Low crowd</span>
+            <span><i class="dot moderate"></i>Moderate</span>
+            <span><i class="dot high"></i>High</span>
+          </div>
+        </aside>
+
+        <article class="map-panel">
+          <div class="panel-heading map-heading">
+            <div><span>Network pulse</span><small>Tap a station for its destination board</small></div>
+            <div class="map-actions" aria-label="Map zoom">
+              <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+              <output id="zoom-level" aria-live="polite">100%</output>
+              <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+            </div>
+          </div>
+          <div class="map-viewport">
+            <svg id="network-map" viewBox="0 0 960 520" role="img" aria-labelledby="map-title map-desc">
+              <title id="map-title">Singapore rail network preview</title>
+              <desc id="map-desc">A schematic selection of MRT lines and interchange stations.</desc>
+              <g id="map-stage"></g>
+            </svg>
+          </div>
+        </article>
+
+        <aside class="station-panel" aria-live="polite">
+          <div class="station-header">
+            <span class="station-kicker">Selected station</span>
+            <div id="station-codes" class="station-codes"></div>
+            <h2 id="station-name">—</h2>
+            <p id="station-crowd">Select a station on the map.</p>
+          </div>
+          <div class="board-label"><span>Destination</span><span>Arriving in</span></div>
+          <div id="departures" class="departures"></div>
+          <p id="station-notice" class="station-notice" hidden></p>
+        </aside>
+      </section>
+
+      <section class="board-view" data-panel="board" hidden aria-labelledby="board-title">
+        <div class="board-topline">
+          <div><p class="eyebrow">Passenger information display</p><h2 id="board-title">Platform departures</h2></div>
+          <label>Station<select id="board-station"></select></label>
+        </div>
+        <div id="full-board" class="full-board"></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Singapore-MRTracker</span>
+      <span>Draft interface · data contract preview</span>
+      <span>Not affiliated with LTA</span>
+    </footer>
+  </body>
+</html>
