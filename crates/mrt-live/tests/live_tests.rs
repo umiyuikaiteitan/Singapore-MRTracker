@@ -126,6 +126,16 @@ fn line_matching_uses_codes_and_names() {
     };
     assert_eq!(match_train_line(&by_name), Some(TrainLine::SLRT));
 
+    let hyphenated = mrt_gtfs::Line {
+        route_id: "NS".to_string(),
+        name: "NS".to_string(),
+        long_name: Some("North-South Line".to_string()),
+        route_type: 1,
+        color: None,
+        text_color: None,
+    };
+    assert_eq!(match_train_line(&hyphenated), Some(TrainLine::NSL));
+
     let bus = mrt_gtfs::Line {
         route_id: "970".to_string(),
         name: "970".to_string(),

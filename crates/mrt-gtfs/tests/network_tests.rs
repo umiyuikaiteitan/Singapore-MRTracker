@@ -382,3 +382,106 @@ mod zip_source {
         assert_eq!(feed.trips.len(), 8);
     }
 }
+
+#[test]
+fn split_route_entries_do_not_make_an_interchange() {
+    // The official LTA feed splits the Circle Line into several route
+    // entries with the same display name. A station that only those
+    // entries serve is not an interchange.
+    use mrt_gtfs::{Calendar, Route, Stop, StopTime, Trip};
+
+    fn route(id: &str, name: &str) -> Route {
+        Route {
+            route_id: id.to_string(),
+            agency_id: None,
+            route_short_name: Some(name.to_string()),
+            route_long_name: None,
+            route_type: 1,
+            route_color: None,
+            route_text_color: None,
+        }
+    }
+    fn trip(route: &str, id: &str) -> Trip {
+        Trip {
+            route_id: route.to_string(),
+            service_id: "DAILY".to_string(),
+            trip_id: id.to_string(),
+            trip_headsign: None,
+            direction_id: Some(0),
+            shape_id: None,
+        }
+    }
+    fn call(trip: &str, time: &str, stop: &str, seq: u32) -> StopTime {
+        StopTime {
+            trip_id: trip.to_string(),
+            arrival_time: Some(time.parse().unwrap()),
+            departure_time: Some(time.parse().unwrap()),
+            stop_id: stop.to_string(),
+            stop_sequence: seq,
+            stop_headsign: None,
+            pickup_type: None,
+            drop_off_type: None,
+        }
+    }
+
+    let feed = GtfsFeed {
+        stops: vec![
+            Stop {
+                stop_id: "A".to_string(),
+                stop_name: Some("Alpha".to_string()),
+                ..Default::default()
+            },
+            Stop {
+                stop_id: "B".to_string(),
+                stop_name: Some("Beta".to_string()),
+                ..Default::default()
+            },
+            Stop {
+                stop_id: "C".to_string(),
+                stop_name: Some("Gamma".to_string()),
+                ..Default::default()
+            },
+        ],
+        routes: vec![
+            route("CC_a", "CC"),
+            route("CC_b", "CC"),
+            route("NS_1", "NS"),
+        ],
+        trips: vec![trip("CC_a", "T1"), trip("CC_b", "T2"), trip("NS_1", "T3")],
+        stop_times: vec![
+            // Both CC variants and the NS route call at Alpha. Only
+            // the CC variants call at Beta.
+            call("T1", "08:00:00", "A", 1),
+            call("T1", "08:05:00", "B", 2),
+            call("T2", "09:00:00", "A", 1),
+            call("T2", "09:05:00", "B", 2),
+            call("T3", "08:00:00", "A", 1),
+            call("T3", "08:03:00", "C", 2),
+        ],
+        calendar: vec![Calendar {
+            service_id: "DAILY".to_string(),
+            monday: 1,
+            tuesday: 1,
+            wednesday: 1,
+            thursday: 1,
+            friday: 1,
+            saturday: 1,
+            sunday: 1,
+            start_date: "20250101".parse().unwrap(),
+            end_date: "20271231".parse().unwrap(),
+        }],
+        ..Default::default()
+    };
+    let network = RailNetwork::from_feed(&feed).unwrap();
+
+    let alpha = network.station_by_name("Alpha").unwrap();
+    let beta = network.station_by_name("Beta").unwrap();
+
+    // Alpha: CC and NS -> interchange. Beta: CC only -> not one,
+    // although two route entries serve it.
+    assert!(network.is_interchange(alpha));
+    assert!(!network.is_interchange(beta));
+    assert!(network.station(beta).is_interchange()); // raw entry count
+    let ids: Vec<_> = network.interchanges().collect();
+    assert_eq!(ids, vec![alpha]);
+}

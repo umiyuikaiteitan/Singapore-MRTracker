@@ -92,9 +92,11 @@ impl std::str::FromStr for TrainLine {
 
     /// Parse a line code. The parser ignores case.
     ///
-    /// The parser also accepts the loop codes that the train service
-    /// alerts use: `SEL` and `SWL` map to `SLRT`; `PEL` and `PWL` map
-    /// to `PLRT`.
+    /// The parser also accepts the codes that the train service
+    /// alerts use. The API User Guide (version 6.9) lists `STL` for
+    /// the Sengkang LRT and `PTL` for the Punggol LRT. Community
+    /// data also shows the loop codes `SEL`, `SWL`, `PEL`, and
+    /// `PWL`. All of these map to `SLRT` or `PLRT`.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_ascii_uppercase().as_str() {
             "CCL" => Ok(TrainLine::CCL),
@@ -105,8 +107,8 @@ impl std::str::FromStr for TrainLine {
             "NEL" => Ok(TrainLine::NEL),
             "NSL" => Ok(TrainLine::NSL),
             "BPL" => Ok(TrainLine::BPL),
-            "SLRT" | "SEL" | "SWL" => Ok(TrainLine::SLRT),
-            "PLRT" | "PEL" | "PWL" => Ok(TrainLine::PLRT),
+            "SLRT" | "STL" | "SEL" | "SWL" => Ok(TrainLine::SLRT),
+            "PLRT" | "PTL" | "PEL" | "PWL" => Ok(TrainLine::PLRT),
             "TEL" => Ok(TrainLine::TEL),
             other => Err(format!("\"{other}\" is not a known train line code")),
         }
@@ -363,6 +365,8 @@ mod tests {
 
     #[test]
     fn train_line_parser_accepts_alert_loop_codes() {
+        assert_eq!("STL".parse::<TrainLine>().unwrap(), TrainLine::SLRT);
+        assert_eq!("PTL".parse::<TrainLine>().unwrap(), TrainLine::PLRT);
         assert_eq!("SEL".parse::<TrainLine>().unwrap(), TrainLine::SLRT);
         assert_eq!("swl".parse::<TrainLine>().unwrap(), TrainLine::SLRT);
         assert_eq!("PEL".parse::<TrainLine>().unwrap(), TrainLine::PLRT);

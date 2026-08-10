@@ -70,6 +70,9 @@ pub fn match_train_line(line: &Line) -> Option<TrainLine> {
         text.push(' ');
         text.push_str(&long.to_ascii_uppercase());
     }
+    // The official LTA feed hyphenates the names, for example
+    // "North-South Line". Normalize the hyphens away.
+    let text = text.replace('-', " ");
     const NAME_MAP: [(&str, TrainLine); 10] = [
         ("NORTH SOUTH", TrainLine::NSL),
         ("EAST WEST", TrainLine::EWL),

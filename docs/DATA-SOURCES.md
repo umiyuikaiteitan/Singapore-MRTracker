@@ -136,6 +136,7 @@ endpoint that the library does not model yet.
   number, for example `NS1`.
 - LRT codes: `BP`, `STC`, `SE`, `SW`, `PTC`, `PE`, `PW` plus a
   number.
-- The alerts API can report LRT loops as `SEL`, `SWL`, `PEL`, and
-  `PWL`. The `TrainLine` parser maps these codes to `SLRT` and
-  `PLRT`.
+- The alerts API reports the LRT lines as `STL` (Sengkang) and
+  `PTL` (Punggol) per the API User Guide version 6.9. Community data
+  also shows the loop codes `SEL`, `SWL`, `PEL`, and `PWL`. The
+  `TrainLine` parser maps all of these codes to `SLRT` and `PLRT`.

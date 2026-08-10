@@ -66,7 +66,13 @@ pub struct Station {
 }
 
 impl Station {
-    /// Report whether more than one line serves this station.
+    /// Report whether more than one line entry serves this station.
+    ///
+    /// Some feeds split one line into several route entries with the
+    /// same display name. This method then reports `true` for
+    /// stations on one physical line. Use
+    /// [`RailNetwork::is_interchange`] for a check that compares the
+    /// line names.
     pub fn is_interchange(&self) -> bool {
         self.lines.len() > 1
     }
@@ -183,10 +189,8 @@ impl ServiceCalendar {
 ///
 /// let feed = GtfsFeed::from_zip_path("data/singapore-gtfs.zip").unwrap();
 /// let network = RailNetwork::from_feed(&feed).unwrap();
-/// for station in network.stations() {
-///     if station.is_interchange() {
-///         println!("{} is an interchange.", station.name);
-///     }
+/// for id in network.interchanges() {
+///     println!("{} is an interchange.", network.station(id).name);
 /// }
 /// ```
 #[derive(Debug, Clone)]
@@ -524,13 +528,30 @@ impl RailNetwork {
         self.stop_to_station.get(stop_id).copied()
     }
 
-    /// Get the identifiers of all interchange stations.
-    pub fn interchanges(&self) -> impl Iterator<Item = StationId> + '_ {
-        self.stations
+    /// Report whether the station is an interchange.
+    ///
+    /// A station is an interchange when lines with more than one
+    /// distinct display name serve it. The name comparison absorbs
+    /// feeds that split one line into several route entries. The
+    /// official LTA feed does this for the Circle Line.
+    pub fn is_interchange(&self, station: StationId) -> bool {
+        let mut names: Vec<&str> = self.stations[station.0]
+            .lines
             .iter()
-            .enumerate()
-            .filter(|(_, s)| s.is_interchange())
-            .map(|(i, _)| StationId(i))
+            .map(|&id| self.lines[id.0].name.as_str())
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        names.len() > 1
+    }
+
+    /// Get the identifiers of all interchange stations.
+    ///
+    /// See [`RailNetwork::is_interchange`] for the definition.
+    pub fn interchanges(&self) -> impl Iterator<Item = StationId> + '_ {
+        (0..self.stations.len())
+            .map(StationId)
+            .filter(|&id| self.is_interchange(id))
     }
 
     /// Report whether a service operates on a date.
