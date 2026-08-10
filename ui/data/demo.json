@@ -1,0 +1,97 @@
+{
+  "generated_at": "10 Aug 2026 · 21:20 SGT",
+  "network_status": [
+    { "line_code": "NS", "status": "Normal", "message": "" },
+    { "line_code": "EW", "status": "Normal", "message": "" },
+    { "line_code": "NE", "status": "Normal", "message": "" },
+    { "line_code": "CC", "status": "Normal", "message": "" },
+    { "line_code": "DT", "status": "Normal", "message": "" },
+    { "line_code": "TE", "status": "Normal", "message": "" }
+  ],
+  "lines": [
+    { "id": "NS", "code": "NS", "short_name": "North South", "name": "North South Line", "color": "#d42e12", "text_color": "#ffffff", "stations": ["bishan", "newton", "dhoby-ghaut", "city-hall", "raffles-place"] },
+    { "id": "EW", "code": "EW", "short_name": "East West", "name": "East West Line", "color": "#009645", "text_color": "#ffffff", "stations": ["buona-vista", "outram-park", "raffles-place", "city-hall", "paya-lebar"] },
+    { "id": "NE", "code": "NE", "short_name": "North East", "name": "North East Line", "color": "#9900aa", "text_color": "#ffffff", "stations": ["serangoon", "little-india", "dhoby-ghaut", "outram-park", "harbourfront"] },
+    { "id": "CC", "code": "CC", "short_name": "Circle", "name": "Circle Line", "color": "#fa9e0d", "text_color": "#111111", "stations": ["bishan", "serangoon", "paya-lebar", "promenade", "bayfront", "harbourfront", "buona-vista", "bishan"] },
+    { "id": "DT", "code": "DT", "short_name": "Downtown", "name": "Downtown Line", "color": "#005ec4", "text_color": "#ffffff", "stations": ["little-india", "newton", "promenade", "bayfront"] },
+    { "id": "TE", "code": "TE", "short_name": "Thomson-East Coast", "name": "Thomson-East Coast Line", "color": "#9d5b25", "text_color": "#ffffff", "stations": ["orchard", "outram-park", "marina-bay"] }
+  ],
+  "stations": [
+    { "id": "bishan", "name": "Bishan", "codes": ["NS17", "CC15"], "lines": ["NS", "CC"], "x": 520, "y": 70, "label_side": "right", "crowd": "Moderate", "notices": [], "board": [
+      { "line_code": "NS", "destination": "Marina South Pier", "departs_in_secs": 150, "clock_time": "21:23", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "CC", "destination": "HarbourFront", "departs_in_secs": 300, "clock_time": "21:25", "approximate": false, "crowd": "Low" },
+      { "line_code": "NS", "destination": "Jurong East", "departs_in_secs": 420, "clock_time": "21:27", "approximate": true, "crowd": "Moderate" }
+    ] },
+    { "id": "serangoon", "name": "Serangoon", "codes": ["NE12", "CC13"], "lines": ["NE", "CC"], "x": 675, "y": 126, "label_side": "right", "crowd": "Low", "notices": [], "board": [
+      { "line_code": "NE", "destination": "HarbourFront", "departs_in_secs": 120, "clock_time": "21:22", "approximate": false, "crowd": "Low" },
+      { "line_code": "CC", "destination": "Dhoby Ghaut", "departs_in_secs": 260, "clock_time": "21:24", "approximate": false, "crowd": "Low" },
+      { "line_code": "NE", "destination": "Punggol Coast", "departs_in_secs": 390, "clock_time": "21:27", "approximate": true, "crowd": "Moderate" }
+    ] },
+    { "id": "paya-lebar", "name": "Paya Lebar", "codes": ["EW8", "CC9"], "lines": ["EW", "CC"], "x": 806, "y": 240, "label_side": "right", "crowd": "Moderate", "notices": [], "board": [
+      { "line_code": "EW", "destination": "Tuas Link", "departs_in_secs": 180, "clock_time": "21:23", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "CC", "destination": "HarbourFront", "departs_in_secs": 310, "clock_time": "21:25", "approximate": false, "crowd": "Low" },
+      { "line_code": "EW", "destination": "Pasir Ris", "departs_in_secs": 470, "clock_time": "21:28", "approximate": true, "crowd": "Moderate" }
+    ] },
+    { "id": "newton", "name": "Newton", "codes": ["NS21", "DT11"], "lines": ["NS", "DT"], "x": 430, "y": 178, "label_side": "left", "crowd": "Low", "notices": [], "board": [
+      { "line_code": "NS", "destination": "Marina South Pier", "departs_in_secs": 100, "clock_time": "21:22", "approximate": false, "crowd": "Low" },
+      { "line_code": "DT", "destination": "Expo", "departs_in_secs": 240, "clock_time": "21:24", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "NS", "destination": "Jurong East", "departs_in_secs": 410, "clock_time": "21:27", "approximate": true, "crowd": "Low" }
+    ] },
+    { "id": "little-india", "name": "Little India", "codes": ["NE7", "DT12"], "lines": ["NE", "DT"], "x": 535, "y": 208, "label_side": "right", "crowd": "Low", "notices": [], "board": [
+      { "line_code": "NE", "destination": "HarbourFront", "departs_in_secs": 140, "clock_time": "21:22", "approximate": false, "crowd": "Low" },
+      { "line_code": "DT", "destination": "Bukit Panjang", "departs_in_secs": 320, "clock_time": "21:25", "approximate": true, "crowd": "Low" },
+      { "line_code": "NE", "destination": "Punggol Coast", "departs_in_secs": 450, "clock_time": "21:28", "approximate": false, "crowd": "Moderate" }
+    ] },
+    { "id": "orchard", "name": "Orchard", "codes": ["NS22", "TE14"], "lines": ["NS", "TE"], "x": 362, "y": 236, "label_side": "left", "crowd": "High", "notices": [], "board": [
+      { "line_code": "TE", "destination": "Woodlands North", "departs_in_secs": 160, "clock_time": "21:23", "approximate": false, "crowd": "High" },
+      { "line_code": "NS", "destination": "Marina South Pier", "departs_in_secs": 290, "clock_time": "21:25", "approximate": false, "crowd": "High" },
+      { "line_code": "TE", "destination": "Bayshore", "departs_in_secs": 500, "clock_time": "21:28", "approximate": true, "crowd": "Moderate" }
+    ] },
+    { "id": "dhoby-ghaut", "name": "Dhoby Ghaut", "codes": ["NS24", "NE6", "CC1"], "lines": ["NS", "NE", "CC"], "x": 455, "y": 292, "label_side": "left", "crowd": "High", "featured": true, "notices": [], "board": [
+      { "line_code": "CC", "destination": "HarbourFront", "departs_in_secs": 120, "clock_time": "21:22", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "NS", "destination": "Marina South Pier", "departs_in_secs": 185, "clock_time": "21:23", "approximate": false, "crowd": "High" },
+      { "line_code": "NE", "destination": "Punggol Coast", "departs_in_secs": 360, "clock_time": "21:26", "approximate": true, "crowd": "Moderate" },
+      { "line_code": "NS", "destination": "Jurong East", "departs_in_secs": 510, "clock_time": "21:29", "approximate": false, "crowd": "High" }
+    ] },
+    { "id": "buona-vista", "name": "Buona Vista", "codes": ["EW21", "CC22"], "lines": ["EW", "CC"], "x": 178, "y": 280, "label_side": "left", "crowd": "Low", "notices": [], "board": [
+      { "line_code": "EW", "destination": "Pasir Ris", "departs_in_secs": 130, "clock_time": "21:22", "approximate": false, "crowd": "Low" },
+      { "line_code": "CC", "destination": "Dhoby Ghaut", "departs_in_secs": 280, "clock_time": "21:25", "approximate": false, "crowd": "Low" },
+      { "line_code": "EW", "destination": "Tuas Link", "departs_in_secs": 440, "clock_time": "21:27", "approximate": true, "crowd": "Moderate" }
+    ] },
+    { "id": "promenade", "name": "Promenade", "codes": ["CC4", "DT15"], "lines": ["CC", "DT"], "x": 640, "y": 318, "label_side": "right", "crowd": "Moderate", "notices": [], "board": [
+      { "line_code": "DT", "destination": "Expo", "departs_in_secs": 110, "clock_time": "21:22", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "CC", "destination": "HarbourFront", "departs_in_secs": 270, "clock_time": "21:24", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "DT", "destination": "Bukit Panjang", "departs_in_secs": 430, "clock_time": "21:27", "approximate": true, "crowd": "Low" }
+    ] },
+    { "id": "city-hall", "name": "City Hall", "codes": ["NS25", "EW13"], "lines": ["NS", "EW"], "x": 510, "y": 350, "label_side": "left", "crowd": "Moderate", "notices": [], "board": [
+      { "line_code": "EW", "destination": "Pasir Ris", "departs_in_secs": 150, "clock_time": "21:23", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "NS", "destination": "Marina South Pier", "departs_in_secs": 330, "clock_time": "21:26", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "EW", "destination": "Tuas Link", "departs_in_secs": 480, "clock_time": "21:28", "approximate": true, "crowd": "High" }
+    ] },
+    { "id": "bayfront", "name": "Bayfront", "codes": ["CE1", "DT16"], "lines": ["CC", "DT"], "x": 676, "y": 390, "label_side": "right", "crowd": "High", "notices": [], "board": [
+      { "line_code": "DT", "destination": "Expo", "departs_in_secs": 125, "clock_time": "21:22", "approximate": false, "crowd": "High" },
+      { "line_code": "CC", "destination": "Stadium", "departs_in_secs": 275, "clock_time": "21:25", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "DT", "destination": "Bukit Panjang", "departs_in_secs": 460, "clock_time": "21:28", "approximate": true, "crowd": "High" }
+    ] },
+    { "id": "raffles-place", "name": "Raffles Place", "codes": ["NS26", "EW14"], "lines": ["NS", "EW"], "x": 508, "y": 414, "label_side": "left", "crowd": "Moderate", "notices": [], "board": [
+      { "line_code": "NS", "destination": "Marina South Pier", "departs_in_secs": 105, "clock_time": "21:22", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "EW", "destination": "Pasir Ris", "departs_in_secs": 255, "clock_time": "21:24", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "NS", "destination": "Jurong East", "departs_in_secs": 400, "clock_time": "21:27", "approximate": true, "crowd": "High" }
+    ] },
+    { "id": "outram-park", "name": "Outram Park", "codes": ["EW16", "NE3", "TE17"], "lines": ["EW", "NE", "TE"], "x": 350, "y": 395, "label_side": "left", "crowd": "High", "notices": [], "board": [
+      { "line_code": "NE", "destination": "HarbourFront", "departs_in_secs": 95, "clock_time": "21:22", "approximate": false, "crowd": "High" },
+      { "line_code": "TE", "destination": "Woodlands North", "departs_in_secs": 235, "clock_time": "21:24", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "EW", "destination": "Pasir Ris", "departs_in_secs": 390, "clock_time": "21:27", "approximate": true, "crowd": "High" }
+    ] },
+    { "id": "marina-bay", "name": "Marina Bay", "codes": ["NS27", "TE20"], "lines": ["TE"], "x": 540, "y": 470, "label_side": "right", "crowd": "Low", "notices": [], "board": [
+      { "line_code": "TE", "destination": "Bayshore", "departs_in_secs": 170, "clock_time": "21:23", "approximate": false, "crowd": "Low" },
+      { "line_code": "TE", "destination": "Woodlands North", "departs_in_secs": 350, "clock_time": "21:26", "approximate": false, "crowd": "Low" },
+      { "line_code": "TE", "destination": "Bayshore", "departs_in_secs": 540, "clock_time": "21:29", "approximate": true, "crowd": "Moderate" }
+    ] },
+    { "id": "harbourfront", "name": "HarbourFront", "codes": ["NE1", "CC29"], "lines": ["NE", "CC"], "x": 210, "y": 455, "label_side": "left", "crowd": "Moderate", "notices": [], "board": [
+      { "line_code": "CC", "destination": "Dhoby Ghaut", "departs_in_secs": 135, "clock_time": "21:22", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "NE", "destination": "Punggol Coast", "departs_in_secs": 310, "clock_time": "21:25", "approximate": false, "crowd": "Moderate" },
+      { "line_code": "CC", "destination": "Marina Bay", "departs_in_secs": 475, "clock_time": "21:28", "approximate": true, "crowd": "Low" }
+    ] }
+  ]
+}
