@@ -1,0 +1,14 @@
+[package]
+name = "mrt-gtfs-rt"
+description = "Decode GTFS-Realtime feeds (trip updates, service alerts, vehicle positions) for Singapore rail."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+prost = "0.14"
+serde.workspace = true
+thiserror.workspace = true

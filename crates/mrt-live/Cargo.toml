@@ -1,0 +1,19 @@
+[package]
+name = "mrt-live"
+description = "Merge the static rail network with live DataMall data into render-ready view models."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+mrt-gtfs.workspace = true
+mrt-gtfs-rt.workspace = true
+mrt-datamall.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

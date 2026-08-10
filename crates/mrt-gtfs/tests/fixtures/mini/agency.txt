@@ -1,0 +1,3 @@
+agency_id,agency_name,agency_url,agency_timezone
+SMRT,SMRT Trains,https://www.smrt.com.sg,Asia/Singapore
+SBST,SBS Transit,https://www.sbstransit.com.sg,Asia/Singapore

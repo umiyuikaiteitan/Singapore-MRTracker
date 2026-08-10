@@ -1,0 +1,4 @@
+from_stop_id,to_stop_id,transfer_type,min_transfer_time
+JUR_NS,JUR_EW,2,180
+JUR_EW,JUR_NS,2,180
+CCK_NS,CCK_BP,2,240

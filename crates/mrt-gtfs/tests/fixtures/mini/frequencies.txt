@@ -1,0 +1,2 @@
+trip_id,start_time,end_time,headway_secs,exact_times
+BP_T1,05:30:00,06:00:00,600,0

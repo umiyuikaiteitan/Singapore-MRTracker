@@ -1,0 +1,24 @@
+[package]
+name = "mrt-gtfs"
+description = "Ingest GTFS static feeds and build a rail network model for Singapore MRT and LRT."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[features]
+default = ["zip-source"]
+# Read a GTFS feed directly from a .zip archive.
+zip-source = ["dep:zip"]
+
+[dependencies]
+csv.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+zip = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
+zip.workspace = true

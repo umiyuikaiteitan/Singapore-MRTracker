@@ -1,0 +1,18 @@
+# Build output.
+/target/
+**/target/
+
+# Secrets. Never commit the DataMall account key.
+.env
+.env.*
+*.key
+secrets/
+
+# Local GTFS downloads. The feeds are large. Do not commit them.
+/data/
+*.gtfs.zip
+
+# Editor files.
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,21 @@
+[package]
+name = "mrt-datamall"
+description = "Client for the LTA DataMall rail APIs: GTFS dataset links, train service alerts, and platform crowd density."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[features]
+default = ["http-ureq"]
+# The built-in HTTP transport, based on ureq. Turn this feature off to
+# supply your own Transport implementation and avoid the dependency.
+http-ureq = ["dep:ureq"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ureq = { workspace = true, optional = true }
