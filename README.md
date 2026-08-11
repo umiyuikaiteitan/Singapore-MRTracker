@@ -4,6 +4,8 @@ A Rust library and framework that ingests GTFS data for the Singapore
 rail network (MRT and LRT). Use it to build interactive live train
 maps, destination boards, and LED panels.
 
+(meta note, from yui: this is one of my first large-scale exercises in vibecoding. will keep a cautious eye on it, but it all seems to work for now :3)
+
 ## What the project does
 
 - It downloads the official GTFS datasets for trains from LTA
