@@ -119,9 +119,10 @@ arbitrary one of them.
 
 The board shows Singapore time (UTC+8) wherever a visitor opens it:
 the panel clock, the snapshot time in the status line, and the
-tooltip all read SGT. Wait times need no timezone at all, because the
-board files carry POSIX instants and the page subtracts the visitor's
-clock.
+tooltip. The panel clock carries the `SGT` label, and the other times
+follow it without repeating it. Wait times need no timezone at all,
+because the board files carry POSIX instants and the page subtracts
+the visitor's clock.
 
 The status line ends with a lamp and the age of the live data:
 

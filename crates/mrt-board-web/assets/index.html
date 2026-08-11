@@ -121,8 +121,7 @@
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
       <b class="red">delayed or cancelled</b> ·
-      ~ headway-based time ·
-      all times Singapore time (SGT)
+      ~ headway-based time
     </div>
   </div>
 
@@ -357,7 +356,7 @@ function updateStatus() {
     state = "down";
   } else if (fetchedAt) {
     const age = (now - fetchedAt) / 1000;
-    parts.push("fetched " + sgtTime(fetchedAt, true) + " SGT, " + agoText(age));
+    parts.push("fetched " + sgtTime(fetchedAt, true) + ", " + agoText(age));
     state = age > 60 ? "stale" : "ok";
   } else {
     parts.push("waiting for the server");
