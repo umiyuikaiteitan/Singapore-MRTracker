@@ -119,6 +119,66 @@ fn station_lookups_ignore_case() {
 }
 
 #[test]
+fn aliases_resolve_codes_and_names_in_any_spelling() {
+    let network = network();
+    let jurong = network.station_by_code("NS1").unwrap();
+
+    for spelling in [
+        "NS1",
+        "ns1",
+        "ns-1",
+        "NS 1",
+        "EW24",
+        "Jurong East",
+        "jurong-east",
+        "JurongEast",
+        "  jurong east  ",
+    ] {
+        assert_eq!(
+            network.station_by_alias(spelling),
+            Some(jurong),
+            "alias {spelling:?} does not resolve to Jurong East"
+        );
+    }
+
+    assert_eq!(network.station_by_alias("XX99"), None);
+    assert_eq!(network.station_by_alias(""), None);
+}
+
+#[test]
+fn a_station_slug_is_its_canonical_alias() {
+    let network = network();
+    for (index, station) in network.stations().iter().enumerate() {
+        let slug = station.slug();
+        assert_eq!(
+            network.station_by_alias(&slug),
+            Some(StationId(index)),
+            "the slug {slug:?} does not resolve back to its station"
+        );
+    }
+    let cck = network.station(network.station_by_code("BP1").unwrap());
+    assert_eq!(cck.slug(), "choa-chu-kang");
+}
+
+#[test]
+fn the_exported_alias_table_matches_the_lookup() {
+    let network = network();
+    let table: Vec<(String, StationId)> = network
+        .station_aliases()
+        .map(|(key, id)| (key.to_string(), id))
+        .collect();
+
+    for (key, id) in &table {
+        assert_eq!(network.station_by_alias(key), Some(*id));
+    }
+    // Every code and every station name is in the table.
+    let keys: Vec<&str> = table.iter().map(|(k, _)| k.as_str()).collect();
+    for expected in ["ns1", "ew24", "bp2", "jurongeast", "southview"] {
+        assert!(keys.contains(&expected), "the table lacks {expected:?}");
+    }
+}
+
+#[test]
 fn interchanges_are_stations_with_more_than_one_line() {
     let network = network();
     let names: Vec<&str> = network

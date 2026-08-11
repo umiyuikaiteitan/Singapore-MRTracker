@@ -23,10 +23,16 @@
 //!   index.html               the board page
 //!   .nojekyll                serve files as they are
 //!   assets/lta-identity.ttf  the header typeface
-//!   data/stations.json       all stations with their codes
+//!   data/stations.json       all stations with their codes and slugs
+//!   data/aliases.json        URL alias -> station code
 //!   data/live.json           alerts and crowd levels, if a key is set
 //!   data/board/<CODE>.json   departures per station, POSIX seconds
 //! ```
+//!
+//! The page names a station in its `station` query parameter. The
+//! alias table accepts every station code and every station name, in
+//! any spelling, so `?station=NS1` and `?station=jurong-east` open the
+//! same board.
 
 use std::io::Cursor;
 use std::path::Path;
@@ -91,19 +97,31 @@ fn main() {
     )
     .expect("cannot write the font");
 
-    // Step 3: write the station list.
+    // Step 3: write the station list. The slug is the readable alias
+    // of a station, for example `jurong-east`.
     let now_unix = unix_now();
     let mut stations: Vec<serde_json::Value> = network
         .stations()
         .iter()
         .filter(|s| !s.codes.is_empty())
-        .map(|s| serde_json::json!({ "name": s.name, "codes": s.codes }))
+        .map(|s| serde_json::json!({ "name": s.name, "codes": s.codes, "slug": s.slug() }))
         .collect();
     stations.sort_by_key(|v| v["name"].as_str().unwrap_or("").to_string());
     write_json(
         &data_dir.join("stations.json"),
         &serde_json::json!(stations),
     );
+
+    // Write the alias table, so the page resolves whatever the
+    // `station` parameter of a link carries: a code such as `NS1`, a
+    // name such as `Jurong East`, or a slug such as `jurong-east`.
+    // The keys are normalized: lower case, letters and digits only.
+    let aliases = aliases_json(&network);
+    eprintln!(
+        "Wrote {} station aliases.",
+        aliases.as_object().map_or(0, serde_json::Map::len)
+    );
+    write_json(&data_dir.join("aliases.json"), &aliases);
 
     // Step 4: write one departure file per station code. A station
     // with several codes, for example an interchange, gets one alias
@@ -151,6 +169,21 @@ fn main() {
         &serde_json::json!({ "live_url": live_url, "fallback_url": fallback_url }),
     );
     eprintln!("Site ready in {}.", out.display());
+}
+
+/// Build the alias table: a normalized URL alias to a station code.
+///
+/// The value is the first code of the station, which names the file
+/// `data/board/<CODE>.json`. A station without a code has no board
+/// file, so it contributes no alias.
+fn aliases_json(network: &RailNetwork) -> serde_json::Value {
+    let mut aliases = serde_json::Map::new();
+    for (alias, id) in network.station_aliases() {
+        if let Some(code) = network.station(id).codes.first() {
+            aliases.insert(alias.to_string(), serde_json::json!(code));
+        }
+    }
+    serde_json::Value::Object(aliases)
 }
 
 /// Get the departures of one station as compact rows.

@@ -18,8 +18,11 @@
 //! Endpoints:
 //!
 //! - `GET /` — the board page.
-//! - `GET /api/stations` — all stations with their codes.
+//! - `GET /api/stations` — all stations with their codes and slugs.
 //! - `GET /api/board?station=NS1&rows=4` — the live board as JSON.
+//!
+//! The `station` parameter takes any alias of a station: a code such
+//! as `NS1`, or a name such as `jurong-east`.
 
 mod clock;
 
@@ -169,7 +172,7 @@ fn stations_json(app: &App) -> String {
         .stations()
         .iter()
         .filter(|s| !s.codes.is_empty())
-        .map(|s| serde_json::json!({ "name": s.name, "codes": s.codes }))
+        .map(|s| serde_json::json!({ "name": s.name, "codes": s.codes, "slug": s.slug() }))
         .collect();
     stations.sort_by_key(|v| v["name"].as_str().unwrap_or("").to_string());
     serde_json::json!(stations).to_string()
@@ -179,10 +182,11 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
     let code = query
         .get("station")
         .ok_or_else(|| "missing station parameter".to_string())?;
+    // The parameter carries any alias: NS1, ns-1, or jurong-east.
     let station = app
         .network
         .station_by_code(code)
-        .or_else(|| app.network.station_by_name(code))
+        .or_else(|| app.network.station_by_alias(code))
         .ok_or_else(|| format!("unknown station \"{code}\""))?;
     let rows: usize = query
         .get("rows")

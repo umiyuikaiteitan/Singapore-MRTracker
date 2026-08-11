@@ -123,6 +123,17 @@ path:
 cargo run -p mrt-board-web -- data/gtfs_schedule.zip
 ```
 
+A link opens a station directly through the `station` parameter. It
+takes any alias: a code in any spelling, any other code of an
+interchange, or the station name as a slug.
+
+```text
+?station=NS1   ?station=ns-1   ?station=EW24   ?station=jurong-east
+```
+
+The board reads Singapore time (UTC+8) wherever it is opened, and the
+status line reports when the page last reached the live status feed.
+
 To host the board without a server, generate it as a static site.
 See `docs/DEPLOY-PAGES.md` for the GitHub Pages workflow:
 

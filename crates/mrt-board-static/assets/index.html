@@ -55,7 +55,28 @@
     font-weight: 700;
     color: #fff;
   }
-  .status { margin-left: auto; font-size: 14px; color: #9a9aa2; }
+  .status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    color: #9a9aa2;
+  }
+  /* The freshness lamp of the live status feed. */
+  .lamp {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #55565e;
+    flex: none;
+  }
+  .lamp.ok { background: var(--green); box-shadow: 0 0 7px rgba(53,212,97,.7); }
+  .lamp.stale { background: var(--amber); box-shadow: 0 0 7px rgba(229,213,0,.7); }
+  .lamp.down { background: var(--red); box-shadow: 0 0 7px rgba(255,75,58,.7); }
+  .lamp.beat { animation: beat .7s ease-out 1; }
+  @keyframes beat { from { transform: scale(2); } to { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .lamp.beat { animation: none; } }
   canvas { display: block; width: 100%; height: auto; background: #000; border-radius: 8px; }
   .legend { margin-top: 10px; font-size: 13px; color: #85858d; }
   .legend b.amber { color: var(--amber); }
@@ -73,14 +94,18 @@
     <div class="head">
       <h1 id="name">&nbsp;</h1>
       <span id="codes"></span>
-      <span class="status" id="status"></span>
+      <span class="status" id="status">
+        <span class="lamp" id="lamp"></span>
+        <span id="statusText">starting up</span>
+      </span>
     </div>
     <canvas id="panel"></canvas>
     <div class="legend">
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
       <b class="red">delayed, cancelled, or alert</b> ·
-      ~ headway-based time
+      ~ headway-based time ·
+      all times Singapore time (SGT)
     </div>
   </div>
 
@@ -138,6 +163,18 @@ let board = null;      // data/board/<CODE>.json content
 let live = null;       // data/live.json content
 let tickerText = "";
 let tickerOffset = 0;
+
+/* Singapore keeps UTC+8 all year and has no daylight saving, so the
+   board reads the same clock everywhere it is opened. */
+const SGT_OFFSET_MS = 8 * 3600 * 1000;
+
+/* Format a POSIX millisecond instant as a Singapore clock time. */
+function sgtTime(ms, withSeconds) {
+  const d = new Date(ms + SGT_OFFSET_MS);
+  const parts = [d.getUTCHours(), d.getUTCMinutes()];
+  if (withSeconds) parts.push(d.getUTCSeconds());
+  return parts.map((n) => String(n).padStart(2, "0")).join(":");
+}
 
 function drawDot(x, y, color) {
   ctx.fillStyle = color;
@@ -233,10 +270,7 @@ function render() {
     drawText(tickerText, col, TICKER_TOP, RED);
     ctx.restore();
   } else {
-    const now = new Date();
-    const text = [now.getHours(), now.getMinutes(), now.getSeconds()]
-      .map((n) => String(n).padStart(2, "0"))
-      .join(":");
+    const text = sgtTime(Date.now(), true) + " SGT";
     drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W, TICKER_TOP, GREEN);
   }
 }
@@ -253,9 +287,16 @@ function tick(ts) {
 
 /* Data plumbing. */
 
-let currentStation = new URLSearchParams(location.search).get("station") || "NS1";
+const DEFAULT_STATION = "NS1";
+
+let currentStation = DEFAULT_STATION; // the first code of the station on screen
+let stations = [];                    // data/stations.json content
+let aliasTable = null;                // data/aliases.json content
 let liveUrl = "data/live.json";
 let liveFallback = null;
+let liveCheckedAt = 0;                // visitor clock, last live fetch that worked
+let liveFailedAt = 0;                 // visitor clock, last live fetch that failed
+let liveSourceUrl = "";               // the source that answered last
 
 async function fetchJson(path) {
   const res = await fetch(path, { cache: "no-cache" });
@@ -274,64 +315,176 @@ function chipColor(code) {
   return colors[prefix] || "#555";
 }
 
-function updateHeader() {
-  if (!board) return;
-  document.getElementById("name").textContent = board.name;
-  const codes = document.getElementById("codes");
-  codes.innerHTML = "";
+/* Station aliases in the URL. A link names a station as a code
+   (NS1, ns-1, NS 1) or as a name (Jurong East, jurong-east). */
+
+/* Reduce any spelling to a comparison key, the way the generator
+   does: lower case, letters and digits only. */
+function normalizeAlias(text) {
+  return String(text == null ? "" : text).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/* Resolve an alias to the station code that names its board file. */
+function resolveStation(alias) {
+  const key = normalizeAlias(alias);
+  if (!key) return null;
+  if (aliasTable && aliasTable[key]) return aliasTable[key];
+  // data/aliases.json is missing: resolve from the station list.
+  for (const station of stations) {
+    if (station.codes.some((code) => normalizeAlias(code) === key)) return station.codes[0];
+  }
+  for (const station of stations) {
+    if (normalizeAlias(station.name) === key) return station.codes[0];
+  }
+  return null;
+}
+
+/* The readable alias of a station, for the address bar. */
+function stationAlias(code) {
+  for (const station of stations) {
+    if (station.codes.includes(code)) {
+      return station.slug || normalizeAlias(station.name) || code;
+    }
+  }
+  return code;
+}
+
+/* The freshness of the live status feed. */
+
+function agoText(secs) {
+  if (secs < 10) return "just now";
+  if (secs < 90) return Math.round(secs) + " s ago";
+  const mins = Math.round(secs / 60);
+  if (mins < 90) return mins + " min ago";
+  return Math.round(mins / 60) + " h ago";
+}
+
+/* Flash the lamp when fresh live data lands. */
+function flashLamp() {
+  const lamp = document.getElementById("lamp");
+  lamp.classList.remove("beat");
+  void lamp.offsetWidth;  // restart the animation
+  lamp.classList.add("beat");
+}
+
+/* The worst crowd level reported for this station. */
+function crowdLevel() {
+  if (!board || !live || !live.live) return "";
+  const names = { l: "low", m: "moderate", h: "high" };
+  const order = ["", "low", "moderate", "high"];
+  let worst = "";
   for (const code of board.codes) {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.textContent = code;
-    chip.style.background = chipColor(code);
-    codes.appendChild(chip);
-    codes.appendChild(document.createTextNode(" "));
+    const level = names[(live.crowd || {})[code]];
+    if (level && order.indexOf(level) > order.indexOf(worst)) worst = level;
   }
+  return worst;
+}
 
-  let crowd = "";
-  let notice = "";
-  if (live && live.live) {
-    let worst = 0;
-    const rank = { l: 1, m: 2, h: 3 };
+/* Repaint the status line: the data source, the crowd level, the
+   Singapore time the snapshot was built, and how long ago the page
+   last reached the live feed. A lamp carries the same state: green
+   when the feed is current, amber when it is falling behind, red
+   when the last attempt failed. */
+function updateStatus() {
+  const now = Date.now();
+  const parts = [live && live.live ? "live status" : "schedule only"];
+
+  const crowd = crowdLevel();
+  if (crowd) parts.push("crowd: " + crowd);
+
+  const generated = (live && live.generated) || (board && board.generated) || 0;
+  if (generated) parts.push("data " + sgtTime(generated * 1000, false) + " SGT");
+
+  let state = "";
+  const tip = [];
+  if (!liveCheckedAt && !liveFailedAt) {
+    parts.push("checking the live feed");
+  } else if (liveFailedAt > liveCheckedAt) {
+    parts.push("live check failed " + agoText((now - liveFailedAt) / 1000));
+    state = "down";
+    tip.push("The last check at " + sgtTime(liveFailedAt, true) + " SGT reached no source.");
+  } else {
+    parts.push("checked " + agoText((now - liveCheckedAt) / 1000));
+    const checkAge = (now - liveCheckedAt) / 1000;
+    const dataAge = generated ? now / 1000 - generated : Infinity;
+    // Amber when the poll is falling behind, when the snapshot is
+    // old, or when the deployment carries no live layer at all.
+    state = !(live && live.live) || checkAge > 120 || dataAge > 900 ? "stale" : "ok";
+  }
+  if (liveCheckedAt) {
+    tip.push("Live status fetched at " + sgtTime(liveCheckedAt, true) + " SGT" +
+             (liveSourceUrl ? " from " + liveSourceUrl : "") + ".");
+  }
+  if (generated) {
+    tip.push("The snapshot was built at " + sgtTime(generated * 1000, true) + " SGT.");
+  }
+  tip.push("The page checks the live feed every 30 seconds.");
+
+  const lamp = document.getElementById("lamp");
+  lamp.classList.toggle("ok", state === "ok");
+  lamp.classList.toggle("stale", state === "stale");
+  lamp.classList.toggle("down", state === "down");
+  document.getElementById("statusText").textContent = parts.join(" · ");
+  document.getElementById("status").title = tip.join("\n");
+}
+
+function updateHeader() {
+  if (board) {
+    document.getElementById("name").textContent = board.name;
+    const codes = document.getElementById("codes");
+    codes.innerHTML = "";
     for (const code of board.codes) {
-      worst = Math.max(worst, rank[(live.crowd || {})[code]] || 0);
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = code;
+      chip.style.background = chipColor(code);
+      codes.appendChild(chip);
+      codes.appendChild(document.createTextNode(" "));
     }
-    crowd = [", ", " · crowd: low", " · crowd: moderate", " · crowd: high"][worst] || "";
-    if (worst === 0) crowd = "";
 
-    const affected = (live.segments || []).some((segment) =>
-      (segment.stations || []).some((s) => board.codes.includes(s)));
-    if (live.disrupted && affected) {
-      notice = (live.messages || []).join("   +++   ");
+    let notice = "";
+    if (live && live.live && live.disrupted) {
+      const affected = (live.segments || []).some((segment) =>
+        (segment.stations || []).some((s) => board.codes.includes(s)));
+      if (affected) notice = (live.messages || []).join("   +++   ");
     }
+    tickerText = notice.toUpperCase();
   }
-  tickerText = notice.toUpperCase();
-
-  const updated = new Date(((live && live.generated) || board.generated || 0) * 1000);
-  document.getElementById("status").textContent =
-    (live && live.live ? "live data" : "schedule only") + crowd +
-    " · updated " + updated.toLocaleTimeString();
+  updateStatus();
 }
 
 async function loadStation() {
-  board = await fetchJson("data/board/" + encodeURIComponent(currentStation) + ".json");
+  try {
+    board = await fetchJson("data/board/" + encodeURIComponent(currentStation) + ".json");
+  } catch (e) {
+    board = null;
+    tickerText = "";
+    document.getElementById("name").textContent = "Unknown station";
+    document.getElementById("codes").innerHTML = "";
+  }
   updateHeader();
 }
 
 async function loadLive() {
   // A changing query defeats any CDN cache in front of a snapshot.
-  const bust = "?t=" + Math.floor(Date.now() / 30000);
+  const bust = "t=" + Math.floor(Date.now() / 30000);
   const urls = [liveUrl];
   if (liveFallback) urls.push(liveFallback);
-  if (liveUrl !== "data/live.json") urls.push("data/live.json");
+  if (!urls.includes("data/live.json")) urls.push("data/live.json");
   for (const url of urls) {
     try {
-      live = await fetchJson(url + (url.includes("?") ? "&" : "?") + bust.slice(1));
+      live = await fetchJson(url + (url.includes("?") ? "&" : "?") + bust);
+      liveCheckedAt = Date.now();
+      liveFailedAt = 0;
+      liveSourceUrl = url;
+      flashLamp();
       updateHeader();
       return;
     } catch (e) { /* try the next source */ }
   }
-  live = null;
+  // Every source failed. Keep the snapshot that is on screen, and
+  // let the lamp report how old it is.
+  liveFailedAt = Date.now();
   updateHeader();
 }
 
@@ -341,27 +494,37 @@ async function init() {
     if (config.live_url) liveUrl = config.live_url;
     if (config.fallback_url) liveFallback = config.fallback_url;
   } catch (e) { /* keep the fallback */ }
-  const stations = await fetchJson("data/stations.json");
+
+  stations = await fetchJson("data/stations.json");
+  try {
+    aliasTable = await fetchJson("data/aliases.json");
+  } catch (e) { /* resolve from the station list instead */ }
+
+  const requested = new URLSearchParams(location.search).get("station");
+  currentStation =
+    resolveStation(requested) ||
+    resolveStation(DEFAULT_STATION) ||
+    (stations[0] && stations[0].codes[0]) ||
+    DEFAULT_STATION;
+
   const select = document.getElementById("station");
   for (const station of stations) {
     const option = document.createElement("option");
     option.value = station.codes[0];
     option.textContent = station.name + " (" + station.codes.join(", ") + ")";
-    if (station.codes.includes(currentStation)) {
-      option.selected = true;
-      currentStation = station.codes[0];
-    }
+    if (station.codes.includes(currentStation)) option.selected = true;
     select.appendChild(option);
   }
   select.addEventListener("change", () => {
     currentStation = select.value;
-    history.replaceState(null, "", "?station=" + encodeURIComponent(currentStation));
+    history.replaceState(null, "", "?station=" + encodeURIComponent(stationAlias(currentStation)));
     loadStation();
   });
   await loadLive();
   await loadStation();
   setInterval(loadStation, 10 * 60 * 1000);
   setInterval(loadLive, 30 * 1000);
+  setInterval(updateStatus, 1000);
   requestAnimationFrame(tick);
 }
 
