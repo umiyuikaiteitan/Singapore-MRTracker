@@ -7,16 +7,24 @@ wait times from the visitor's clock. Train schedules are
 deterministic, so the board stays accurate between refreshes.
 
 ```text
-GitHub Actions (twice per hour)
+GitHub Actions "pages" (twice per hour)
   └─ mrt-board-static + account key (Actions secret)
        ├─ downloads the GTFS Schedule feed
        ├─ computes departures per station -> data/board/<CODE>.json
-       ├─ reads alerts and crowd levels  -> data/live.json
+       ├─ reads alerts, crowd, trip updates -> data/live.json
        └─ deploys everything to GitHub Pages
+
+GitHub Actions "rt-refresh" (every five minutes)
+  └─ mrt-rt-snapshot + account key
+       └─ force-pushes live.json to the live-data branch
+          (alerts, crowd levels, per-trip delays and cancellations)
 
 browser
   └─ index.html reads the JSON files and renders the dot-matrix
-     board; wait = departure instant - Date.now()
+     board; wait = departure instant + live delay - Date.now().
+     The page fetches the live-data snapshot on every visit and
+     every 30 seconds. A delayed trip shows a red time; a canceled
+     trip shows CANC.
 ```
 
 The account key never reaches the browser. It exists only inside the
@@ -40,7 +48,29 @@ data only.
 The site then appears at
 `https://<owner>.github.io/<repository>/`.
 
-## How the workflow runs
+## Delays and cancellations
+
+A static page cannot call DataMall itself: the account key would be
+public, and DataMall sends no CORS headers. The nearest equivalent
+of a live connection is the `rt-refresh` workflow. It decodes the
+GTFS-Realtime trip updates in the Actions runner and publishes a
+small snapshot to the `live-data` branch, which
+`raw.githubusercontent.com` serves with open CORS. The page fetches
+that snapshot when a visitor opens it and every 30 seconds after,
+so a delay reaches the board within minutes of LTA publishing it.
+
+The snapshot maps trip identifiers to delays: `d` is the trip-level
+delay in seconds, `c` marks a cancellation, and `s` carries
+per-stop delays and skipped stops. The board files carry the trip
+identifier of every departure, so the page joins the two on the
+client.
+
+For true per-request freshness, put a small proxy with the key in
+front of DataMall (for example a Cloudflare Worker) and set its URL
+as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
+`data/config.json` names.
+
+## How the workflows run
 
 - The workflow file is `.github/workflows/pages.yml`.
 - It runs twice per hour, on every push to the default branch, and
@@ -56,20 +86,20 @@ The site then appears at
 | File | Content |
 |------|---------|
 | `data/stations.json` | All stations with their codes. |
-| `data/board/<CODE>.json` | Departures for one station: `[posix_seconds, line, destination, exact]` rows for the next 26 hours. An interchange has one alias file per code. |
-| `data/live.json` | Alerts, per-station crowd levels, and the generation time. |
+| `data/board/<CODE>.json` | Departures for one station: `[posix_seconds, line, destination, exact, trip_id]` rows for the next 26 hours. An interchange has one alias file per code. |
+| `data/live.json` | Alerts, crowd levels, per-trip delays, and the generation time. The `live-data` branch carries the same shape, refreshed every five minutes. |
 
-The page refetches the station file every 10 minutes and
-`data/live.json` every minute.
+The page refetches the station file every 10 minutes and the live
+snapshot every 30 seconds.
 
 ## Freshness compared with the server deployment
 
 | Aspect | Server (SRCF) | GitHub Pages |
 |--------|---------------|--------------|
 | Scheduled departures | live, per request | exact between refreshes |
-| Service alerts | at most 20 s old | up to ~30 min old |
-| Crowd levels | at most 20 s old | up to ~30 min old |
-| Trip update delays | per request | not included |
+| Service alerts | at most 20 s old | ~5 min old |
+| Crowd levels | at most 20 s old | ~5 min old |
+| Trip update delays | per request | ~5 min old, fetched on access |
 | Needs a server | yes | no |
 
 Raise the cron frequency in `pages.yml` for fresher live data. Each

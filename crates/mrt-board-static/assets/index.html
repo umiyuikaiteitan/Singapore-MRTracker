@@ -79,7 +79,7 @@
     <div class="legend">
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
-      <b class="red">service alert</b> ·
+      <b class="red">delayed, cancelled, or alert</b> ·
       ~ headway-based time
     </div>
   </div>
@@ -159,20 +159,45 @@ function drawText(text, colDot, rowDot, color) {
   }
 }
 
-/* Compute the next departures from the visitor's clock. */
+/* Look up the real-time state of one trip at this station. */
+function tripState(tid) {
+  const entry = live && live.trips ? live.trips[tid] : null;
+  if (!entry) return { delay: 0, canceled: false, skipped: false };
+  let delay = typeof entry.d === "number" ? entry.d : 0;
+  let skipped = false;
+  for (const stop of board.stops || []) {
+    const v = (entry.s || {})[stop];
+    if (v === "skip") skipped = true;
+    else if (typeof v === "number") delay = v;
+  }
+  return { delay, canceled: !!entry.c, skipped };
+}
+
+/* Compute the next departures from the visitor's clock, with the
+   real-time delays and cancellations applied. */
 function currentRows() {
   if (!board) return [];
   const now = Date.now() / 1000;
   const rows = [];
-  for (const [t, line, dest, exact] of board.rows) {
-    if (t < now - 15) continue;
-    rows.push({ wait: t - now, line, dest, exact: !!exact, t });
-    if (rows.length >= N_ROWS) break;
+  for (const [t, line, dest, exact, tid] of board.rows) {
+    const state = tripState(tid);
+    if (state.skipped) continue;
+    const eta = t + (state.canceled ? 0 : state.delay);
+    if (eta < now - 15) continue;
+    rows.push({
+      wait: eta - now,
+      line, dest,
+      exact: !!exact,
+      delayed: state.delay >= 60,
+      canceled: state.canceled,
+    });
   }
-  return rows;
+  rows.sort((a, b) => a.wait - b.wait);
+  return rows.slice(0, N_ROWS);
 }
 
 function waitText(row) {
+  if (row.canceled) return "CANC";
   const mins = Math.round(row.wait / 60);
   let text = mins <= 0 ? "ARR" : mins + " MIN";
   if (!row.exact) text = "~" + text;
@@ -191,7 +216,8 @@ function render() {
     drawText(String(i + 1), MARGIN, MARGIN + i * ROW_PITCH, AMBER);
     drawText(row.dest.toUpperCase().slice(0, 24), MARGIN + 2 * CHAR_W, MARGIN + i * ROW_PITCH, AMBER);
     const wait = waitText(row);
-    drawText(wait, MARGIN + (COLS_CHARS - wait.length) * CHAR_W, MARGIN + i * ROW_PITCH, GREEN);
+    const color = row.canceled || row.delayed ? RED : GREEN;
+    drawText(wait, MARGIN + (COLS_CHARS - wait.length) * CHAR_W, MARGIN + i * ROW_PITCH, color);
   });
   if (board && !rows.length) {
     drawText("NO TRAIN SERVICE", MARGIN + 8 * CHAR_W, MARGIN + ROW_PITCH, AMBER);
@@ -228,6 +254,7 @@ function tick(ts) {
 /* Data plumbing. */
 
 let currentStation = new URLSearchParams(location.search).get("station") || "NS1";
+let liveUrl = "data/live.json";
 
 async function fetchJson(path) {
   const res = await fetch(path, { cache: "no-cache" });
@@ -279,7 +306,7 @@ function updateHeader() {
   }
   tickerText = notice.toUpperCase();
 
-  const updated = new Date((board.generated || 0) * 1000);
+  const updated = new Date(((live && live.generated) || board.generated || 0) * 1000);
   document.getElementById("status").textContent =
     (live && live.live ? "live data" : "schedule only") + crowd +
     " · updated " + updated.toLocaleTimeString();
@@ -291,15 +318,26 @@ async function loadStation() {
 }
 
 async function loadLive() {
+  // A changing query defeats the CDN cache in front of the
+  // fast-refresh snapshot.
+  const bust = (liveUrl.includes("?") ? "&" : "?") + "t=" + Math.floor(Date.now() / 30000);
   try {
-    live = await fetchJson("data/live.json");
+    live = await fetchJson(liveUrl + bust);
   } catch (e) {
-    live = null;
+    try {
+      live = await fetchJson("data/live.json");
+    } catch (e2) {
+      live = null;
+    }
   }
   updateHeader();
 }
 
 async function init() {
+  try {
+    const config = await fetchJson("data/config.json");
+    if (config.live_url) liveUrl = config.live_url;
+  } catch (e) { /* keep the fallback */ }
   const stations = await fetchJson("data/stations.json");
   const select = document.getElementById("station");
   for (const station of stations) {
@@ -320,7 +358,7 @@ async function init() {
   await loadLive();
   await loadStation();
   setInterval(loadStation, 10 * 60 * 1000);
-  setInterval(loadLive, 60 * 1000);
+  setInterval(loadLive, 30 * 1000);
   requestAnimationFrame(tick);
 }
 

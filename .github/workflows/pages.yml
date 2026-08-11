@@ -28,11 +28,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "board"
 
       - name: Generate the static site
         run: cargo run --release -p mrt-board-static -- site
         env:
           LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
+          MRT_DELAYS_URL: https://raw.githubusercontent.com/${{ github.repository }}/live-data/live.json
 
       - uses: actions/upload-pages-artifact@v3
         with:
