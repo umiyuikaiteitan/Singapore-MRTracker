@@ -12,11 +12,12 @@ GitHub Actions (twice per hour)
        ├─ downloads the GTFS Schedule feed
        ├─ computes departures per station -> data/board/<CODE>.json
        ├─ reads alerts and crowd levels  -> data/live.json
-       └─ deploys everything to GitHub Pages
+       └─ deploys the network visualisation and classic board
 
 browser
-  └─ index.html reads the JSON files and renders the dot-matrix
-     board; wait = departure instant - Date.now()
+  ├─ index.html renders the interactive network visualisation
+  └─ board.html renders the classic dot-matrix destination board
+     wait = departure instant - Date.now()
 ```
 
 The account key never reaches the browser. It exists only inside the
@@ -39,6 +40,10 @@ data only.
 
 The site then appears at
 `https://<owner>.github.io/<repository>/`.
+
+The network visualisation is the landing page. The earlier dot-matrix
+board remains available at
+`https://<owner>.github.io/<repository>/board.html`.
 
 ## How the workflow runs
 

@@ -20,9 +20,13 @@
 //!
 //! ```text
 //! <output-dir>/
-//!   index.html               the board page
+//!   index.html               the network visualisation
+//!   board.html               the classic dot-matrix board
+//!   styles.css               visualisation styles
+//!   app.js                   visualisation interactions
 //!   .nojekyll                serve files as they are
 //!   assets/lta-identity.ttf  the header typeface
+//!   data/demo.json           schematic topology and offline preview
 //!   data/stations.json       all stations with their codes
 //!   data/live.json           alerts and crowd levels, if a key is set
 //!   data/board/<CODE>.json   departures per station, POSIX seconds
@@ -82,8 +86,19 @@ fn main() {
     let board_dir = data_dir.join("board");
     std::fs::create_dir_all(out.join("assets")).expect("cannot create the output directory");
     std::fs::create_dir_all(&board_dir).expect("cannot create the data directory");
-    std::fs::write(out.join("index.html"), include_str!("../assets/index.html"))
+    std::fs::write(out.join("index.html"), include_str!("../../../ui/index.html"))
         .expect("cannot write index.html");
+    std::fs::write(out.join("styles.css"), include_str!("../../../ui/styles.css"))
+        .expect("cannot write styles.css");
+    std::fs::write(out.join("app.js"), include_str!("../../../ui/app.js"))
+        .expect("cannot write app.js");
+    std::fs::write(
+        data_dir.join("demo.json"),
+        include_str!("../../../ui/data/demo.json"),
+    )
+    .expect("cannot write demo.json");
+    std::fs::write(out.join("board.html"), include_str!("../assets/index.html"))
+        .expect("cannot write board.html");
     std::fs::write(out.join(".nojekyll"), "").expect("cannot write .nojekyll");
     std::fs::write(
         out.join("assets/lta-identity.ttf"),

@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: "7,37 * * * *"
   push:
-    branches: ["claude/gtfs-rail-ingestion-lib-bcanbl"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
