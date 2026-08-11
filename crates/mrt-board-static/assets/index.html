@@ -104,8 +104,7 @@
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
       <b class="red">delayed, cancelled, or alert</b> ·
-      ~ headway-based time ·
-      all times Singapore time (SGT)
+      ~ headway-based time
     </div>
   </div>
 
@@ -379,7 +378,7 @@ function updateStatus() {
   if (crowd) parts.push("crowd: " + crowd);
 
   const generated = (live && live.generated) || (board && board.generated) || 0;
-  if (generated) parts.push("data " + sgtTime(generated * 1000, false) + " SGT");
+  if (generated) parts.push("data " + sgtTime(generated * 1000, false));
 
   let state = "";
   const tip = [];
@@ -388,7 +387,7 @@ function updateStatus() {
   } else if (liveFailedAt > liveCheckedAt) {
     parts.push("live check failed " + agoText((now - liveFailedAt) / 1000));
     state = "down";
-    tip.push("The last check at " + sgtTime(liveFailedAt, true) + " SGT reached no source.");
+    tip.push("The last check at " + sgtTime(liveFailedAt, true) + " reached no source.");
   } else {
     parts.push("checked " + agoText((now - liveCheckedAt) / 1000));
     const checkAge = (now - liveCheckedAt) / 1000;
@@ -398,11 +397,11 @@ function updateStatus() {
     state = !(live && live.live) || checkAge > 120 || dataAge > 900 ? "stale" : "ok";
   }
   if (liveCheckedAt) {
-    tip.push("Live status fetched at " + sgtTime(liveCheckedAt, true) + " SGT" +
+    tip.push("Live status fetched at " + sgtTime(liveCheckedAt, true) +
              (liveSourceUrl ? " from " + liveSourceUrl : "") + ".");
   }
   if (generated) {
-    tip.push("The snapshot was built at " + sgtTime(generated * 1000, true) + " SGT.");
+    tip.push("The snapshot was built at " + sgtTime(generated * 1000, true) + ".");
   }
   tip.push("The page checks the live feed every 30 seconds.");
 
