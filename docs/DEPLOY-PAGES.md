@@ -85,8 +85,7 @@ as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
 
 | File | Content |
 |------|---------|
-| `data/stations.json` | All stations with their codes and their slugs. |
-| `data/aliases.json` | The URL alias table: a normalized alias to the station code that names its board file. |
+| `data/stations.json` | All stations with their codes. |
 | `data/board/<CODE>.json` | Departures for one station: `[posix_seconds, line, destination, exact, trip_id]` rows for the next 26 hours. An interchange has one alias file per code. |
 | `data/live.json` | Alerts, crowd levels, per-trip delays, and the generation time. The `live-data` branch carries the same shape, refreshed every five minutes. |
 
@@ -95,22 +94,26 @@ snapshot every 30 seconds.
 
 ## Station aliases in the URL
 
-The `station` query parameter takes any alias of a station, so a link
-can read the way a person would say it:
+The `station` query parameter takes any code of a station, in any
+spelling:
 
 ```text
-?station=NS1           the station code
-?station=ns-1          any spelling of the code
-?station=EW24          any other code of the same interchange
-?station=jurong-east   the station name as a slug
-?station=Jurong+East   the station name as it appears on the board
+?station=NS1    the station code
+?station=ns1    any case
+?station=ns-1   any punctuation or spacing
+?station=EW24   any other code of the same interchange
 ```
 
-The generator writes `data/aliases.json`, and the page resolves the
-parameter against that table. The keys are normalized the same way on
-both sides: lower case, letters and digits only. An alias that names
-no station falls back to the default station. Picking a station from
-the dropdown writes the readable slug into the address bar.
+The page normalizes the parameter the way the library does — lower
+case, letters and digits only — and matches it against the codes in
+`data/stations.json`. An alias that names no station falls back to
+the default station instead of leaving a blank board. Picking a
+station from the dropdown writes its first code into the address bar.
+
+Station names are not aliases. The official feed carries names that
+two stations share, for example `Bukit Panjang` on the Downtown Line
+and on the Bukit Panjang LRT, so a name in a link would open an
+arbitrary one of them.
 
 ## Times and the freshness lamp
 

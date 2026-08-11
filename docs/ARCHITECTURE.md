@@ -58,15 +58,17 @@ Supporting types: `GtfsTime` (seconds on a service day) and
 implemented in the crate with the well-known civil calendar
 algorithms, so the crate needs no date-time dependency.
 
-The `alias` module turns names and codes into URL aliases.
-`alias::slug` builds the readable form of a name (`Jurong East`
-becomes `jurong-east`), and `alias::normalize` reduces any spelling
-to a comparison key (`NS1`, `ns-1`, and `NS 1` all become `ns1`).
-`RailNetwork::station_by_alias` resolves a key, and
-`RailNetwork::station_aliases` exports the whole table, so a static
-site can ship it to the browser and resolve the same links offline.
-A name that two stations share resolves to neither: an ambiguous
-alias never picks an arbitrary station.
+The `alias` module makes station codes usable in URLs.
+`alias::normalize` reduces any spelling to a comparison key (`NS1`,
+`ns-1`, and `NS 1` all become `ns1`), and
+`RailNetwork::station_by_alias` resolves that key against every code
+of every station, so each code of an interchange opens the same
+board. Station names stay out of the alias table on purpose: the
+feed carries names that two stations share, for example `Bukit
+Panjang` on the Downtown Line and on the Bukit Panjang LRT, and a
+name in a link would name an arbitrary one. `station_by_name`
+remains for callers that accept the ambiguity, such as the command
+line examples.
 
 ### Identifier model
 

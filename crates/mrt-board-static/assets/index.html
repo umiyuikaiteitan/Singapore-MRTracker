@@ -291,7 +291,6 @@ const DEFAULT_STATION = "NS1";
 
 let currentStation = DEFAULT_STATION; // the first code of the station on screen
 let stations = [];                    // data/stations.json content
-let aliasTable = null;                // data/aliases.json content
 let liveUrl = "data/live.json";
 let liveFallback = null;
 let liveCheckedAt = 0;                // visitor clock, last live fetch that worked
@@ -315,11 +314,13 @@ function chipColor(code) {
   return colors[prefix] || "#555";
 }
 
-/* Station aliases in the URL. A link names a station as a code
-   (NS1, ns-1, NS 1) or as a name (Jurong East, jurong-east). */
+/* Station aliases in the URL. Every code of a station names it, in
+   any spelling: NS1, ns-1, NS 1, and EW24 all open Jurong East.
+   Station names are no aliases, because the feed carries names that
+   two stations share, for example Bukit Panjang. */
 
-/* Reduce any spelling to a comparison key, the way the generator
-   does: lower case, letters and digits only. */
+/* Reduce any spelling to a comparison key, the way the library does:
+   lower case, letters and digits only. */
 function normalizeAlias(text) {
   return String(text == null ? "" : text).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -328,25 +329,10 @@ function normalizeAlias(text) {
 function resolveStation(alias) {
   const key = normalizeAlias(alias);
   if (!key) return null;
-  if (aliasTable && aliasTable[key]) return aliasTable[key];
-  // data/aliases.json is missing: resolve from the station list.
   for (const station of stations) {
     if (station.codes.some((code) => normalizeAlias(code) === key)) return station.codes[0];
   }
-  for (const station of stations) {
-    if (normalizeAlias(station.name) === key) return station.codes[0];
-  }
   return null;
-}
-
-/* The readable alias of a station, for the address bar. */
-function stationAlias(code) {
-  for (const station of stations) {
-    if (station.codes.includes(code)) {
-      return station.slug || normalizeAlias(station.name) || code;
-    }
-  }
-  return code;
 }
 
 /* The freshness of the live status feed. */
@@ -496,9 +482,6 @@ async function init() {
   } catch (e) { /* keep the fallback */ }
 
   stations = await fetchJson("data/stations.json");
-  try {
-    aliasTable = await fetchJson("data/aliases.json");
-  } catch (e) { /* resolve from the station list instead */ }
 
   const requested = new URLSearchParams(location.search).get("station");
   currentStation =
@@ -517,7 +500,7 @@ async function init() {
   }
   select.addEventListener("change", () => {
     currentStation = select.value;
-    history.replaceState(null, "", "?station=" + encodeURIComponent(stationAlias(currentStation)));
+    history.replaceState(null, "", "?station=" + encodeURIComponent(currentStation));
     loadStation();
   });
   await loadLive();

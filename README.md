@@ -124,11 +124,11 @@ cargo run -p mrt-board-web -- data/gtfs_schedule.zip
 ```
 
 A link opens a station directly through the `station` parameter. It
-takes any alias: a code in any spelling, any other code of an
-interchange, or the station name as a slug.
+takes any code of the station, in any spelling, so every code of an
+interchange opens the same board.
 
 ```text
-?station=NS1   ?station=ns-1   ?station=EW24   ?station=jurong-east
+?station=NS1   ?station=ns1   ?station=ns-1   ?station=EW24
 ```
 
 The board reads Singapore time (UTC+8) wherever it is opened, and the

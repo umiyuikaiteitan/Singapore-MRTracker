@@ -5,7 +5,7 @@
 //! plain indexes. They make lookups fast and keep the model easy to
 //! port to other languages.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use serde::Serialize;
 
@@ -67,15 +67,6 @@ pub struct Station {
 }
 
 impl Station {
-    /// Get the canonical URL alias of this station.
-    ///
-    /// The alias is the slug of the station name, for example
-    /// `jurong-east`. [`RailNetwork::station_by_alias`] resolves it,
-    /// together with every station code.
-    pub fn slug(&self) -> String {
-        alias::slug(&self.name)
-    }
-
     /// Report whether more than one line entry serves this station.
     ///
     /// Some feeds split one line into several route entries with the
@@ -536,34 +527,24 @@ impl RailNetwork {
             .map(StationId)
     }
 
-    /// Find a station by any alias: a code or a name, in any
-    /// spelling.
+    /// Find a station by any spelling of any of its codes.
     ///
     /// The alias runs through [`alias::normalize`], so `NS1`, `ns-1`,
-    /// `NS 1`, `Jurong East`, and `jurong-east` all reach the same
-    /// station. A name that two stations share resolves to neither,
-    /// because the alias would be ambiguous; look those up with
-    /// [`RailNetwork::station_by_code`].
+    /// and `NS 1` all reach the same station, and every code of an
+    /// interchange reaches it too. Station names are not aliases:
+    /// several stations share a name, so a name in a link would name
+    /// an arbitrary one. Use [`RailNetwork::station_by_name`] where
+    /// the ambiguity is acceptable.
     ///
     /// ```no_run
     /// # use mrt_gtfs::{GtfsFeed, RailNetwork};
     /// # let feed = GtfsFeed::from_zip_path("data/singapore-gtfs.zip").unwrap();
     /// # let network = RailNetwork::from_feed(&feed).unwrap();
-    /// let station = network.station_by_alias("jurong-east").unwrap();
+    /// let station = network.station_by_alias("ns-1").unwrap();
     /// assert_eq!(network.station(station).name, "Jurong East");
     /// ```
     pub fn station_by_alias(&self, alias: &str) -> Option<StationId> {
         self.alias_index.get(&alias::normalize(alias)).copied()
-    }
-
-    /// List every alias the network resolves, as normalized keys.
-    ///
-    /// An application that resolves aliases elsewhere, for example a
-    /// static site that ships the table to the browser, can export
-    /// the pairs and stay in step with
-    /// [`RailNetwork::station_by_alias`].
-    pub fn station_aliases(&self) -> impl Iterator<Item = (&str, StationId)> {
-        self.alias_index.iter().map(|(key, &id)| (key.as_str(), id))
     }
 
     /// Get the station that contains the given stop.
@@ -608,12 +589,11 @@ impl RailNetwork {
     }
 }
 
-/// Build the alias table: a normalized alias to one station.
+/// Build the alias table: a normalized station code to its station.
 ///
-/// Station codes come first, because they are unique by definition.
-/// Station names follow, and a name yields to a code of the same
-/// spelling. A name that two stations share names neither of them, so
-/// an ambiguous alias never resolves to an arbitrary station.
+/// Codes alone make the table. A station name is not an alias: the
+/// feed carries names that two stations share, for example `Bukit
+/// Panjang` on the Downtown Line and on the Bukit Panjang LRT.
 fn build_alias_index(stations: &[Station]) -> HashMap<String, StationId> {
     let mut index: HashMap<String, StationId> = HashMap::new();
     for (i, station) in stations.iter().enumerate() {
@@ -622,28 +602,6 @@ fn build_alias_index(stations: &[Station]) -> HashMap<String, StationId> {
             if !key.is_empty() {
                 index.insert(key, StationId(i));
             }
-        }
-    }
-
-    let mut names: HashMap<String, StationId> = HashMap::new();
-    let mut ambiguous: HashSet<String> = HashSet::new();
-    for (i, station) in stations.iter().enumerate() {
-        let key = alias::normalize(&station.name);
-        if key.is_empty() || index.contains_key(&key) {
-            continue;
-        }
-        match names.get(&key) {
-            Some(&owner) if owner != StationId(i) => {
-                ambiguous.insert(key);
-            }
-            _ => {
-                names.insert(key, StationId(i));
-            }
-        }
-    }
-    for (key, id) in names {
-        if !ambiguous.contains(&key) {
-            index.insert(key, id);
         }
     }
     index
@@ -666,42 +624,34 @@ mod tests {
     }
 
     #[test]
-    fn the_alias_index_holds_codes_and_names() {
+    fn the_alias_index_holds_every_code() {
         let stations = [station("Jurong East", &["NS1", "EW24"])];
         let index = build_alias_index(&stations);
         assert_eq!(index.get("ns1"), Some(&StationId(0)));
         assert_eq!(index.get("ew24"), Some(&StationId(0)));
-        assert_eq!(index.get("jurongeast"), Some(&StationId(0)));
     }
 
     #[test]
-    fn a_shared_name_resolves_to_neither_station() {
+    fn a_station_name_is_not_an_alias() {
+        // Two stations share the name, so neither owns it.
         let stations = [
-            station("Punggol", &["NE17"]),
-            station("Punggol", &["PTC"]),
+            station("Bukit Panjang", &["DT1"]),
+            station("Bukit Panjang", &["BP6"]),
+        ];
+        let index = build_alias_index(&stations);
+        assert_eq!(index.get("bukitpanjang"), None);
+        assert_eq!(index.get("dt1"), Some(&StationId(0)));
+        assert_eq!(index.get("bp6"), Some(&StationId(1)));
+    }
+
+    #[test]
+    fn a_station_without_a_code_adds_no_alias() {
+        let stations = [
+            station("Woodlands Depot", &[]),
             station("Sengkang", &["NE16"]),
         ];
         let index = build_alias_index(&stations);
-        // The ambiguous name disappears; the codes still work.
-        assert_eq!(index.get("punggol"), None);
-        assert_eq!(index.get("ne17"), Some(&StationId(0)));
-        assert_eq!(index.get("ptc"), Some(&StationId(1)));
-        assert_eq!(index.get("sengkang"), Some(&StationId(2)));
-    }
-
-    #[test]
-    fn a_code_outranks_a_name_of_the_same_spelling() {
-        let stations = [station("NS1", &["EW24"]), station("Jurong East", &["NS1"])];
-        let index = build_alias_index(&stations);
-        assert_eq!(index.get("ns1"), Some(&StationId(1)));
-    }
-
-    #[test]
-    fn a_station_without_a_usable_name_adds_no_alias() {
-        let stations = [station("", &["NS1"]), station("!!!", &["NS2"])];
-        let index = build_alias_index(&stations);
-        assert_eq!(index.len(), 2);
-        assert_eq!(index.get("ns1"), Some(&StationId(0)));
-        assert_eq!(index.get("ns2"), Some(&StationId(1)));
+        assert_eq!(index.len(), 1);
+        assert_eq!(index.get("ne16"), Some(&StationId(1)));
     }
 }

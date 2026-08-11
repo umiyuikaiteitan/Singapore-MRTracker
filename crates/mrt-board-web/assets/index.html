@@ -318,19 +318,18 @@ function chipColor(code) {
   return colors[prefix] || "#555";
 }
 
-/* The server takes any alias of a station: NS1, ns-1, or
-   jurong-east. Whatever the link carries goes straight through. */
+/* The server takes any code of a station, in any spelling: NS1,
+   ns-1, or EW24. Whatever the link carries goes straight through. */
 let currentStation =
   new URLSearchParams(location.search).get("station") || "NS1";
 
-let slugByCode = {};     // station code -> readable alias
 let liveState = "";      // "live" or "schedule only"
 let liveCrowd = "";      // the crowd level of the station, if known
 let fetchedAt = 0;       // visitor clock, last board fetch that worked
 let failedAt = 0;        // visitor clock, last board fetch that failed
 
-/* Reduce any spelling to a comparison key, the way the server does:
-   lower case, letters and digits only. */
+/* Reduce any spelling of a code to a comparison key, the way the
+   server does: lower case, letters and digits only. */
 function normalizeAlias(text) {
   return String(text == null ? "" : text).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -388,18 +387,14 @@ async function init() {
   const res = await fetch("/api/stations");
   const stations = await res.json();
   const select = document.getElementById("station");
-  // The alias in the URL may be a code, a name, or a slug, so match
-  // the dropdown on the same normalized key the server uses.
+  // The URL may spell the code in any way, so match the dropdown on
+  // the same normalized key the server uses.
   const key = normalizeAlias(currentStation);
   for (const station of stations) {
     const option = document.createElement("option");
     option.value = station.codes[0];
     option.textContent = station.name + " (" + station.codes.join(", ") + ")";
-    slugByCode[station.codes[0]] = station.slug || normalizeAlias(station.name);
-    const matches =
-      station.codes.some((code) => normalizeAlias(code) === key) ||
-      normalizeAlias(station.name) === key;
-    if (matches) {
+    if (station.codes.some((code) => normalizeAlias(code) === key)) {
       option.selected = true;
       currentStation = station.codes[0];
     }
@@ -407,8 +402,7 @@ async function init() {
   }
   select.addEventListener("change", () => {
     currentStation = select.value;
-    const alias = slugByCode[currentStation] || currentStation;
-    history.replaceState(null, "", "?station=" + encodeURIComponent(alias));
+    history.replaceState(null, "", "?station=" + encodeURIComponent(currentStation));
     refresh();
   });
   await refresh();

@@ -119,21 +119,12 @@ fn station_lookups_ignore_case() {
 }
 
 #[test]
-fn aliases_resolve_codes_and_names_in_any_spelling() {
+fn aliases_resolve_every_code_in_any_spelling() {
     let network = network();
     let jurong = network.station_by_code("NS1").unwrap();
 
-    for spelling in [
-        "NS1",
-        "ns1",
-        "ns-1",
-        "NS 1",
-        "EW24",
-        "Jurong East",
-        "jurong-east",
-        "JurongEast",
-        "  jurong east  ",
-    ] {
+    // Every code of the interchange, in any spelling.
+    for spelling in ["NS1", "ns1", "ns-1", "NS 1", " ns1 ", "EW24", "ew-24"] {
         assert_eq!(
             network.station_by_alias(spelling),
             Some(jurong),
@@ -141,41 +132,26 @@ fn aliases_resolve_codes_and_names_in_any_spelling() {
         );
     }
 
+    // Every station code of the network resolves back to its station.
+    for (index, station) in network.stations().iter().enumerate() {
+        for code in &station.codes {
+            assert_eq!(network.station_by_alias(code), Some(StationId(index)));
+        }
+    }
+
     assert_eq!(network.station_by_alias("XX99"), None);
     assert_eq!(network.station_by_alias(""), None);
 }
 
 #[test]
-fn a_station_slug_is_its_canonical_alias() {
+fn a_station_name_is_not_an_alias() {
+    // Names repeat in the official feed, so a name in a URL would
+    // name an arbitrary station. `station_by_name` stays for callers
+    // that accept that, for example a command line.
     let network = network();
-    for (index, station) in network.stations().iter().enumerate() {
-        let slug = station.slug();
-        assert_eq!(
-            network.station_by_alias(&slug),
-            Some(StationId(index)),
-            "the slug {slug:?} does not resolve back to its station"
-        );
-    }
-    let cck = network.station(network.station_by_code("BP1").unwrap());
-    assert_eq!(cck.slug(), "choa-chu-kang");
-}
-
-#[test]
-fn the_exported_alias_table_matches_the_lookup() {
-    let network = network();
-    let table: Vec<(String, StationId)> = network
-        .station_aliases()
-        .map(|(key, id)| (key.to_string(), id))
-        .collect();
-
-    for (key, id) in &table {
-        assert_eq!(network.station_by_alias(key), Some(*id));
-    }
-    // Every code and every station name is in the table.
-    let keys: Vec<&str> = table.iter().map(|(k, _)| k.as_str()).collect();
-    for expected in ["ns1", "ew24", "bp2", "jurongeast", "southview"] {
-        assert!(keys.contains(&expected), "the table lacks {expected:?}");
-    }
+    assert_eq!(network.station_by_alias("Jurong East"), None);
+    assert_eq!(network.station_by_alias("jurong-east"), None);
+    assert!(network.station_by_name("Jurong East").is_some());
 }
 
 #[test]
