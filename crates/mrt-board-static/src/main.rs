@@ -143,9 +143,12 @@ fn main() {
     let live_url = std::env::var("MRT_DELAYS_URL")
         .ok()
         .filter(|u| !u.is_empty());
+    let fallback_url = std::env::var("MRT_DELAYS_FALLBACK_URL")
+        .ok()
+        .filter(|u| !u.is_empty());
     write_json(
         &data_dir.join("config.json"),
-        &serde_json::json!({ "live_url": live_url }),
+        &serde_json::json!({ "live_url": live_url, "fallback_url": fallback_url }),
     );
     eprintln!("Site ready in {}.", out.display());
 }
