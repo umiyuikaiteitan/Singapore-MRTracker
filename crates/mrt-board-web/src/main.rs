@@ -36,6 +36,10 @@ use mrt_live::{match_train_line, LiveBoardBuilder};
 /// How long the server reuses fetched live data.
 const LIVE_TTL: Duration = Duration::from_secs(20);
 
+/// How long the live forwarder reuses one snapshot. DataMall sees at
+/// most one snapshot refresh per minute, whatever the request rate.
+const FORWARDER_TTL: Duration = Duration::from_secs(60);
+
 /// The default listen address. Override with `MRT_BOARD_ADDR`.
 const DEFAULT_ADDR: &str = "127.0.0.1:8600";
 
@@ -51,6 +55,10 @@ struct App {
     network: RailNetwork,
     client: Option<DataMallClient<UreqTransport>>,
     cache: Mutex<LiveCache>,
+    /// Origins that may read `/api/live`, from `MRT_ALLOWED_ORIGINS`.
+    allowed_origins: Vec<String>,
+    /// The cached forwarder snapshot and its fetch time.
+    forwarder: Mutex<Option<(Instant, String)>>,
 }
 
 fn main() {
@@ -67,10 +75,22 @@ fn main() {
         eprintln!("LTA_DATAMALL_ACCOUNT_KEY is not set; the board shows the static schedule.");
     }
 
+    let allowed_origins: Vec<String> = std::env::var("MRT_ALLOWED_ORIGINS")
+        .unwrap_or_default()
+        .split(',')
+        .map(|o| o.trim().trim_end_matches('/').to_string())
+        .filter(|o| !o.is_empty())
+        .collect();
+    if allowed_origins.is_empty() {
+        eprintln!("MRT_ALLOWED_ORIGINS is not set; /api/live answers 403.");
+    }
+
     let app = App {
         network,
         client,
         cache: Mutex::new(LiveCache::default()),
+        allowed_origins,
+        forwarder: Mutex::new(None),
     };
 
     let addr = std::env::var("MRT_BOARD_ADDR").unwrap_or_else(|_| DEFAULT_ADDR.to_string());
@@ -93,6 +113,25 @@ fn main() {
                 Ok(body) => json(body),
                 Err(message) => error_json(404, &message),
             },
+            "/api/live" => {
+                let origin = header_value(&request, "Origin");
+                let referer = header_value(&request, "Referer");
+                match allowed_origin(&app.allowed_origins, origin.as_deref(), referer.as_deref()) {
+                    Some(origin) => {
+                        let cors = tiny_http::Header::from_bytes(
+                            &b"Access-Control-Allow-Origin"[..],
+                            origin.as_bytes(),
+                        )
+                        .expect("valid header");
+                        let vary = tiny_http::Header::from_bytes(&b"Vary"[..], &b"Origin"[..])
+                            .expect("valid header");
+                        json(forwarder_json(&app))
+                            .with_header(cors)
+                            .with_header(vary)
+                    }
+                    None => error_json(403, "origin not allowed"),
+                }
+            }
             _ => error_json(404, "not found"),
         };
         let _ = request.respond(response);
@@ -231,6 +270,70 @@ fn live_layers(
     )
 }
 
+/// Get one request header value.
+fn header_value(request: &tiny_http::Request, name: &str) -> Option<String> {
+    request
+        .headers()
+        .iter()
+        .find(|h| h.field.as_str().as_str().eq_ignore_ascii_case(name))
+        .map(|h| h.value.as_str().to_string())
+}
+
+/// Check the request origin against the allowlist.
+///
+/// The function accepts a matching `Origin` header, or a `Referer`
+/// that starts with an allowed origin. It returns the origin value
+/// for the `Access-Control-Allow-Origin` response header.
+///
+/// Browsers enforce this check; command-line clients can forge the
+/// headers. The forwarder therefore protects the DataMall quota and
+/// deters casual reuse, not determined actors.
+fn allowed_origin(
+    allowlist: &[String],
+    origin: Option<&str>,
+    referer: Option<&str>,
+) -> Option<String> {
+    if let Some(origin) = origin {
+        let origin = origin.trim_end_matches('/');
+        return allowlist
+            .iter()
+            .find(|allowed| allowed.eq_ignore_ascii_case(origin))
+            .cloned();
+    }
+    if let Some(referer) = referer {
+        return allowlist
+            .iter()
+            .find(|allowed| {
+                referer.len() > allowed.len()
+                    && referer[..allowed.len()].eq_ignore_ascii_case(allowed)
+                    && referer.as_bytes().get(allowed.len()) == Some(&b'/')
+            })
+            .cloned();
+    }
+    None
+}
+
+/// Get the cached live snapshot, or fetch a fresh one after the TTL.
+fn forwarder_json(app: &App) -> String {
+    let mut cache = app.forwarder.lock().expect("forwarder lock");
+    if let Some((at, body)) = cache.as_ref() {
+        if at.elapsed() < FORWARDER_TTL {
+            return body.clone();
+        }
+    }
+    let now_unix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("the clock is after 1970")
+        .as_secs() as i64;
+    let snapshot = match &app.client {
+        Some(client) => mrt_board_static::live_snapshot(client, now_unix),
+        None => serde_json::json!({ "generated": now_unix, "live": false }),
+    };
+    let body = snapshot.to_string();
+    *cache = Some((Instant::now(), body.clone()));
+    body
+}
+
 // ----------------------------------------------------------------------
 // HTTP plumbing
 // ----------------------------------------------------------------------
@@ -325,5 +428,38 @@ mod tests {
         let (_, query) = split_query("/x?a=100%&b=%zz");
         assert_eq!(query["a"], "100%");
         assert_eq!(query["b"], "%zz");
+    }
+
+    #[test]
+    fn origins_match_the_allowlist() {
+        let allow = vec!["https://example.github.io".to_string()];
+
+        // A matching Origin header passes, in any case.
+        assert_eq!(
+            allowed_origin(&allow, Some("https://example.github.io"), None).as_deref(),
+            Some("https://example.github.io")
+        );
+        assert!(allowed_origin(&allow, Some("HTTPS://EXAMPLE.GITHUB.IO"), None).is_some());
+        // A trailing slash on the Origin value is tolerated.
+        assert!(allowed_origin(&allow, Some("https://example.github.io/"), None).is_some());
+
+        // Other origins fail, including prefix tricks.
+        assert!(allowed_origin(&allow, Some("https://evil.example"), None).is_none());
+        assert!(
+            allowed_origin(&allow, Some("https://example.github.io.evil.example"), None).is_none()
+        );
+
+        // A Referer passes only with a path boundary.
+        assert!(allowed_origin(&allow, None, Some("https://example.github.io/repo/")).is_some());
+        assert!(allowed_origin(
+            &allow,
+            None,
+            Some("https://example.github.io.evil.example/")
+        )
+        .is_none());
+
+        // No headers, or an empty allowlist, fail.
+        assert!(allowed_origin(&allow, None, None).is_none());
+        assert!(allowed_origin(&[], Some("https://example.github.io"), None).is_none());
     }
 }

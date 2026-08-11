@@ -419,6 +419,7 @@ dependencies = [
 name = "mrt-board-web"
 version = "0.1.0"
 dependencies = [
+ "mrt-board-static",
  "mrt-datamall",
  "mrt-gtfs",
  "mrt-gtfs-rt",

@@ -1,11 +1,12 @@
 name: Deploy board to GitHub Pages
 
 on:
-  # Refresh the schedule data and the live layer twice per hour.
+  # Refresh the schedule data once per hour. The SRCF forwarder and
+  # the rt-refresh fallback carry the live layer between deploys.
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "7 * * * *"
   push:
-    branches: ["claude/gtfs-rail-ingestion-lib-bcanbl"]
+    branches: ["claude/srcf-live-forwarder"]
   workflow_dispatch:
 
 permissions:
@@ -35,7 +36,8 @@ jobs:
         run: cargo run --release -p mrt-board-static -- site
         env:
           LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
-          MRT_DELAYS_URL: https://raw.githubusercontent.com/${{ github.repository }}/live-data/live.json
+          MRT_DELAYS_URL: https://hw737.user.srcf.net/rail/api/live
+          MRT_DELAYS_FALLBACK_URL: https://raw.githubusercontent.com/${{ github.repository }}/live-data/live.json
 
       - uses: actions/upload-pages-artifact@v3
         with:

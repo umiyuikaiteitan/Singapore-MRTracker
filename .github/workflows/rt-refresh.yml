@@ -1,10 +1,11 @@
 name: Refresh live data
 
 on:
-  # Publish a fresh delays-and-alerts snapshot every five minutes.
-  # GitHub can delay scheduled runs; this is a target, not a promise.
+  # Publish a fallback delays-and-alerts snapshot twice per hour.
+  # The SRCF forwarder is the primary live source; this snapshot
+  # covers visitors when the forwarder is unreachable.
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "11,41 * * * *"
   workflow_dispatch:
 
 permissions:

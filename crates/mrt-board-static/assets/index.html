@@ -255,6 +255,7 @@ function tick(ts) {
 
 let currentStation = new URLSearchParams(location.search).get("station") || "NS1";
 let liveUrl = "data/live.json";
+let liveFallback = null;
 
 async function fetchJson(path) {
   const res = await fetch(path, { cache: "no-cache" });
@@ -318,18 +319,19 @@ async function loadStation() {
 }
 
 async function loadLive() {
-  // A changing query defeats the CDN cache in front of the
-  // fast-refresh snapshot.
-  const bust = (liveUrl.includes("?") ? "&" : "?") + "t=" + Math.floor(Date.now() / 30000);
-  try {
-    live = await fetchJson(liveUrl + bust);
-  } catch (e) {
+  // A changing query defeats any CDN cache in front of a snapshot.
+  const bust = "?t=" + Math.floor(Date.now() / 30000);
+  const urls = [liveUrl];
+  if (liveFallback) urls.push(liveFallback);
+  if (liveUrl !== "data/live.json") urls.push("data/live.json");
+  for (const url of urls) {
     try {
-      live = await fetchJson("data/live.json");
-    } catch (e2) {
-      live = null;
-    }
+      live = await fetchJson(url + (url.includes("?") ? "&" : "?") + bust.slice(1));
+      updateHeader();
+      return;
+    } catch (e) { /* try the next source */ }
   }
+  live = null;
   updateHeader();
 }
 
@@ -337,6 +339,7 @@ async function init() {
   try {
     const config = await fetchJson("data/config.json");
     if (config.live_url) liveUrl = config.live_url;
+    if (config.fallback_url) liveFallback = config.fallback_url;
   } catch (e) { /* keep the fallback */ }
   const stations = await fetchJson("data/stations.json");
   const select = document.getElementById("station");
