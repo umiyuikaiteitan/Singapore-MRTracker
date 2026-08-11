@@ -31,7 +31,7 @@
 use std::io::Cursor;
 use std::path::Path;
 
-use mrt_datamall::{DataMallClient, TrainLine};
+use mrt_datamall::DataMallClient;
 use mrt_gtfs::{GtfsFeed, GtfsTime, RailNetwork, ServiceDate, StationId, ZipSource};
 
 /// The offset of Singapore Standard Time from UTC, in seconds.
@@ -117,6 +117,7 @@ fn main() {
         let body = serde_json::json!({
             "name": station.name,
             "codes": station.codes,
+            "stops": station.platform_stop_ids,
             "generated": now_unix,
             "rows": rows,
         });
@@ -129,13 +130,23 @@ fn main() {
 
     // Step 5: write the live layer, if a key is available.
     let live = match &client {
-        Some(client) => live_json(client, now_unix),
+        Some(client) => mrt_board_static::live_snapshot(client, now_unix),
         None => {
             eprintln!("LTA_DATAMALL_ACCOUNT_KEY is not set; live.json carries no data.");
             serde_json::json!({ "generated": now_unix, "live": false })
         }
     };
     write_json(&data_dir.join("live.json"), &live);
+
+    // Step 6: point the page at the fast-refresh snapshot, when the
+    // caller names one. The page falls back to data/live.json.
+    let live_url = std::env::var("MRT_DELAYS_URL")
+        .ok()
+        .filter(|u| !u.is_empty());
+    write_json(
+        &data_dir.join("config.json"),
+        &serde_json::json!({ "live_url": live_url }),
+    );
     eprintln!("Site ready in {}.", out.display());
 }
 
@@ -176,63 +187,12 @@ fn departures_json(
                 line.name,
                 destination,
                 if dep.exact { 1 } else { 0 },
+                dep.trip_id,
             ]));
         }
     }
     rows.sort_by_key(|r| r[0].as_i64().unwrap_or(0));
     rows
-}
-
-/// Get the live layer: alerts and per-station crowd levels.
-fn live_json(
-    client: &DataMallClient<mrt_datamall::UreqTransport>,
-    now_unix: i64,
-) -> serde_json::Value {
-    let alerts = client.train_service_alerts().ok();
-    let mut crowd = serde_json::Map::new();
-    for line in TrainLine::ALL {
-        let Ok(records) = client.platform_crowd(line) else {
-            continue;
-        };
-        for record in records {
-            let level = match record.crowd_level {
-                mrt_datamall::CrowdLevel::Low => "l",
-                mrt_datamall::CrowdLevel::Moderate => "m",
-                mrt_datamall::CrowdLevel::High => "h",
-                mrt_datamall::CrowdLevel::Unknown => continue,
-            };
-            crowd.insert(record.station, serde_json::json!(level));
-        }
-    }
-    let (disrupted, segments, messages) = match &alerts {
-        Some(alerts) => (
-            alerts.status == mrt_datamall::ServiceStatus::Disrupted,
-            alerts
-                .affected_segments
-                .iter()
-                .map(|s| {
-                    serde_json::json!({
-                        "line": s.line,
-                        "stations": s.station_codes(),
-                    })
-                })
-                .collect::<Vec<_>>(),
-            alerts
-                .messages
-                .iter()
-                .map(|m| m.content.clone())
-                .collect::<Vec<_>>(),
-        ),
-        None => (false, Vec::new(), Vec::new()),
-    };
-    serde_json::json!({
-        "generated": now_unix,
-        "live": true,
-        "disrupted": disrupted,
-        "segments": segments,
-        "messages": messages,
-        "crowd": crowd,
-    })
 }
 
 fn write_json(path: &Path, value: &serde_json::Value) {

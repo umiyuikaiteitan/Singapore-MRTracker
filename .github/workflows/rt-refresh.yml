@@ -1,0 +1,48 @@
+name: Refresh live data
+
+on:
+  # Publish a fallback delays-and-alerts snapshot twice per hour.
+  # The SRCF forwarder is the primary live source; this snapshot
+  # covers visitors when the forwarder is unreachable.
+  schedule:
+    - cron: "11,41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-data
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "board"
+
+      - name: Build the live snapshot
+        run: cargo run --release -p mrt-board-static --bin mrt-rt-snapshot -- live.json
+        env:
+          LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
+
+      # The live-data branch holds one file and one commit. A force
+      # push replaces the commit, so the branch history stays flat.
+      - name: Publish to the live-data branch
+        run: |
+          mkdir publish
+          cp live.json publish/
+          cd publish
+          git init -q -b live-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add live.json
+          git commit -qm "Live data snapshot"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" live-data

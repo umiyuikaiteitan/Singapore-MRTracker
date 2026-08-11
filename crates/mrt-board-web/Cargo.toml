@@ -13,6 +13,7 @@ mrt-gtfs.workspace = true
 mrt-gtfs-rt.workspace = true
 mrt-datamall.workspace = true
 mrt-live = { path = "../mrt-live" }
+mrt-board-static = { path = "../mrt-board-static" }
 serde.workspace = true
 serde_json.workspace = true
 tiny_http = "0.12"
