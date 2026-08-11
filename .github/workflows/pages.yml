@@ -1,0 +1,49 @@
+name: Deploy board to GitHub Pages
+
+on:
+  # Refresh the schedule data and the live layer twice per hour.
+  schedule:
+    - cron: "7,37 * * * *"
+  push:
+    branches: ["claude/gtfs-rail-ingestion-lib-bcanbl"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer run replaces a queued one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Generate the static site
+        run: cargo run --release -p mrt-board-static -- site
+        env:
+          LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

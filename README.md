@@ -29,6 +29,7 @@ own.
 | `crates/mrt-datamall` | Talk to the LTA DataMall API: dataset links, downloads, alerts, crowd density. |
 | `crates/mrt-live` | Merge the static network with the live data into view models for maps, boards, and panels. |
 | `crates/mrt-board-web` | Serve a dot-matrix destination board in the browser (draft). |
+| `crates/mrt-board-static` | Generate the board as a static site for GitHub Pages. |
 
 Other important paths:
 
@@ -36,6 +37,7 @@ Other important paths:
 |------|---------|
 | `docs/ARCHITECTURE.md` | The design of the library and the porting notes. |
 | `docs/DATA-SOURCES.md` | The DataMall endpoints and their response formats. |
+| `docs/DEPLOY-PAGES.md` | How to host the board on GitHub Pages. |
 | `scripts/regenerate-gtfs-rt.sh` | The generator for the vendored Protocol Buffer code. |
 | `crates/*/examples/` | Small example programs. |
 
@@ -117,6 +119,13 @@ path:
 
 ```sh
 cargo run -p mrt-board-web -- data/gtfs_schedule.zip
+```
+
+To host the board without a server, generate it as a static site.
+See `docs/DEPLOY-PAGES.md` for the GitHub Pages workflow:
+
+```sh
+cargo run --release -p mrt-board-static -- site data/gtfs_schedule.zip
 ```
 
 ## Library overview

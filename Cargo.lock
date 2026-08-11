@@ -405,6 +405,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mrt-board-static"
+version = "0.1.0"
+dependencies = [
+ "mrt-datamall",
+ "mrt-gtfs",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "mrt-board-web"
 version = "0.1.0"
 dependencies = [
