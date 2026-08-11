@@ -27,6 +27,11 @@
 //!   data/live.json           alerts and crowd levels, if a key is set
 //!   data/board/<CODE>.json   departures per station, POSIX seconds
 //! ```
+//!
+//! The page names a station in its `station` query parameter. Every
+//! code of a station is an alias of it, in any spelling, so
+//! `?station=NS1`, `?station=ns-1`, and `?station=EW24` all open the
+//! Jurong East board.
 
 use std::io::Cursor;
 use std::path::Path;
@@ -91,7 +96,8 @@ fn main() {
     )
     .expect("cannot write the font");
 
-    // Step 3: write the station list.
+    // Step 3: write the station list. The page resolves the `station`
+    // parameter of a link against these codes, in any spelling.
     let now_unix = unix_now();
     let mut stations: Vec<serde_json::Value> = network
         .stations()

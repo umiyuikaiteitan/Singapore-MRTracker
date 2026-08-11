@@ -19,6 +19,10 @@
 //!    lines, patterns, and schedules, and answer queries such as
 //!    [`RailNetwork::departure_board`].
 //!
+//! The [`alias`] module turns station names and codes into
+//! URL-friendly aliases, so a link can name a station as `NS1` or as
+//! `jurong-east`.
+//!
 //! # Example
 //!
 //! ```no_run
@@ -52,6 +56,7 @@
 
 #![warn(missing_docs)]
 
+pub mod alias;
 mod date;
 mod error;
 mod feed;

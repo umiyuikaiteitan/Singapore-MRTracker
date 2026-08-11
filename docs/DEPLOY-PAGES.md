@@ -92,6 +92,48 @@ as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
 The page refetches the station file every 10 minutes and the live
 snapshot every 30 seconds.
 
+## Station aliases in the URL
+
+The `station` query parameter takes any code of a station, in any
+spelling:
+
+```text
+?station=NS1    the station code
+?station=ns1    any case
+?station=ns-1   any punctuation or spacing
+?station=EW24   any other code of the same interchange
+```
+
+The page normalizes the parameter the way the library does — lower
+case, letters and digits only — and matches it against the codes in
+`data/stations.json`. An alias that names no station falls back to
+the default station instead of leaving a blank board. Picking a
+station from the dropdown writes its first code into the address bar.
+
+Station names are not aliases. The official feed carries names that
+two stations share, for example `Bukit Panjang` on the Downtown Line
+and on the Bukit Panjang LRT, so a name in a link would open an
+arbitrary one of them.
+
+## Times and the freshness lamp
+
+The board shows Singapore time (UTC+8) wherever a visitor opens it:
+the panel clock, the snapshot time in the status line, and the
+tooltip all read SGT. Wait times need no timezone at all, because the
+board files carry POSIX instants and the page subtracts the visitor's
+clock.
+
+The status line ends with a lamp and the age of the live data:
+
+| Lamp | Meaning |
+|------|---------|
+| Green | The last check reached a live source, and the snapshot is current. |
+| Amber | The poll is falling behind (no answer for two minutes), the snapshot is more than 15 minutes old, or the deployment carries no live layer. |
+| Red | The last check reached no source at all. The board keeps the last snapshot on screen and says how long ago it arrived. |
+
+The tooltip on the status line names the exact fetch time, the source
+that answered, and the time the snapshot was built.
+
 ## Freshness compared with the server deployment
 
 | Aspect | Server (SRCF) | GitHub Pages |

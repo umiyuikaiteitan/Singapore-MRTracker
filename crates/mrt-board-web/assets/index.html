@@ -73,9 +73,23 @@
   }
   .status {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
     font-size: 14px;
     color: #9a9aa2;
   }
+  /* The freshness lamp of the live data. */
+  .lamp {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #55565e;
+    flex: none;
+  }
+  .lamp.ok { background: var(--green); box-shadow: 0 0 7px rgba(53,212,97,.7); }
+  .lamp.stale { background: var(--amber); box-shadow: 0 0 7px rgba(229,213,0,.7); }
+  .lamp.down { background: var(--red); box-shadow: 0 0 7px rgba(255,75,58,.7); }
   canvas { display: block; width: 100%; height: auto; background: #000; border-radius: 8px; }
   .legend {
     margin-top: 10px;
@@ -97,14 +111,18 @@
     <div class="head">
       <h1 id="name">&nbsp;</h1>
       <span id="codes"></span>
-      <span class="status" id="status"></span>
+      <span class="status" id="status">
+        <span class="lamp" id="lamp"></span>
+        <span id="statusText">starting up</span>
+      </span>
     </div>
     <canvas id="panel"></canvas>
     <div class="legend">
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
       <b class="red">delayed or cancelled</b> ·
-      ~ headway-based time
+      ~ headway-based time ·
+      all times Singapore time (SGT)
     </div>
   </div>
 
@@ -165,6 +183,18 @@ let litRows = [];    // static rows content: [{text, col, color}]
 let tickerText = ""; // scrolling text, empty = show the clock
 let tickerOffset = 0;
 
+/* Singapore keeps UTC+8 all year and has no daylight saving, so the
+   board reads the same clock everywhere it is opened. */
+const SGT_OFFSET_MS = 8 * 3600 * 1000;
+
+/* Format a POSIX millisecond instant as a Singapore clock time. */
+function sgtTime(ms, withSeconds) {
+  const d = new Date(ms + SGT_OFFSET_MS);
+  const parts = [d.getUTCHours(), d.getUTCMinutes()];
+  if (withSeconds) parts.push(d.getUTCSeconds());
+  return parts.map((n) => String(n).padStart(2, "0")).join(":");
+}
+
 function drawDot(x, y, color) {
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -212,12 +242,8 @@ function render() {
     drawText(tickerText, col, TICKER_TOP, AMBER);
     ctx.restore();
   } else {
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    const ss = String(now.getSeconds()).padStart(2, "0");
-    const text = hh + ":" + mm + ":" + ss;
-    drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W / 1, TICKER_TOP, GREEN);
+    const text = sgtTime(Date.now(), true) + " SGT";
+    drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W, TICKER_TOP, GREEN);
   }
 }
 
@@ -262,11 +288,9 @@ function setBoard(data) {
     codes.appendChild(chip);
     codes.appendChild(document.createTextNode(" "));
   }
-  const crowd = board.rows.length ? board.rows[0].crowd : null;
-  document.getElementById("status").textContent =
-    (data.live ? "live" : "schedule only") +
-    (crowd ? " · crowd: " + crowd.toLowerCase() : "") +
-    " · updated " + new Date().toLocaleTimeString();
+  liveState = data.live ? "live" : "schedule only";
+  liveCrowd = board.rows.length && board.rows[0].crowd ? board.rows[0].crowd.toLowerCase() : "";
+  updateStatus();
 
   litRows = [];
   board.rows.slice(0, N_ROWS).forEach((row, i) => {
@@ -294,16 +318,68 @@ function chipColor(code) {
   return colors[prefix] || "#555";
 }
 
+/* The server takes any code of a station, in any spelling: NS1,
+   ns-1, or EW24. Whatever the link carries goes straight through. */
 let currentStation =
   new URLSearchParams(location.search).get("station") || "NS1";
+
+let liveState = "";      // "live" or "schedule only"
+let liveCrowd = "";      // the crowd level of the station, if known
+let fetchedAt = 0;       // visitor clock, last board fetch that worked
+let failedAt = 0;        // visitor clock, last board fetch that failed
+
+/* Reduce any spelling of a code to a comparison key, the way the
+   server does: lower case, letters and digits only. */
+function normalizeAlias(text) {
+  return String(text == null ? "" : text).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function agoText(secs) {
+  if (secs < 10) return "just now";
+  if (secs < 90) return Math.round(secs) + " s ago";
+  const mins = Math.round(secs / 60);
+  if (mins < 90) return mins + " min ago";
+  return Math.round(mins / 60) + " h ago";
+}
+
+/* Repaint the status line: the data source, the crowd level, and the
+   Singapore time of the last successful fetch. The lamp carries the
+   same state: green when the data is current, amber when the poll is
+   falling behind, red when the last fetch failed. */
+function updateStatus() {
+  const now = Date.now();
+  const parts = [];
+  let state = "";
+  if (liveState) parts.push(liveState);
+  if (liveCrowd) parts.push("crowd: " + liveCrowd);
+  if (failedAt > fetchedAt) {
+    parts.push("connection lost " + agoText((now - failedAt) / 1000));
+    state = "down";
+  } else if (fetchedAt) {
+    const age = (now - fetchedAt) / 1000;
+    parts.push("fetched " + sgtTime(fetchedAt, true) + " SGT, " + agoText(age));
+    state = age > 60 ? "stale" : "ok";
+  } else {
+    parts.push("waiting for the server");
+  }
+  const lamp = document.getElementById("lamp");
+  lamp.classList.toggle("ok", state === "ok");
+  lamp.classList.toggle("stale", state === "stale");
+  lamp.classList.toggle("down", state === "down");
+  document.getElementById("statusText").textContent = parts.join(" · ");
+}
 
 async function refresh() {
   try {
     const res = await fetch("/api/board?station=" + encodeURIComponent(currentStation));
     if (!res.ok) throw new Error("board fetch failed");
-    setBoard(await res.json());
+    const data = await res.json();
+    fetchedAt = Date.now();
+    failedAt = 0;
+    setBoard(data);
   } catch (e) {
-    document.getElementById("status").textContent = "connection lost";
+    failedAt = Date.now();
+    updateStatus();
   }
 }
 
@@ -311,11 +387,17 @@ async function init() {
   const res = await fetch("/api/stations");
   const stations = await res.json();
   const select = document.getElementById("station");
+  // The URL may spell the code in any way, so match the dropdown on
+  // the same normalized key the server uses.
+  const key = normalizeAlias(currentStation);
   for (const station of stations) {
     const option = document.createElement("option");
     option.value = station.codes[0];
     option.textContent = station.name + " (" + station.codes.join(", ") + ")";
-    if (station.codes.includes(currentStation)) option.selected = true;
+    if (station.codes.some((code) => normalizeAlias(code) === key)) {
+      option.selected = true;
+      currentStation = station.codes[0];
+    }
     select.appendChild(option);
   }
   select.addEventListener("change", () => {
@@ -325,6 +407,7 @@ async function init() {
   });
   await refresh();
   setInterval(refresh, 15000);
+  setInterval(updateStatus, 1000);
   requestAnimationFrame(tick);
 }
 

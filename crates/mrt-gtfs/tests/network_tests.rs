@@ -119,6 +119,42 @@ fn station_lookups_ignore_case() {
 }
 
 #[test]
+fn aliases_resolve_every_code_in_any_spelling() {
+    let network = network();
+    let jurong = network.station_by_code("NS1").unwrap();
+
+    // Every code of the interchange, in any spelling.
+    for spelling in ["NS1", "ns1", "ns-1", "NS 1", " ns1 ", "EW24", "ew-24"] {
+        assert_eq!(
+            network.station_by_alias(spelling),
+            Some(jurong),
+            "alias {spelling:?} does not resolve to Jurong East"
+        );
+    }
+
+    // Every station code of the network resolves back to its station.
+    for (index, station) in network.stations().iter().enumerate() {
+        for code in &station.codes {
+            assert_eq!(network.station_by_alias(code), Some(StationId(index)));
+        }
+    }
+
+    assert_eq!(network.station_by_alias("XX99"), None);
+    assert_eq!(network.station_by_alias(""), None);
+}
+
+#[test]
+fn a_station_name_is_not_an_alias() {
+    // Names repeat in the official feed, so a name in a URL would
+    // name an arbitrary station. `station_by_name` stays for callers
+    // that accept that, for example a command line.
+    let network = network();
+    assert_eq!(network.station_by_alias("Jurong East"), None);
+    assert_eq!(network.station_by_alias("jurong-east"), None);
+    assert!(network.station_by_name("Jurong East").is_some());
+}
+
+#[test]
 fn interchanges_are_stations_with_more_than_one_line() {
     let network = network();
     let names: Vec<&str> = network
