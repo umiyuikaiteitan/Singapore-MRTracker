@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MRTracker board</title>
+<style>
+  @font-face {
+    font-family: "LTA Identity";
+    src: url("/assets/lta-identity.ttf") format("truetype");
+  }
+  :root {
+    --bg: #0b0b0d;
+    --fascia: #17181c;
+    --amber: #e5d500;
+    --green: #35d461;
+    --red: #ff4b3a;
+    --text: #e8e8e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "LTA Identity", "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  select {
+    background: var(--fascia);
+    color: var(--text);
+    border: 1px solid #33343a;
+    border-radius: 6px;
+    font: inherit;
+    padding: 6px 10px;
+  }
+  .fascia {
+    background: var(--fascia);
+    border-radius: 14px;
+    padding: 18px 22px 22px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.55);
+    width: min(960px, 100%);
+  }
+  .head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .head h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: .5px;
+  }
+  .chip {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .status {
+    margin-left: auto;
+    font-size: 14px;
+    color: #9a9aa2;
+  }
+  canvas { display: block; width: 100%; height: auto; background: #000; border-radius: 8px; }
+  .legend {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #85858d;
+  }
+  .legend b.amber { color: var(--amber); }
+  .legend b.green { color: var(--green); }
+  .legend b.red { color: var(--red); }
+</style>
+</head>
+<body>
+  <div class="controls">
+    <label for="station">Station</label>
+    <select id="station"></select>
+  </div>
+
+  <div class="fascia">
+    <div class="head">
+      <h1 id="name">&nbsp;</h1>
+      <span id="codes"></span>
+      <span class="status" id="status"></span>
+    </div>
+    <canvas id="panel"></canvas>
+    <div class="legend">
+      <b class="amber">destination</b> ·
+      <b class="green">on time</b> ·
+      <b class="red">delayed or cancelled</b> ·
+      ~ headway-based time
+    </div>
+  </div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ */
+/* 5x7 dot-matrix font. Each glyph is 7 rows of 5 bits, MSB left.     */
+/* ------------------------------------------------------------------ */
+const FONT = {
+  "A":[0x0E,0x11,0x11,0x1F,0x11,0x11,0x11], "B":[0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E],
+  "C":[0x0E,0x11,0x10,0x10,0x10,0x11,0x0E], "D":[0x1E,0x11,0x11,0x11,0x11,0x11,0x1E],
+  "E":[0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F], "F":[0x1F,0x10,0x10,0x1E,0x10,0x10,0x10],
+  "G":[0x0E,0x11,0x10,0x17,0x11,0x11,0x0F], "H":[0x11,0x11,0x11,0x1F,0x11,0x11,0x11],
+  "I":[0x0E,0x04,0x04,0x04,0x04,0x04,0x0E], "J":[0x07,0x02,0x02,0x02,0x02,0x12,0x0C],
+  "K":[0x11,0x12,0x14,0x18,0x14,0x12,0x11], "L":[0x10,0x10,0x10,0x10,0x10,0x10,0x1F],
+  "M":[0x11,0x1B,0x15,0x15,0x11,0x11,0x11], "N":[0x11,0x19,0x15,0x13,0x11,0x11,0x11],
+  "O":[0x0E,0x11,0x11,0x11,0x11,0x11,0x0E], "P":[0x1E,0x11,0x11,0x1E,0x10,0x10,0x10],
+  "Q":[0x0E,0x11,0x11,0x11,0x15,0x12,0x0D], "R":[0x1E,0x11,0x11,0x1E,0x14,0x12,0x11],
+  "S":[0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E], "T":[0x1F,0x04,0x04,0x04,0x04,0x04,0x04],
+  "U":[0x11,0x11,0x11,0x11,0x11,0x11,0x0E], "V":[0x11,0x11,0x11,0x11,0x0A,0x0A,0x04],
+  "W":[0x11,0x11,0x11,0x15,0x15,0x1B,0x11], "X":[0x11,0x11,0x0A,0x04,0x0A,0x11,0x11],
+  "Y":[0x11,0x11,0x0A,0x04,0x04,0x04,0x04], "Z":[0x1F,0x01,0x02,0x04,0x08,0x10,0x1F],
+  "0":[0x0E,0x11,0x13,0x15,0x19,0x11,0x0E], "1":[0x04,0x0C,0x04,0x04,0x04,0x04,0x0E],
+  "2":[0x0E,0x11,0x01,0x06,0x08,0x10,0x1F], "3":[0x1F,0x02,0x04,0x02,0x01,0x11,0x0E],
+  "4":[0x02,0x06,0x0A,0x12,0x1F,0x02,0x02], "5":[0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E],
+  "6":[0x06,0x08,0x10,0x1E,0x11,0x11,0x0E], "7":[0x1F,0x01,0x02,0x04,0x08,0x08,0x08],
+  "8":[0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E], "9":[0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C],
+  " ":[0,0,0,0,0,0,0],
+  ":":[0x00,0x04,0x04,0x00,0x04,0x04,0x00], ".":[0x00,0x00,0x00,0x00,0x00,0x0C,0x0C],
+  "-":[0x00,0x00,0x00,0x0E,0x00,0x00,0x00], "/":[0x01,0x02,0x04,0x04,0x08,0x10,0x00],
+  "&":[0x0C,0x12,0x14,0x08,0x15,0x12,0x0D], "'":[0x04,0x04,0x08,0x00,0x00,0x00,0x00],
+  "(":[0x02,0x04,0x08,0x08,0x08,0x04,0x02], ")":[0x08,0x04,0x02,0x02,0x02,0x04,0x08],
+  "+":[0x00,0x04,0x04,0x1F,0x04,0x04,0x00], "!":[0x04,0x04,0x04,0x04,0x04,0x00,0x04],
+  ",":[0x00,0x00,0x00,0x00,0x0C,0x04,0x08], "~":[0x00,0x00,0x08,0x15,0x02,0x00,0x00],
+};
+
+/* Panel geometry, in dots. */
+const CHAR_W = 6, CHAR_H = 8;        // one glyph cell with spacing
+const COLS_CHARS = 36;               // characters per line
+const MARGIN = 4;                    // dot margin around the content
+const GRID_W = COLS_CHARS * CHAR_W + MARGIN * 2;
+const ROW_PITCH = 10;                // dot rows per board line
+const N_ROWS = 4;                    // arrival rows
+const TICKER_TOP = MARGIN + N_ROWS * ROW_PITCH + 2;
+const GRID_H = TICKER_TOP + CHAR_H + MARGIN;
+const PITCH = 10, RADIUS = 3.4;      // dot pitch and radius in pixels
+
+const AMBER = "#e5d500", GREEN = "#35d461", RED = "#ff4b3a", OFF = "#151509";
+
+const canvas = document.getElementById("panel");
+canvas.width = GRID_W * PITCH;
+canvas.height = GRID_H * PITCH;
+const ctx = canvas.getContext("2d");
+
+/* The lit dots for the current frame: map "x,y" -> color. */
+let litRows = [];    // static rows content: [{text, col, color}]
+let tickerText = ""; // scrolling text, empty = show the clock
+let tickerOffset = 0;
+
+function drawDot(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x * PITCH + PITCH / 2, y * PITCH + PITCH / 2, RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/* Draw one text string with its top-left glyph corner at a dot
+   position. Returns nothing; unknown characters print as space. */
+function drawText(text, colDot, rowDot, color) {
+  for (let i = 0; i < text.length; i++) {
+    const glyph = FONT[text[i].toUpperCase()] || FONT[" "];
+    for (let r = 0; r < 7; r++) {
+      const bits = glyph[r];
+      for (let c = 0; c < 5; c++) {
+        if (bits & (1 << (4 - c))) {
+          drawDot(colDot + i * CHAR_W + c, rowDot + r, color);
+        }
+      }
+    }
+  }
+}
+
+function render() {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // The unlit dot grid gives the panel its texture.
+  for (let y = 0; y < GRID_H; y++) {
+    for (let x = 0; x < GRID_W; x++) drawDot(x, y, OFF);
+  }
+
+  for (const row of litRows) {
+    drawText(row.text, MARGIN + row.col * CHAR_W, MARGIN + row.line * ROW_PITCH, row.color);
+  }
+
+  // Ticker: scroll the notices, or show the clock.
+  if (tickerText) {
+    const totalDots = tickerText.length * CHAR_W;
+    let col = GRID_W - (tickerOffset % (totalDots + GRID_W));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(MARGIN * PITCH, 0, (GRID_W - 2 * MARGIN) * PITCH, canvas.height);
+    ctx.clip();
+    drawText(tickerText, col, TICKER_TOP, AMBER);
+    ctx.restore();
+  } else {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    const text = hh + ":" + mm + ":" + ss;
+    drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W / 1, TICKER_TOP, GREEN);
+  }
+}
+
+let lastFrame = 0;
+function tick(ts) {
+  if (ts - lastFrame > 33) {   // about 30 frames per second
+    tickerOffset += 1;
+    render();
+    lastFrame = ts;
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ------------------------------------------------------------------ */
+/* Data plumbing.                                                     */
+/* ------------------------------------------------------------------ */
+
+function waitText(row) {
+  if (row.canceled) return "CANC";
+  const mins = Math.round(row.departs_in_secs / 60);
+  let text = mins <= 0 ? "ARR" : mins + " MIN";
+  if (row.approximate) text = "~" + text;
+  return text;
+}
+
+function rowColor(row) {
+  if (row.canceled) return RED;
+  if ((row.delay_secs || 0) >= 60) return RED;
+  return GREEN;
+}
+
+function setBoard(data) {
+  const board = data.board;
+  document.getElementById("name").textContent = board.station_name;
+  const codes = document.getElementById("codes");
+  codes.innerHTML = "";
+  for (const code of board.station_codes) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = code;
+    chip.style.background = chipColor(code);
+    codes.appendChild(chip);
+    codes.appendChild(document.createTextNode(" "));
+  }
+  const crowd = board.rows.length ? board.rows[0].crowd : null;
+  document.getElementById("status").textContent =
+    (data.live ? "live" : "schedule only") +
+    (crowd ? " · crowd: " + crowd.toLowerCase() : "") +
+    " · updated " + new Date().toLocaleTimeString();
+
+  litRows = [];
+  board.rows.slice(0, N_ROWS).forEach((row, i) => {
+    const dest = row.destination.toUpperCase().slice(0, 24);
+    const wait = waitText(row);
+    litRows.push({ line: i, col: 0, text: String(i + 1), color: AMBER });
+    litRows.push({ line: i, col: 2, text: dest, color: AMBER });
+    litRows.push({ line: i, col: COLS_CHARS - wait.length, text: wait, color: rowColor(row) });
+  });
+  if (!board.rows.length) {
+    litRows.push({ line: 1, col: 8, text: "NO TRAIN SERVICE", color: AMBER });
+  }
+  tickerText = board.notices.length ? board.notices.join("   +++   ").toUpperCase() : "";
+}
+
+/* Line colors for the station code chips, by code prefix. */
+function chipColor(code) {
+  const prefix = code.match(/^[A-Z]+/)[0];
+  const colors = {
+    NS: "#d42e12", EW: "#009645", CG: "#009645", NE: "#9900aa",
+    CC: "#fa9e0d", CE: "#fa9e0d", DT: "#005ec4", TE: "#9d5b25",
+    BP: "#748477", SK: "#748477", SE: "#748477", SW: "#748477", STC: "#748477",
+    PG: "#748477", PE: "#748477", PW: "#748477", PTC: "#748477",
+  };
+  return colors[prefix] || "#555";
+}
+
+let currentStation =
+  new URLSearchParams(location.search).get("station") || "NS1";
+
+async function refresh() {
+  try {
+    const res = await fetch("/api/board?station=" + encodeURIComponent(currentStation));
+    if (!res.ok) throw new Error("board fetch failed");
+    setBoard(await res.json());
+  } catch (e) {
+    document.getElementById("status").textContent = "connection lost";
+  }
+}
+
+async function init() {
+  const res = await fetch("/api/stations");
+  const stations = await res.json();
+  const select = document.getElementById("station");
+  for (const station of stations) {
+    const option = document.createElement("option");
+    option.value = station.codes[0];
+    option.textContent = station.name + " (" + station.codes.join(", ") + ")";
+    if (station.codes.includes(currentStation)) option.selected = true;
+    select.appendChild(option);
+  }
+  select.addEventListener("change", () => {
+    currentStation = select.value;
+    history.replaceState(null, "", "?station=" + encodeURIComponent(currentStation));
+    refresh();
+  });
+  await refresh();
+  setInterval(refresh, 15000);
+  requestAnimationFrame(tick);
+}
+
+init();
+</script>
+</body>
+</html>

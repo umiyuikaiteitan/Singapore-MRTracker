@@ -1,14 +1,82 @@
 const state = { data: null, activeLine: null, stationId: null, zoom: 1 };
 
-const lineById = (id) => state.data.lines.find((line) => line.id === id);
 const stationById = (id) => state.data.stations.find((station) => station.id === id);
 const crowdColor = { Low: "#4de2c5", Moderate: "#ffc34c", High: "#ff6b61", Unknown: "#819096" };
+const crowdRank = { Unknown: 0, Low: 1, Moderate: 2, High: 3 };
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+})[character]);
+
+async function fetchJson(path) {
+  const response = await fetch(path, { cache: "no-cache" });
+  if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+  return response.json();
+}
 
 async function loadData() {
-  const response = await fetch("./data/demo.json");
-  if (!response.ok) throw new Error(`Could not load preview data (${response.status})`);
-  state.data = await response.json();
+  state.data = await fetchJson("./data/demo.json");
   state.stationId = state.data.stations.find((station) => station.featured)?.id ?? state.data.stations[0].id;
+
+  try {
+    await hydrateFromPages();
+    document.querySelector("#data-source").textContent = "GitHub Pages · generated from main";
+  } catch (error) {
+    console.info("Generated Pages data is unavailable; using the checked-in preview.", error);
+  }
+}
+
+async function hydrateFromPages() {
+  const live = await fetchJson("./data/live.json");
+  const boards = await Promise.all(state.data.stations.map(async (station) => {
+    try {
+      return await fetchJson(`./data/board/${encodeURIComponent(station.codes[0])}.json`);
+    } catch {
+      return null;
+    }
+  }));
+
+  let newest = live.generated || 0;
+  state.data.stations.forEach((station, index) => {
+    const board = boards[index];
+    if (board) {
+      newest = Math.max(newest, board.generated || 0);
+      const now = Date.now() / 1000;
+      station.board = board.rows
+        .filter(([departure]) => departure >= now - 15)
+        .slice(0, 10)
+        .map(([departure, lineCode, destination, exact]) => ({
+          line_code: lineCode,
+          destination,
+          departs_in_secs: Math.max(0, departure - now),
+          clock_time: new Date(departure * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          approximate: !exact,
+          crowd: station.crowd,
+        }));
+    }
+
+    const levels = station.codes.map((code) => ({ l: "Low", m: "Moderate", h: "High" })[live.crowd?.[code]] || "Unknown");
+    station.crowd = levels.sort((a, b) => crowdRank[b] - crowdRank[a])[0] || "Unknown";
+    station.board.forEach((row) => { row.crowd = station.crowd; });
+
+    const affected = (live.segments || []).some((segment) =>
+      (segment.stations || []).some((code) => station.codes.includes(code)));
+    station.notices = live.disrupted && affected ? (live.messages || []) : [];
+  });
+
+  state.data.network_status = state.data.network_status.map((status) => {
+    const affected = (live.segments || []).some((segment) =>
+      segment.line?.toUpperCase().startsWith(status.line_code));
+    return {
+      ...status,
+      status: live.disrupted && affected ? "Disrupted" : "Normal",
+      message: live.disrupted && affected ? (live.messages || []).join(" ") : "",
+    };
+  });
+  if (newest) {
+    state.data.generated_at = new Date(newest * 1000).toLocaleString("en-SG", {
+      timeZone: "Asia/Singapore", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+    }) + " SGT";
+  }
 }
 
 function renderSummary() {
@@ -19,7 +87,7 @@ function renderSummary() {
   document.querySelector("#service-label").textContent = disrupted.length ? `${disrupted.length} service notice${disrupted.length > 1 ? "s" : ""}` : "All services normal";
   document.querySelector("#service-copy").textContent = disrupted.length ? disrupted.map((line) => line.message).join(" ") : "No active disruptions across the monitored MRT and LRT lines.";
   const next = stationById(state.stationId).board[0];
-  document.querySelector("#next-service").textContent = `${Math.max(1, Math.round(next.departs_in_secs / 60))} min`;
+  document.querySelector("#next-service").textContent = next ? `${Math.max(1, Math.round(next.departs_in_secs / 60))} min` : "—";
 }
 
 function renderFilters() {
@@ -90,14 +158,14 @@ function departureMarkup(row, full = false, index = 0) {
   const line = state.data.lines.find((item) => item.code === row.line_code);
   const minutes = Math.max(1, Math.round(row.departs_in_secs / 60));
   if (full) return `<article class="full-row">
-    <div class="platform">Platform ${index % 2 ? "B" : "A"}<br /><span class="code-pill" style="--line:${line?.color};--text:${line?.text_color}">${row.line_code}</span></div>
-    <h3><span class="via">${row.approximate ? "Scheduled" : "Live estimate"}</span>${row.destination}</h3>
+    <div class="platform">Platform ${index % 2 ? "B" : "A"}<br /><span class="code-pill" style="--line:${line?.color};--text:${line?.text_color}">${escapeHtml(row.line_code)}</span></div>
+    <h3><span class="via">${row.approximate ? "Scheduled" : "Live estimate"}</span>${escapeHtml(row.destination)}</h3>
     <div class="eta"><strong>${minutes}</strong><span>mins</span></div>
   </article>`;
   return `<article class="departure">
     <div class="departure-main">
-      <span class="line-name">${line?.name ?? row.line_code}</span>
-      <h3>${row.destination}</h3>
+      <span class="line-name">${escapeHtml(line?.name ?? row.line_code)}</span>
+      <h3>${escapeHtml(row.destination)}</h3>
       <div class="meta"><span>${row.clock_time}</span><span>·</span><span class="crowd-tag" style="--crowd:${crowdColor[row.crowd]}">${row.crowd} crowd</span></div>
     </div>
     <div class="eta"><strong>${minutes}</strong><span>mins</span></div>
@@ -109,7 +177,9 @@ function renderStation() {
   document.querySelector("#station-codes").innerHTML = codePills(station);
   document.querySelector("#station-name").textContent = station.name;
   document.querySelector("#station-crowd").textContent = `${station.crowd} crowd level · ${station.lines.length > 1 ? "Interchange" : "Single line"}`;
-  document.querySelector("#departures").innerHTML = station.board.slice(0, 3).map((row) => departureMarkup(row)).join("");
+  document.querySelector("#departures").innerHTML = station.board.length
+    ? station.board.slice(0, 3).map((row) => departureMarkup(row)).join("")
+    : '<p class="empty-state">No upcoming departures in the generated schedule.</p>';
   const notice = document.querySelector("#station-notice");
   notice.hidden = !station.notices.length;
   notice.textContent = station.notices.join(" ");
@@ -126,7 +196,9 @@ function renderBoardPicker() {
 function renderFullBoard() {
   const station = stationById(state.stationId);
   document.querySelector("#board-station").value = state.stationId;
-  document.querySelector("#full-board").innerHTML = station.board.map((row, index) => departureMarkup(row, true, index)).join("");
+  document.querySelector("#full-board").innerHTML = station.board.length
+    ? station.board.map((row, index) => departureMarkup(row, true, index)).join("")
+    : '<p class="empty-state">No upcoming departures in the generated schedule.</p>';
 }
 
 function bindControls() {

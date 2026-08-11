@@ -5,6 +5,8 @@ members = [
     "crates/mrt-gtfs-rt",
     "crates/mrt-datamall",
     "crates/mrt-live",
+    "crates/mrt-board-web",
+    "crates/mrt-board-static",
 ]
 
 [workspace.package]

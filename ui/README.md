@@ -1,9 +1,11 @@
 # MRTracker UI draft
 
-This directory contains a dependency-free web prototype for the
-`mrt-live` view models. It does not call an API. The checked-in preview
-data lets contributors review the information design without an LTA
-DataMall account key.
+This directory contains the dependency-free GitHub Pages interface for
+the `mrt-live` view models. The checked-in preview data lets
+contributors review the information design without an LTA DataMall
+account key. When the Pages generator supplies `stations.json`,
+per-station board files, and `live.json`, the interface replaces the
+preview rows with generated schedule and live data.
 
 ## Preview
 
@@ -29,9 +31,15 @@ exports:
 - Station coordinates and line paths are presentation data. They do
   not come from the deprecated arrival API.
 
-The next implementation step is a small adapter that writes the
-serialized Rust view models into this shape. Keep fetching and secrets
+The `mrt-board-static` crate writes the schedule and live layers that
+the interface consumes on GitHub Pages. Keep fetching and secrets
 outside the browser.
+
+## GitHub Pages
+
+`mrt-board-static` copies this interface to the site root. It preserves
+the earlier dot-matrix interface at `board.html`. The Pages workflow
+generates the data on `main`; pull-request branches do not deploy.
 
 ## Visual references
 

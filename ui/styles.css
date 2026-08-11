@@ -34,6 +34,7 @@ button { color: inherit; }
 .brand-mark i:nth-child(3) { height: 11px; align-self: end; }
 .view-tabs { align-self: stretch; display: flex; }
 .tab { min-width: 100px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); cursor: pointer; }
+.tab-link { display: grid; place-items: center; text-decoration: none; font-size: 13px; }
 .tab:hover, .tab:focus-visible { color: var(--ink); }
 .tab.is-active { color: var(--ink); border-color: var(--signal); }
 .sync-state { justify-self: end; display: flex; align-items: center; gap: 10px; text-align: right; font-size: 12px; }
@@ -115,6 +116,7 @@ h1 em { color: var(--muted); font-style: normal; }
 .eta strong { display: block; font-size: 42px; line-height: .85; font-weight: 400; }
 .eta span { color: var(--muted); font-size: 11px; }
 .station-notice { margin: 16px -8px 0; padding: 12px; background: color-mix(in srgb, var(--danger) 12%, transparent); color: #ffaaa4; font-size: 12px; line-height: 1.45; }
+.empty-state { padding: 24px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 
 .board-view { border: 1px solid var(--rule); padding: 30px; background: #0b0e10; }
 .board-topline { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin-bottom: 24px; }
