@@ -1,8 +1,7 @@
 # Data sources
 
 This document lists the LTA DataMall resources that the library
-uses, with their request and response formats. It applies the
-ASD-STE100 writing rules where possible.
+uses, with their request and response formats.
 
 The authoritative reference is the LTA DataMall API User Guide:
 <https://datamall.lta.gov.sg/content/dam/datamall/datasets/LTA_DataMall_API_User_Guide.pdf>.

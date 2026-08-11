@@ -1,7 +1,7 @@
 # Architecture
 
 This document describes the design of the Singapore-MRTracker
-library. It applies the ASD-STE100 writing rules where possible.
+library.
 
 ## Layers
 
@@ -136,7 +136,9 @@ the HTTP status. The library does not panic on bad input data.
   responses through a mock transport.
 - The GTFS-Realtime tests encode synthetic Protocol Buffer messages
   and decode them again.
-- No test uses the network.
+- The tests marked `#[ignore]` verify the client against the live
+  DataMall API. Run them with an account key:
+  `cargo test --workspace -- --ignored`.
 
 ## Porting notes
 
