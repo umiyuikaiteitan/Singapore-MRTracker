@@ -317,6 +317,27 @@ mod tests {
     }
 
     #[test]
+    fn a_blank_alert_text_leaves_the_message_out() {
+        // The LTA feed publishes a Downtown Line alert whose header
+        // is one space. The entry still ships, because its effect
+        // and its route still matter, but it carries no message.
+        let mut blank = alert(AlertEffect::ModifiedService);
+        blank.header = Some(" ".to_string());
+        blank.description = None;
+        blank.informed = vec![InformedEntity {
+            agency_id: None,
+            route_id: Some("DTL".to_string()),
+            stop_id: None,
+            trip_id: None,
+        }];
+        let json = rt_alerts_json(&[blank], 1_000);
+        let entry = &json.as_array().unwrap()[0];
+        assert!(entry.get("m").is_none());
+        assert_eq!(entry["e"], "ms");
+        assert_eq!(entry["r"], serde_json::json!(["DTL"]));
+    }
+
+    #[test]
     fn an_alert_without_text_and_entities_stays_out() {
         let mut empty = alert(AlertEffect::NoService);
         empty.header = None;

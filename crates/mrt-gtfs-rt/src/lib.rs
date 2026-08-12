@@ -294,13 +294,18 @@ impl AlertEffect {
     ///
     /// A board marks an affected departure as disturbed, but keeps
     /// its scheduled time: the alert carries no delay figure.
+    ///
+    /// [`AlertEffect::ModifiedService`] stays out. The LTA feed uses
+    /// it for planned adjustments that run for months, for example
+    /// the Sengkang West LRT loop closure, and those already sit in
+    /// the published timetable. Marking every departure of such a
+    /// line disturbed would leave the line permanently red and hide
+    /// the disruptions that matter. The alert still reaches the
+    /// board as a notice.
     pub fn disturbs_service(self) -> bool {
         matches!(
             self,
-            AlertEffect::ReducedService
-                | AlertEffect::SignificantDelays
-                | AlertEffect::Detour
-                | AlertEffect::ModifiedService
+            AlertEffect::ReducedService | AlertEffect::SignificantDelays | AlertEffect::Detour
         )
     }
 }
@@ -321,9 +326,18 @@ impl Alert {
         })
     }
 
-    /// Get the best display text: the header, or else the description.
+    /// Get the best display text: the header, or else the
+    /// description.
+    ///
+    /// A blank string is no text. The LTA feed publishes alerts
+    /// whose header is one space, and a board would scroll an empty
+    /// notice for them.
     pub fn text(&self) -> Option<&str> {
-        self.header.as_deref().or(self.description.as_deref())
+        [self.header.as_deref(), self.description.as_deref()]
+            .into_iter()
+            .flatten()
+            .map(str::trim)
+            .find(|text| !text.is_empty())
     }
 
     fn from_pb(alert: &pb::Alert) -> Self {
@@ -668,12 +682,12 @@ mod tests {
             AlertEffect::ReducedService,
             AlertEffect::SignificantDelays,
             AlertEffect::Detour,
-            AlertEffect::ModifiedService,
         ] {
             assert!(effect.disturbs_service(), "{effect:?} must disturb");
             assert!(!effect.stops_service());
         }
         for effect in [
+            AlertEffect::ModifiedService,
             AlertEffect::AdditionalService,
             AlertEffect::Other,
             AlertEffect::Unknown,
@@ -684,5 +698,33 @@ mod tests {
             assert!(!effect.stops_service());
             assert!(!effect.disturbs_service());
         }
+    }
+
+    #[test]
+    fn a_modified_schedule_is_a_notice_only() {
+        // The LTA feed marks months-long planned adjustments this
+        // way. They must not paint a whole line as disturbed.
+        assert!(!AlertEffect::ModifiedService.disturbs_service());
+        assert!(!AlertEffect::ModifiedService.stops_service());
+    }
+
+    #[test]
+    fn blank_alert_text_counts_as_no_text() {
+        let mut alert = alert_with_periods(Vec::new());
+        alert.header = Some(" ".to_string());
+        alert.description = None;
+        assert_eq!(alert.text(), None);
+
+        // A blank header falls through to the description.
+        alert.description = Some("Modified Schedule".to_string());
+        assert_eq!(alert.text(), Some("Modified Schedule"));
+
+        // Surrounding space never reaches the board.
+        alert.header = Some("  Signal fault  ".to_string());
+        assert_eq!(alert.text(), Some("Signal fault"));
+
+        alert.header = None;
+        alert.description = Some("\n\t ".to_string());
+        assert_eq!(alert.text(), None);
     }
 }
