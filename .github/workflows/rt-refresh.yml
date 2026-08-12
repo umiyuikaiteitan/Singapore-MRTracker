@@ -1,9 +1,9 @@
 name: Refresh live data
 
 on:
-  # Publish a fallback delays-and-alerts snapshot twice per hour.
-  # The SRCF forwarder is the primary live source; this snapshot
-  # covers visitors when the forwarder is unreachable.
+  # Publish the delays-and-alerts snapshot twice per hour. This is
+  # the live source of the board: the page fetches it for delays,
+  # cancellations, and alerts between deploys.
   schedule:
     - cron: "11,41 * * * *"
   workflow_dispatch:

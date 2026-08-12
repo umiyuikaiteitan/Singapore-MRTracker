@@ -14,7 +14,7 @@ GitHub Actions "pages" (twice per hour)
        ├─ reads alerts, crowd, trip updates -> data/live.json
        └─ deploys everything to GitHub Pages
 
-GitHub Actions "rt-refresh" (every five minutes)
+GitHub Actions "rt-refresh" (twice per hour)
   └─ mrt-rt-snapshot + account key
        └─ force-pushes live.json to the live-data branch
           (alerts, crowd levels, per-trip delays and cancellations)
@@ -57,7 +57,10 @@ GTFS-Realtime trip updates in the Actions runner and publishes a
 small snapshot to the `live-data` branch, which
 `raw.githubusercontent.com` serves with open CORS. The page fetches
 that snapshot when a visitor opens it and every 30 seconds after,
-so a delay reaches the board within minutes of LTA publishing it.
+so a delay reaches the board at the next snapshot after LTA
+publishes it. The workflow runs at minutes 11 and 41, so the live
+layer is at most about half an hour old; raise the cron frequency
+in `rt-refresh.yml` to narrow that.
 
 The snapshot maps trip identifiers to delays: `d` is the trip-level
 delay in seconds, `c` marks a cancellation, and `s` carries
@@ -78,9 +81,13 @@ snapshot refreshes. A no-service alert that names a trip is also
 folded into the trips map, which older cached pages understand.
 
 For true per-request freshness, put a small proxy with the key in
-front of DataMall (for example a Cloudflare Worker) and set its URL
-as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
-`data/config.json` names.
+front of DataMall and set its URL as `MRT_DELAYS_URL` in
+`pages.yml` — the page follows whatever URL `data/config.json`
+names, and `MRT_DELAYS_FALLBACK_URL` names the source it tries
+next. A `mrt-board-web` instance serves that shape at `/api/live`
+for the origins in `MRT_ALLOWED_ORIGINS`; a small serverless
+function (for example a Cloudflare Worker) does the same without a
+host to keep running.
 
 ## How the workflows run
 
@@ -99,7 +106,7 @@ as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
 |------|---------|
 | `data/stations.json` | All stations with their codes. |
 | `data/board/<CODE>.json` | Departures for one station: `[posix_seconds, line, destination, exact, trip_id, route_id]` rows for the next 26 hours, with the station's platforms and route identifiers. An interchange has one alias file per code. |
-| `data/live.json` | Alerts (legacy and GTFS-Realtime), crowd levels, per-trip delays, and the generation time. The `live-data` branch carries the same shape, refreshed every five minutes. |
+| `data/live.json` | Alerts (legacy and GTFS-Realtime), crowd levels, per-trip delays, and the generation time. The `live-data` branch carries the same shape, refreshed twice per hour, and the page reads it first. |
 
 The page refetches the station file every 10 minutes and the live
 snapshot every 30 seconds.
@@ -147,19 +154,19 @@ The status line ends with a lamp and the age of the live data:
 The tooltip on the status line names the exact fetch time, the source
 that answered, and the time the snapshot was built.
 
-## Freshness compared with the server deployment
+## Freshness compared with a server deployment
 
-| Aspect | Server (SRCF) | GitHub Pages |
-|--------|---------------|--------------|
+| Aspect | Server (`mrt-board-web`) | GitHub Pages |
+|--------|--------------------------|--------------|
 | Scheduled departures | live, per request | exact between refreshes |
-| Service alerts | at most 20 s old | ~5 min old |
-| Crowd levels | at most 20 s old | ~5 min old |
-| Trip update delays | per request | ~5 min old, fetched on access |
-| Needs a server | yes | no |
+| Service alerts | at most 20 s old | up to ~30 min old |
+| Crowd levels | at most 20 s old | up to ~30 min old |
+| Trip update delays | per request | up to ~30 min old, fetched on access |
+| Needs a host | yes | no |
 
-Raise the cron frequency in `pages.yml` for fresher live data. Each
-run costs a few Actions minutes; a public repository has free
-Actions minutes.
+Raise the cron frequency in `rt-refresh.yml` for a fresher live
+layer, and in `pages.yml` for fresher schedules. Each run costs a
+few Actions minutes; a public repository has free Actions minutes.
 
 ## Generate the site locally
 
