@@ -103,6 +103,7 @@
     <div class="legend">
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
+      <b class="amber">early</b> ·
       <b class="red">delayed, cancelled, or alert</b> ·
       ~ headway-based time
     </div>
@@ -241,6 +242,10 @@ function alertState(tid, route) {
   return result;
 }
 
+/* How far a trip must run from its schedule before the board calls
+   it delayed or early, in seconds. */
+const OFF_SCHEDULE_SECS = 60;
+
 /* Compute the next departures from the visitor's clock, with the
    real-time delays, cancellations, and alerts applied. */
 function currentRows() {
@@ -258,12 +263,23 @@ function currentRows() {
       wait: eta - now,
       line, dest,
       exact: !!exact,
-      delayed: state.delay >= 60 || alert.alerted,
+      delayed: state.delay >= OFF_SCHEDULE_SECS || alert.alerted,
+      early: state.delay <= -OFF_SCHEDULE_SECS,
       canceled,
     });
   }
   rows.sort((a, b) => a.wait - b.wait);
   return rows.slice(0, N_ROWS);
+}
+
+/* The color of the wait time: red for a trip that lost time or
+   carries an alert, yellow for one that runs ahead of its
+   schedule, green for one on time. Yellow is the caution color of
+   the freshness lamp too. */
+function waitColor(row) {
+  if (row.canceled || row.delayed) return RED;
+  if (row.early) return AMBER;
+  return GREEN;
 }
 
 function waitText(row) {
@@ -286,8 +302,7 @@ function render() {
     drawText(String(i + 1), MARGIN, MARGIN + i * ROW_PITCH, AMBER);
     drawText(row.dest.toUpperCase().slice(0, 24), MARGIN + 2 * CHAR_W, MARGIN + i * ROW_PITCH, AMBER);
     const wait = waitText(row);
-    const color = row.canceled || row.delayed ? RED : GREEN;
-    drawText(wait, MARGIN + (COLS_CHARS - wait.length) * CHAR_W, MARGIN + i * ROW_PITCH, color);
+    drawText(wait, MARGIN + (COLS_CHARS - wait.length) * CHAR_W, MARGIN + i * ROW_PITCH, waitColor(row));
   });
   if (board && !rows.length) {
     drawText("NO TRAIN SERVICE", MARGIN + 8 * CHAR_W, MARGIN + ROW_PITCH, AMBER);
