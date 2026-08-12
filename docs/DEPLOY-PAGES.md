@@ -23,8 +23,9 @@ browser
   └─ index.html reads the JSON files and renders the dot-matrix
      board; wait = departure instant + live delay - Date.now().
      The page fetches the live-data snapshot on every visit and
-     every 30 seconds. A delayed trip shows a red time; a canceled
-     trip shows CANC.
+     every 30 seconds. A delayed trip shows a red time, a trip that
+     runs ahead of its schedule a yellow one; a canceled trip shows
+     CANC.
 ```
 
 The account key never reaches the browser. It exists only inside the

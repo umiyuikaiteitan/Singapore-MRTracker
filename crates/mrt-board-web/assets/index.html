@@ -120,6 +120,7 @@
     <div class="legend">
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
+      <b class="amber">early</b> ·
       <b class="red">delayed or cancelled</b> ·
       ~ headway-based time
     </div>
@@ -268,10 +269,20 @@ function waitText(row) {
   return text;
 }
 
+/* How far a trip must run from its schedule before the board calls
+   it delayed or early, in seconds. */
+const OFF_SCHEDULE_SECS = 60;
+
+/* The color of the wait time: red for a trip that lost time or
+   carries an alert, yellow for one that runs ahead of its
+   schedule, green for one on time. Yellow is the caution color of
+   the freshness lamp too. */
 function rowColor(row) {
   if (row.canceled) return RED;
   if (row.alerted) return RED;
-  if ((row.delay_secs || 0) >= 60) return RED;
+  const delay = row.delay_secs || 0;
+  if (delay >= OFF_SCHEDULE_SECS) return RED;
+  if (delay <= -OFF_SCHEDULE_SECS) return AMBER;
   return GREEN;
 }
 
