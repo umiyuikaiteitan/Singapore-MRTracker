@@ -220,11 +220,19 @@ function alertActive(alert, nowSecs) {
     (start == null || nowSecs >= start) && (end == null || nowSecs <= end));
 }
 
+/* The effect codes that mark a departure as disturbed: reduced
+   service, significant delays, and a detour. A modified schedule
+   ("ms") stays out. The feed uses it for planned adjustments that
+   run for months, which the published timetable already carries, so
+   marking them would leave a whole line permanently red. Those
+   alerts still scroll in the ticker. */
+const DISTURBING_EFFECTS = ["rs", "sd", "dt"];
+
 /* The effect of the active service alerts on one departure. An
    alert reaches the departure when it names the trip, the route of
    the row, or a platform of this station. A no-service alert
-   cancels; the disturbance effects mark the row without changing
-   the minutes, because an alert carries no delay figure. */
+   cancels; a disturbance marks the row without changing the
+   minutes, because an alert carries no delay figure. */
 function alertState(tid, route) {
   const result = { canceled: false, alerted: false };
   if (!board || !live || !live.alerts) return result;
@@ -237,7 +245,7 @@ function alertState(tid, route) {
                 (alert.s || []).some((s) => stops.includes(s));
     if (!hit) continue;
     if (alert.e === "no") result.canceled = true;
-    else if (["rs", "sd", "dt", "ms"].includes(alert.e)) result.alerted = true;
+    else if (DISTURBING_EFFECTS.includes(alert.e)) result.alerted = true;
   }
   return result;
 }
@@ -490,13 +498,16 @@ function updateHeader() {
       const stops = board.stops || [];
       const tids = new Set((board.rows || []).map((row) => row[4]));
       for (const alert of live.alerts || []) {
-        if (!alert.m || !alertActive(alert, nowSecs)) continue;
+        // A blank text is no text: the feed publishes alerts whose
+        // header is one space, and an older snapshot may carry one.
+        const message = (alert.m || "").trim();
+        if (!message || !alertActive(alert, nowSecs)) continue;
         const scoped = (alert.r || []).length || (alert.s || []).length || (alert.t || []).length;
         const hit = !scoped ||
           (alert.r || []).some((r) => routes.includes(r)) ||
           (alert.s || []).some((s) => stops.includes(s)) ||
           (alert.t || []).some((t) => tids.has(t));
-        if (hit && !notices.includes(alert.m)) notices.push(alert.m);
+        if (hit && !notices.includes(message)) notices.push(message);
       }
     }
     tickerText = notices.join("   +++   ").toUpperCase();

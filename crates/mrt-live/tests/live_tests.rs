@@ -455,3 +455,28 @@ fn a_non_disruptive_alert_leaves_the_timing_alone() {
     assert!(!board.rows[0].canceled);
     assert!(!board.rows[0].alerted);
 }
+
+#[test]
+fn a_modified_schedule_is_a_notice_without_marking_rows() {
+    // The LTA feed publishes months-long planned adjustments as
+    // ModifiedService on a whole route. The board names them, but
+    // must not mark every departure of the line.
+    let alerts = vec![rt_alert(
+        AlertEffect::ModifiedService,
+        vec![route_entity("NS")],
+    )];
+    let board = build_with_alerts(&alerts, 1_000);
+    assert!(!board.rows[0].alerted);
+    assert!(!board.rows[0].canceled);
+    assert_eq!(board.notices, vec!["Test alert"]);
+}
+
+#[test]
+fn a_blank_alert_text_reaches_no_notice() {
+    let mut alert = rt_alert(AlertEffect::NoService, vec![route_entity("NS")]);
+    alert.header = Some(" ".to_string());
+    let board = build_with_alerts(&[alert], 1_000);
+    // The effect still applies; only the empty text stays out.
+    assert!(board.rows[0].canceled);
+    assert!(board.notices.is_empty());
+}

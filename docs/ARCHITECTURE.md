@@ -126,9 +126,14 @@ The crate merges the three data sources into view models:
 - A service alert reaches a departure when it names the trip, the
   route of the line, or a platform of the station, and one of its
   active periods covers the build time. A no-service alert cancels
-  the departure; reduced service, significant delays, a detour, or
-  a modified service set the row's `alerted` flag, because an alert
-  carries no delay figure. The alert text joins the notices.
+  the departure; reduced service, significant delays, or a detour
+  set the row's `alerted` flag, because an alert carries no delay
+  figure. The alert text joins the notices.
+- A modified schedule is a notice only. The LTA feed uses that
+  effect for planned adjustments that run for months, for example
+  the Sengkang West LRT loop closure, and the published timetable
+  already carries them. Marking their departures would leave whole
+  lines permanently flagged and bury the live disruptions.
 - `match_train_line` maps GTFS route names to the DataMall line
   codes with simple heuristics.
 

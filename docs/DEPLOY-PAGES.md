@@ -71,12 +71,16 @@ into an `alerts` array: the display text, the effect, the active
 periods, and the informed routes, stops, and trips. The board files
 carry the route identifier of every departure and the platforms of
 every station, so the page joins the alerts on the client too: a
-no-service alert cancels the affected departures (`CANC`), the
-disturbance effects turn them red, and the alert text scrolls in
-the ticker. The page applies the active periods against the
-visitor's clock, so an alert takes effect and expires between
-snapshot refreshes. A no-service alert that names a trip is also
-folded into the trips map, which older cached pages understand.
+no-service alert cancels the affected departures (`CANC`), reduced
+service, significant delays, and a detour turn them red, and the
+alert text scrolls in the ticker. A modified schedule only scrolls:
+the feed uses that effect for planned adjustments that run for
+months, which the timetable already carries, so flagging their
+departures would leave whole lines permanently red. The page
+applies the active periods against the visitor's clock, so an alert
+takes effect and expires between snapshot refreshes. A no-service
+alert that names a trip is also folded into the trips map, which
+older cached pages understand.
 
 For true per-request freshness, put a small proxy with the key in
 front of DataMall (for example a Cloudflare Worker) and set its URL
