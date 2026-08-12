@@ -120,10 +120,18 @@ fn main() {
             continue;
         }
         let rows = departures_json(&network, StationId(index), now_unix);
+        // The GTFS route identifiers of the lines that serve the
+        // station, so the page can match route-informed alerts.
+        let routes: Vec<&str> = station
+            .lines
+            .iter()
+            .map(|&id| network.line(id).route_id.as_str())
+            .collect();
         let body = serde_json::json!({
             "name": station.name,
             "codes": station.codes,
             "stops": station.platform_stop_ids,
+            "routes": routes,
             "generated": now_unix,
             "rows": rows,
         });
@@ -161,8 +169,9 @@ fn main() {
 
 /// Get the departures of one station as compact rows.
 ///
-/// Each row is `[posix_seconds, line_code, destination, exact]`. The
-/// rows cover the time from shortly before now until the horizon.
+/// Each row is `[posix_seconds, line_code, destination, exact,
+/// trip_id, route_id]`. The rows cover the time from shortly before
+/// now until the horizon.
 fn departures_json(
     network: &RailNetwork,
     station: StationId,
@@ -197,6 +206,7 @@ fn departures_json(
                 destination,
                 if dep.exact { 1 } else { 0 },
                 dep.trip_id,
+                line.route_id,
             ]));
         }
     }

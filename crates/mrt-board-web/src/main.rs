@@ -51,6 +51,7 @@ const DEFAULT_ADDR: &str = "127.0.0.1:8600";
 struct LiveCache {
     alerts: Option<(Instant, TrainServiceAlerts)>,
     realtime: Option<(Instant, RailRtFeed)>,
+    rt_alerts: Option<(Instant, Vec<mrt_gtfs_rt::Alert>)>,
     crowd: HashMap<&'static str, (Instant, Vec<PlatformCrowd>)>,
 }
 
@@ -196,7 +197,7 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
         .min(12);
 
     // Refresh the live layers, then build the board.
-    let (alerts, realtime, crowd) = live_layers(app, station);
+    let (alerts, realtime, rt_alerts, crowd) = live_layers(app, station);
     let mut builder = LiveBoardBuilder::new(&app.network).max_rows(rows);
     if let Some(alerts) = &alerts {
         builder = builder.with_alerts(alerts);
@@ -204,7 +205,9 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
     if let Some(realtime) = &realtime {
         builder = builder.with_realtime(realtime);
     }
-    builder = builder.with_crowd(&crowd);
+    builder = builder
+        .with_crowd(&crowd)
+        .with_rt_alerts(&rt_alerts, clock::unix_now() as u64);
 
     let (date, now) = clock::sgt_now();
     let board = builder.build(station, date, now, 3600);
@@ -225,10 +228,11 @@ fn live_layers(
 ) -> (
     Option<TrainServiceAlerts>,
     Option<RailRtFeed>,
+    Vec<mrt_gtfs_rt::Alert>,
     Vec<PlatformCrowd>,
 ) {
     let Some(client) = &app.client else {
-        return (None, None, Vec::new());
+        return (None, None, Vec::new(), Vec::new());
     };
     let mut cache = app.cache.lock().expect("cache lock");
     let now = Instant::now();
@@ -246,6 +250,15 @@ fn live_layers(
             .and_then(|bytes| RailRtFeed::decode(&bytes).ok())
         {
             cache.realtime = Some((now, feed));
+        }
+    }
+    if !cache.rt_alerts.as_ref().is_some_and(|(at, _)| fresh(*at)) {
+        if let Some(feed) = client
+            .fetch_service_alerts()
+            .ok()
+            .and_then(|bytes| RailRtFeed::decode(&bytes).ok())
+        {
+            cache.rt_alerts = Some((now, feed.alerts));
         }
     }
 
@@ -271,6 +284,11 @@ fn live_layers(
     (
         cache.alerts.as_ref().map(|(_, a)| a.clone()),
         cache.realtime.as_ref().map(|(_, r)| r.clone()),
+        cache
+            .rt_alerts
+            .as_ref()
+            .map(|(_, a)| a.clone())
+            .unwrap_or_default(),
         crowd,
     )
 }
