@@ -52,10 +52,11 @@ fn seed() -> DocumentSeed {
 /// Write an example page and return it.
 fn publish(name: &str, body: String) -> String {
     let path = repository_root().join("examples").join(name);
-    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    // Only write when the content changed, so a read-only checkout and
-    // an unchanged run both stay quiet.
+    // Only write when the content changed, and never fail on a write:
+    // the assertions below are the test, and a read-only checkout must
+    // still be able to run them.
     if std::fs::read_to_string(&path).ok().as_deref() != Some(body.as_str()) {
+        let _ = std::fs::create_dir_all(path.parent().unwrap_or(&path));
         let _ = std::fs::write(&path, &body);
     }
     body
