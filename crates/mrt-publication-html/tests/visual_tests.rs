@@ -138,6 +138,20 @@ fn the_timetable_page_prints_on_a4_and_stays_readable_without_style() {
     let html = timetable_page();
     assert!(html.contains("size: A4 portrait"));
     assert!(html.contains("print-color-adjust: exact"));
+    // Paper is wide enough for the columns. `print` does not match
+    // `screen`, so the grid needs its own query or a printed page
+    // wastes half the sheet.
+    let print_block = html
+        .split("@media print {")
+        .nth(1)
+        .expect("the page has a print block");
+    assert!(
+        html.matches("grid-template-columns: repeat(2, minmax(0, 1fr))")
+            .count()
+            >= 2,
+        "the column grid is missing from one of the media queries"
+    );
+    let _ = print_block;
     // A row must not break across two pages.
     assert!(html.contains("page-break-inside: avoid"));
     // Removing the stylesheet leaves a table with an hour heading per

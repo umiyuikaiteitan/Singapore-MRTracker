@@ -157,7 +157,7 @@
         "panel": 0
       },
       {
-        "key": "WDN#0",
+        "key": "WDN#1",
         "station": {
           "gtfs_id": "WDN",
           "name": "Woodlands North",
@@ -165,13 +165,13 @@
             "TE1"
           ]
         },
-        "occurrence": 0,
+        "occurrence": 1,
         "y": 153.0,
         "cumulative_distance": 0.0,
         "panel": 1
       },
       {
-        "key": "WDL#0",
+        "key": "WDL#1",
         "station": {
           "gtfs_id": "WDL",
           "name": "Woodlands",
@@ -179,7 +179,7 @@
             "TE2"
           ]
         },
-        "occurrence": 0,
+        "occurrence": 1,
         "y": 187.0,
         "cumulative_distance": 1248.56,
         "panel": 1

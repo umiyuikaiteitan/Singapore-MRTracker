@@ -354,6 +354,11 @@ fn check(args: &Args) -> Result<(), CliError> {
             "name a feed with --feed <PATH>, or use --source datamall".to_string(),
         ));
     }
+    if args.feed.is_some() && args.datamall {
+        return Err(CliError::usage(
+            "--feed and --source datamall name two different feeds; choose one",
+        ));
+    }
     match args.command {
         Command::Timetable => {
             if args.station.is_none() {
@@ -614,6 +619,23 @@ mod tests {
         .unwrap_err()
         .message
         .contains("only one"));
+    }
+
+    #[test]
+    fn two_sources_at_once_are_rejected() {
+        let error = run(&[
+            "timetable",
+            "--feed",
+            "f",
+            "--source",
+            "datamall",
+            "--station",
+            "NS1",
+            "--date",
+            "20260810",
+        ])
+        .unwrap_err();
+        assert!(error.message.contains("choose one"));
     }
 
     #[test]

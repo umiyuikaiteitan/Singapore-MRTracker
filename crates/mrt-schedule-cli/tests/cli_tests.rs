@@ -515,6 +515,110 @@ fn a_configured_corridor_reaches_the_diagram() {
 }
 
 // ----------------------------------------------------------------------
+// The cache
+// ----------------------------------------------------------------------
+
+#[test]
+fn a_failed_download_uses_the_cache_only_with_allow_stale() {
+    // The key variable is deliberately one that no environment sets,
+    // so the download fails without touching the network.
+    const MISSING_KEY: &str = "MRT_TEST_KEY_THAT_IS_NEVER_SET";
+    let dir = tempfile::tempdir().unwrap();
+    let cache = dir.path().join("cache");
+
+    // Seed the cache with the fixture, packed as an archive.
+    let archive = pack_fixture();
+    let store = mrt_schedule_cli::cache::FeedCache::open(&cache).unwrap();
+    let entry = store
+        .store(
+            &archive,
+            Some("2026-08-10T00:00:00+08:00".into()),
+            "GTFSScheduleTrain",
+            1,
+        )
+        .unwrap();
+    assert_eq!(entry.sha256.len(), 64);
+
+    let out = dir.path().join("page.html");
+    let base = [
+        "timetable",
+        "--source",
+        "datamall",
+        "--cache-dir",
+        cache.to_str().unwrap(),
+        "--account-key-env",
+        MISSING_KEY,
+        "--station",
+        "TE1",
+        "--date",
+        "2025-05-05",
+        "--out",
+        out.to_str().unwrap(),
+        "--quiet",
+    ];
+
+    // Without --allow-stale the run fails rather than quietly serving
+    // yesterday's timetable.
+    assert_eq!(cli(&base), ExitCode::SourceFailure.code());
+    assert!(!out.exists());
+
+    // With it, the run succeeds and the page says where the data came
+    // from.
+    let mut stale: Vec<&str> = base.to_vec();
+    stale.push("--allow-stale");
+    assert_eq!(cli(&stale), ExitCode::Success.code());
+    let page = read(&out);
+    assert!(page.contains("generated from a cached feed"));
+    assert!(page.contains("class=\"stale\""));
+    // The cached feed's own fingerprint and timestamp reach the page.
+    assert!(page.contains(&entry.sha256[..12]));
+    assert!(page.contains("2026-08-10T00:00:00+08:00"));
+}
+
+#[test]
+fn an_empty_cache_cannot_stand_in_for_a_download() {
+    let dir = tempfile::tempdir().unwrap();
+    assert_eq!(
+        cli(&[
+            "timetable",
+            "--source",
+            "datamall",
+            "--cache-dir",
+            dir.path().join("cache").to_str().unwrap(),
+            "--account-key-env",
+            "MRT_TEST_KEY_THAT_IS_NEVER_SET",
+            "--allow-stale",
+            "--station",
+            "TE1",
+            "--date",
+            "2025-05-05",
+            "--quiet",
+        ]),
+        ExitCode::SourceFailure.code()
+    );
+}
+
+/// Pack the fixture directory into a zip archive in memory.
+fn pack_fixture() -> Vec<u8> {
+    use std::io::Write as _;
+    let mut buffer = std::io::Cursor::new(Vec::new());
+    let mut writer = zip::ZipWriter::new(&mut buffer);
+    let options: zip::write::FileOptions<'_, ()> = zip::write::FileOptions::default();
+    let mut names: Vec<PathBuf> = std::fs::read_dir(fixture())
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    names.sort();
+    for path in names {
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        writer.start_file(name, options).unwrap();
+        writer.write_all(&std::fs::read(&path).unwrap()).unwrap();
+    }
+    writer.finish().unwrap();
+    buffer.into_inner()
+}
+
+// ----------------------------------------------------------------------
 // Secrets
 // ----------------------------------------------------------------------
 

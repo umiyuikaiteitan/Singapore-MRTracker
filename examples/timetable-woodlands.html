@@ -365,7 +365,24 @@ summary:focus-visible {
   padding: 0.5rem 0.9rem 0.9rem;
 }
 
+/* Paper is always wide enough for the columns, and a printed page
+ * that stacks them wastes half the sheet. The two queries carry the
+ * same rules on purpose: `print` does not match `screen`. */
 @media screen and (min-width: 52rem) {
+  .panel-columns[data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="4"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media print {
   .panel-columns[data-columns="2"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

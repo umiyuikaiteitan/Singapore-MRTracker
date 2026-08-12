@@ -470,6 +470,43 @@ fn tel(network: &RailNetwork) -> DiagramTarget {
     DiagramTarget::Line(network.line_by_route_id("TE").unwrap())
 }
 
+/// Report whether every value appears once.
+fn unique(values: &[&str]) -> bool {
+    let mut sorted: Vec<&str> = values.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    sorted.len() == values.len()
+}
+
+#[test]
+fn a_node_key_names_exactly_one_position_on_the_axis() {
+    let network = network();
+    // The TEL branch panel repeats two stations of the main line. A
+    // consumer of the JSON joins on the key, so the two visits must
+    // not share one.
+    let document = build_diagram(
+        &network,
+        &tel(&network),
+        date("20250505"),
+        time("05:00:00"),
+        time("10:00:00"),
+        &PublicationConfig::default(),
+        &seed(),
+    )
+    .unwrap();
+    let keys: Vec<&str> = document
+        .corridor
+        .nodes
+        .iter()
+        .map(|n| n.key.as_str())
+        .collect();
+    assert_eq!(
+        keys,
+        vec!["WDN#0", "WDL#0", "WDS#0", "SPL#0", "WDN#1", "WDL#1", "BRA#0", "BRB#0"]
+    );
+    assert!(unique(&keys), "two nodes share a key");
+}
+
 #[test]
 fn a_diagram_puts_the_corridor_on_one_axis() {
     let network = network();
@@ -675,6 +712,7 @@ fn a_loop_repeats_its_anchor_station_with_a_new_occurrence() {
         .collect();
     assert_eq!(keys, vec!["PGL#0", "PWA#0", "PWB#0", "PGL#1"]);
     assert_eq!(document.corridor.nodes[3].occurrence, 1);
+    assert!(unique(&keys), "two nodes share a key");
 
     let run = &document.runs[0];
     let nodes: Vec<usize> = run.calls.iter().map(|c| c.node).collect();

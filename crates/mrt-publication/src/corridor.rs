@@ -40,8 +40,12 @@ pub struct CorridorNode {
     pub key: String,
     /// The station at this position.
     pub station: StationView,
-    /// How often the station has appeared before this node, starting
-    /// at zero. A loop repeats a station with a higher occurrence.
+    /// How often the station has already appeared on this axis,
+    /// starting at zero.
+    ///
+    /// An unrolled loop repeats a station, and so does a station that
+    /// a branch panel shares with the main line. The count runs across
+    /// the whole corridor, so `key` names exactly one position.
     pub occurrence: u16,
     /// The vertical coordinate in user units.
     pub y: f64,
@@ -460,6 +464,10 @@ fn assemble(
     let mut main_nodes: Vec<usize> = Vec::new();
     let mut main_stations: Vec<StationId> = Vec::new();
     let mut y = 0.0f64;
+    // The counter runs across the whole corridor, not per panel, so
+    // that a station a branch shares with the main line gets its own
+    // node key rather than a duplicate of it.
+    let mut occurrences: BTreeMap<StationId, u16> = BTreeMap::new();
 
     for (panel_index, group) in groups.iter().enumerate() {
         if group.stations.is_empty() {
@@ -482,7 +490,6 @@ fn assemble(
             want_distance && usable,
         );
         let first_node = nodes.len();
-        let mut occurrences: BTreeMap<StationId, u16> = BTreeMap::new();
         let mut group_nodes = Vec::with_capacity(group.stations.len());
         for (index, &station) in group.stations.iter().enumerate() {
             let occurrence = occurrences.entry(station).or_insert(0);
