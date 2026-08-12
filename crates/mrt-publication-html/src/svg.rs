@@ -289,6 +289,8 @@ fn runs(out: &mut String, document: &DiagramDocument, config: &PublicationConfig
         } else {
             "approximate"
         });
+        out.push_str("\" data-panel=\"");
+        out.push_str(&run.panel.to_string());
         out.push_str("\">\n<title>");
         out.push_str(&escape::text(&run_title(run, config)));
         out.push_str("</title>\n");

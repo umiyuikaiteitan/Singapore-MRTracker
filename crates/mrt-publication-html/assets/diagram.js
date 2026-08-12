@@ -337,7 +337,7 @@
     for (var g = 0; g < groups.length; g++) {
       var node = groups[g];
       var visible = true;
-      var keys = ["line", "direction", "destination", "exactness"];
+      var keys = ["line", "direction", "destination", "exactness", "panel"];
       for (var k = 0; k < keys.length; k++) {
         var set = checked[keys[k]];
         if (!set) {

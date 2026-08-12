@@ -241,6 +241,24 @@ fn visible_text(svg: &str) -> String {
 }
 
 #[test]
+fn the_filters_cover_every_axis_a_reader_can_narrow() {
+    let config = PublicationConfig::default();
+    let document = diagram_document(&config);
+    let html = render_diagram(&document, &config);
+    // The TEL corridor needs two panels, so the panel filter appears.
+    assert!(document.corridor.panels.len() > 1);
+    for kind in ["line", "direction", "destination", "panel"] {
+        assert!(
+            html.contains(&format!("data-filter=\"{kind}\"")),
+            "the page has no {kind} filter"
+        );
+    }
+    let svg = render_diagram_svg(&document, &config);
+    assert!(svg.contains("data-panel=\"0\""));
+    assert!(svg.contains("data-panel=\"1\""));
+}
+
+#[test]
 fn the_diagram_page_carries_a_call_table_for_every_run() {
     let config = PublicationConfig::default();
     let document = diagram_document(&config);

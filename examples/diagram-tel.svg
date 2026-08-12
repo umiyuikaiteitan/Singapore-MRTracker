@@ -112,7 +112,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <text class="panel-title" x="172" y="203">Woodlands North – Branch Beta</text>
 </g>
 <g class="runs">
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:00:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:00:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact" data-panel="0">
 <title>TEL → Springleaf · 05:00 – 05:13</title>
 <path class="hit" d="M168 64 L184 98 L200 132 L220 166"/>
 <path class="trace" stroke="#9D5B25" d="M168 64 L184 98 L200 132 L220 166"/>
@@ -121,7 +121,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="200" cy="132"/>
 <circle class="stop-dot" fill="#9D5B25" cx="220" cy="166"/>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:10:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:10:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact" data-panel="0">
 <title>TEL → Springleaf · 05:10 – 05:23</title>
 <path class="hit" d="M208 64 L224 98 L240 132 L260 166"/>
 <path class="trace" stroke="#9D5B25" d="M208 64 L224 98 L240 132 L260 166"/>
@@ -130,7 +130,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="240" cy="132"/>
 <circle class="stop-dot" fill="#9D5B25" cx="260" cy="166"/>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:20:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:20:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact" data-panel="0">
 <title>TEL → Springleaf · 05:20 – 05:33</title>
 <path class="hit" d="M248 64 L264 98 L280 132 L300 166"/>
 <path class="trace" stroke="#9D5B25" d="M248 64 L264 98 L280 132 L300 166"/>
@@ -139,7 +139,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="280" cy="132"/>
 <circle class="stop-dot" fill="#9D5B25" cx="300" cy="166"/>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact" data-panel="0">
 <title>T101 · TEL → Springleaf · 06:00 – 06:13</title>
 <path class="hit" d="M408 64 L410 64 L424 98 L426 98 L440 132 L442 132 L460 166"/>
 <path class="trace" stroke="#9D5B25" d="M408 64 L410 64 L424 98 L426 98 L440 132 L442 132 L460 166"/>
@@ -149,7 +149,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="460" cy="166"/>
 <text class="run-label" fill="#9D5B25" x="451" y="145" text-anchor="middle" transform="rotate(62.1 451 145)">T101</text>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T3" data-line="TE" data-direction="1" data-destination="Woodlands North" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T3" data-line="TE" data-direction="1" data-destination="Woodlands North" data-exactness="exact" data-panel="0">
 <title>T102 · TEL → Woodlands North · 06:05 – 06:18</title>
 <path class="hit" d="M428 166 L430 166 L448 132 L450 132 L464 98 L466 98 L480 64"/>
 <path class="trace" stroke="#9D5B25" d="M428 166 L430 166 L448 132 L450 132 L464 98 L466 98 L480 64"/>
@@ -159,7 +159,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="480" cy="64"/>
 <text class="run-label" fill="#9D5B25" x="457" y="111" text-anchor="middle" transform="rotate(-67.62 457 111)">T102</text>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T2" data-line="TE" data-direction="0" data-destination="Woodlands South" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T2" data-line="TE" data-direction="0" data-destination="Woodlands South" data-exactness="exact" data-panel="0">
 <title>T103 · TEL → Woodlands South · 06:20 – 06:28</title>
 <path class="hit" d="M488 64 L490 64 L504 98 L506 98 L520 132"/>
 <path class="trace" stroke="#9D5B25" d="M488 64 L490 64 L504 98 L506 98 L520 132"/>
@@ -168,7 +168,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="520" cy="132"/>
 <text class="run-label" fill="#9D5B25" x="497" y="77" text-anchor="middle" transform="rotate(67.62 497 77)">T103</text>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_M1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_M1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact" data-panel="0">
 <title>T105 · TEL → Springleaf · 07:00 – 07:13</title>
 <path class="hit" d="M648 64 L650 64 L665 98 L680 132 L700 166"/>
 <path class="trace" stroke="#9D5B25" d="M648 64 L650 64 L665 98 L680 132 L700 166"/>
@@ -178,7 +178,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="700" cy="166"/>
 <text class="run-label" fill="#9D5B25" x="690" y="145" text-anchor="middle" transform="rotate(59.53 690 145)">T105</text>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_P1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_P1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact" data-panel="0">
 <title>T107 · TEL → Springleaf · 08:00 – 08:13</title>
 <path class="hit" d="M888 64 L890 64 L904 98 L920 132 L922 132 L940 166"/>
 <path class="trace" stroke="#9D5B25" d="M888 64 L890 64 L904 98 L920 132 L922 132 L940 166"/>
@@ -188,7 +188,7 @@ svg[data-highlight] .run:focus-within { opacity: 1; }
 <circle class="stop-dot" fill="#9D5B25" cx="940" cy="166"/>
 <text class="run-label" fill="#9D5B25" x="931" y="145" text-anchor="middle" transform="rotate(62.1 931 145)">T107</text>
 </g>
-<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_B1" data-line="TE" data-direction="0" data-destination="Branch Beta" data-exactness="exact">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_B1" data-line="TE" data-direction="0" data-destination="Branch Beta" data-exactness="exact" data-panel="1">
 <title>T121 · TEL → Branch Beta · 09:00 – 09:14</title>
 <path class="hit" d="M1128 217 L1130 217 L1144 251 L1146 251 L1164 285 L1166 285 L1184 319"/>
 <path class="trace" stroke="#9D5B25" d="M1128 217 L1130 217 L1144 251 L1146 251 L1164 285 L1166 285 L1184 319"/>

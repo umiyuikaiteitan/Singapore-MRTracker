@@ -174,6 +174,23 @@ fn filters(out: &mut String, document: &DiagramDocument, labels: &Labels) {
     }
     out.push_str("</fieldset>\n");
 
+    // A corridor that needed more than one panel carries more than one
+    // family of stop patterns, and a reader usually wants one at a
+    // time.
+    if document.corridor.panels.len() > 1 {
+        out.push_str("<fieldset><legend>");
+        out.push_str(&escape::text(labels.corridor));
+        out.push_str("</legend>\n");
+        for (index, panel) in document.corridor.panels.iter().enumerate() {
+            out.push_str("<label><input type=\"checkbox\" checked data-filter=\"panel\" value=\"");
+            out.push_str(&escape::attr(&index.to_string()));
+            out.push_str("\">");
+            out.push_str(&escape::text(&panel.label));
+            out.push_str("</label>\n");
+        }
+        out.push_str("</fieldset>\n");
+    }
+
     if has_bands_or_approximate {
         out.push_str("<fieldset><legend>");
         out.push_str(&escape::text(labels.show_approximate));

@@ -184,6 +184,8 @@ pub struct Labels {
     pub approximate: &'static str,
     /// "Runs".
     pub runs: &'static str,
+    /// "Section", the heading of a corridor panel filter.
+    pub corridor: &'static str,
     /// "Time".
     pub time: &'static str,
     /// "Stations".
@@ -254,6 +256,7 @@ pub const EN: Labels = Labels {
     exact: "Exact",
     approximate: "Approximate",
     runs: "Trains",
+    corridor: "Section",
     time: "Time",
     stations: "Stations",
     filters: "Filters",
@@ -302,6 +305,7 @@ pub const JA: Labels = Labels {
     exact: "確定",
     approximate: "概算",
     runs: "列車",
+    corridor: "区間",
     time: "時刻",
     stations: "駅",
     filters: "絞り込み",
