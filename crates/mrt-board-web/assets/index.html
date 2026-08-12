@@ -270,6 +270,7 @@ function waitText(row) {
 
 function rowColor(row) {
   if (row.canceled) return RED;
+  if (row.alerted) return RED;
   if ((row.delay_secs || 0) >= 60) return RED;
   return GREEN;
 }

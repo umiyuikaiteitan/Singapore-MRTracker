@@ -209,23 +209,57 @@ function tripState(tid) {
   return { delay, canceled: !!entry.c, skipped };
 }
 
+/* Report whether a service alert is active now. The page applies
+   the periods itself, so an alert takes effect and expires between
+   snapshot refreshes. No periods means always active. */
+function alertActive(alert, nowSecs) {
+  const periods = alert.p || [];
+  if (!periods.length) return true;
+  return periods.some(([start, end]) =>
+    (start == null || nowSecs >= start) && (end == null || nowSecs <= end));
+}
+
+/* The effect of the active service alerts on one departure. An
+   alert reaches the departure when it names the trip, the route of
+   the row, or a platform of this station. A no-service alert
+   cancels; the disturbance effects mark the row without changing
+   the minutes, because an alert carries no delay figure. */
+function alertState(tid, route) {
+  const result = { canceled: false, alerted: false };
+  if (!board || !live || !live.alerts) return result;
+  const now = Date.now() / 1000;
+  const stops = board.stops || [];
+  for (const alert of live.alerts) {
+    if (!alertActive(alert, now)) continue;
+    const hit = (alert.t || []).includes(tid) ||
+                (alert.r || []).includes(route) ||
+                (alert.s || []).some((s) => stops.includes(s));
+    if (!hit) continue;
+    if (alert.e === "no") result.canceled = true;
+    else if (["rs", "sd", "dt", "ms"].includes(alert.e)) result.alerted = true;
+  }
+  return result;
+}
+
 /* Compute the next departures from the visitor's clock, with the
-   real-time delays and cancellations applied. */
+   real-time delays, cancellations, and alerts applied. */
 function currentRows() {
   if (!board) return [];
   const now = Date.now() / 1000;
   const rows = [];
-  for (const [t, line, dest, exact, tid] of board.rows) {
+  for (const [t, line, dest, exact, tid, route] of board.rows) {
     const state = tripState(tid);
     if (state.skipped) continue;
-    const eta = t + (state.canceled ? 0 : state.delay);
+    const alert = alertState(tid, route);
+    const canceled = state.canceled || alert.canceled;
+    const eta = t + (canceled ? 0 : state.delay);
     if (eta < now - 15) continue;
     rows.push({
       wait: eta - now,
       line, dest,
       exact: !!exact,
-      delayed: state.delay >= 60,
-      canceled: state.canceled,
+      delayed: state.delay >= 60 || alert.alerted,
+      canceled,
     });
   }
   rows.sort((a, b) => a.wait - b.wait);
@@ -427,13 +461,30 @@ function updateHeader() {
       codes.appendChild(document.createTextNode(" "));
     }
 
-    let notice = "";
+    const notices = [];
     if (live && live.live && live.disrupted) {
       const affected = (live.segments || []).some((segment) =>
         (segment.stations || []).some((s) => board.codes.includes(s)));
-      if (affected) notice = (live.messages || []).join("   +++   ");
+      if (affected) notices.push(...(live.messages || []));
     }
-    tickerText = notice.toUpperCase();
+    // The active service alerts that touch this station: a route or
+    // a platform of it, a trip on its board, or the whole network.
+    if (live && live.live) {
+      const nowSecs = Date.now() / 1000;
+      const routes = board.routes || [];
+      const stops = board.stops || [];
+      const tids = new Set((board.rows || []).map((row) => row[4]));
+      for (const alert of live.alerts || []) {
+        if (!alert.m || !alertActive(alert, nowSecs)) continue;
+        const scoped = (alert.r || []).length || (alert.s || []).length || (alert.t || []).length;
+        const hit = !scoped ||
+          (alert.r || []).some((r) => routes.includes(r)) ||
+          (alert.s || []).some((s) => stops.includes(s)) ||
+          (alert.t || []).some((t) => tids.has(t));
+        if (hit && !notices.includes(alert.m)) notices.push(alert.m);
+      }
+    }
+    tickerText = notices.join("   +++   ").toUpperCase();
   }
   updateStatus();
 }

@@ -332,3 +332,126 @@ fn max_rows_caps_the_board() {
     );
     assert!(board.rows.is_empty());
 }
+
+// ----------------------------------------------------------------------
+// GTFS-Realtime service alerts on the board
+// ----------------------------------------------------------------------
+
+use mrt_gtfs_rt::{ActivePeriod, Alert, AlertCause, AlertEffect, InformedEntity};
+
+fn rt_alert(effect: AlertEffect, informed: Vec<InformedEntity>) -> Alert {
+    Alert {
+        cause: AlertCause::Unknown,
+        effect,
+        header: Some("Test alert".to_string()),
+        description: None,
+        url: None,
+        active_periods: Vec::new(),
+        informed,
+    }
+}
+
+fn trip_entity(trip_id: &str) -> InformedEntity {
+    InformedEntity {
+        agency_id: None,
+        route_id: None,
+        stop_id: None,
+        trip_id: Some(trip_id.to_string()),
+    }
+}
+
+fn route_entity(route_id: &str) -> InformedEntity {
+    InformedEntity {
+        agency_id: None,
+        route_id: Some(route_id.to_string()),
+        stop_id: None,
+        trip_id: None,
+    }
+}
+
+fn stop_entity(stop_id: &str) -> InformedEntity {
+    InformedEntity {
+        agency_id: None,
+        route_id: None,
+        stop_id: Some(stop_id.to_string()),
+        trip_id: None,
+    }
+}
+
+fn build_with_alerts(alerts: &[Alert], now_unix: u64) -> mrt_live::LiveBoard {
+    let network = tiny_network();
+    let station = network.station_by_code("NS4").unwrap();
+    LiveBoardBuilder::new(&network)
+        .with_rt_alerts(alerts, now_unix)
+        .build(
+            station,
+            "20260810".parse().unwrap(),
+            "08:00:00".parse().unwrap(),
+            3600,
+        )
+}
+
+#[test]
+fn a_no_service_alert_cancels_the_named_trip() {
+    let alerts = vec![rt_alert(AlertEffect::NoService, vec![trip_entity("T1")])];
+    let board = build_with_alerts(&alerts, 1_000);
+    assert!(board.rows[0].canceled);
+    assert!(!board.rows[0].alerted);
+}
+
+#[test]
+fn a_route_alert_reaches_every_departure_of_the_line() {
+    let alerts = vec![rt_alert(
+        AlertEffect::SignificantDelays,
+        vec![route_entity("NS")],
+    )];
+    let board = build_with_alerts(&alerts, 1_000);
+    assert!(!board.rows[0].canceled);
+    assert!(board.rows[0].alerted);
+    // The alert text joins the notices.
+    assert_eq!(board.notices, vec!["Test alert"]);
+}
+
+#[test]
+fn a_platform_alert_reaches_the_station() {
+    let alerts = vec![rt_alert(AlertEffect::NoService, vec![stop_entity("S_NS4")])];
+    let board = build_with_alerts(&alerts, 1_000);
+    assert!(board.rows[0].canceled);
+    assert_eq!(board.notices, vec!["Test alert"]);
+}
+
+#[test]
+fn alerts_for_other_parts_of_the_network_stay_away() {
+    let alerts = vec![
+        rt_alert(AlertEffect::NoService, vec![route_entity("EW")]),
+        rt_alert(AlertEffect::NoService, vec![stop_entity("S_EW1")]),
+        rt_alert(AlertEffect::NoService, vec![trip_entity("T9")]),
+    ];
+    let board = build_with_alerts(&alerts, 1_000);
+    assert!(!board.rows[0].canceled);
+    assert!(!board.rows[0].alerted);
+    assert!(board.notices.is_empty());
+}
+
+#[test]
+fn inactive_alerts_change_nothing() {
+    let mut alert = rt_alert(AlertEffect::NoService, vec![route_entity("NS")]);
+    alert.active_periods = vec![ActivePeriod {
+        start: Some(100),
+        end: Some(200),
+    }];
+    let board = build_with_alerts(&[alert], 1_000);
+    assert!(!board.rows[0].canceled);
+    assert!(board.notices.is_empty());
+}
+
+#[test]
+fn a_non_disruptive_alert_leaves_the_timing_alone() {
+    let alerts = vec![rt_alert(
+        AlertEffect::AccessibilityIssue,
+        vec![route_entity("NS")],
+    )];
+    let board = build_with_alerts(&alerts, 1_000);
+    assert!(!board.rows[0].canceled);
+    assert!(!board.rows[0].alerted);
+}

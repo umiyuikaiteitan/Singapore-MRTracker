@@ -49,7 +49,7 @@ use serde::Serialize;
 
 use mrt_datamall::{CrowdLevel, PlatformCrowd, ServiceStatus, TrainLine, TrainServiceAlerts};
 use mrt_gtfs::{GtfsTime, Line, RailNetwork, ServiceDate, StationId};
-use mrt_gtfs_rt::RailRtFeed;
+use mrt_gtfs_rt::{Alert, RailRtFeed};
 
 // ----------------------------------------------------------------------
 // Line matching
@@ -201,8 +201,12 @@ pub struct LiveBoardRow {
     pub approximate: bool,
     /// The live delay in seconds, if a trip update reports one.
     pub delay_secs: Option<i32>,
-    /// `true` if a trip update cancels this trip.
+    /// `true` if a trip update or a service alert cancels this trip.
     pub canceled: bool,
+    /// `true` if an active service alert disturbs this departure
+    /// without a delay figure: reduced service, significant delays,
+    /// a detour, or a modified service.
+    pub alerted: bool,
     /// The live platform crowd level at the station, if available.
     pub crowd: Option<CrowdLevel>,
 }
@@ -229,6 +233,8 @@ pub struct LiveBoardBuilder<'a> {
     alerts: Option<&'a TrainServiceAlerts>,
     crowd: &'a [PlatformCrowd],
     realtime: Option<&'a RailRtFeed>,
+    rt_alerts: &'a [Alert],
+    now_unix: Option<u64>,
     max_rows: usize,
 }
 
@@ -240,6 +246,8 @@ impl<'a> LiveBoardBuilder<'a> {
             alerts: None,
             crowd: &[],
             realtime: None,
+            rt_alerts: &[],
+            now_unix: None,
             max_rows: 10,
         }
     }
@@ -247,6 +255,21 @@ impl<'a> LiveBoardBuilder<'a> {
     /// Add the legacy train service alerts.
     pub fn with_alerts(mut self, alerts: &'a TrainServiceAlerts) -> Self {
         self.alerts = Some(alerts);
+        self
+    }
+
+    /// Add GTFS-Realtime service alerts, active at the given POSIX
+    /// time.
+    ///
+    /// The time selects the alerts whose active periods apply now.
+    /// An active alert that names a trip, a route, or a platform of
+    /// the station reaches the board: a no-service alert cancels the
+    /// affected departures, a disturbance marks them
+    /// ([`LiveBoardRow::alerted`]), and the alert text joins the
+    /// notices.
+    pub fn with_rt_alerts(mut self, alerts: &'a [Alert], now_unix: u64) -> Self {
+        self.rt_alerts = alerts;
+        self.now_unix = Some(now_unix);
         self
     }
 
@@ -297,6 +320,8 @@ impl<'a> LiveBoardBuilder<'a> {
                 .clone()
                 .unwrap_or_else(|| self.network.station(entry.departure.terminus).name.clone());
             let (delay_secs, canceled) = self.trip_status(&entry.departure.trip_id, station);
+            let (alert_canceled, alerted) =
+                self.alert_status(&entry.departure.trip_id, line, station);
             rows.push(LiveBoardRow {
                 line_code: line.name.clone(),
                 line_color: line.color.clone(),
@@ -305,7 +330,8 @@ impl<'a> LiveBoardBuilder<'a> {
                 clock_time: entry.clock_time().to_string(),
                 approximate: !entry.departure.exact,
                 delay_secs,
-                canceled,
+                canceled: canceled || alert_canceled,
+                alerted,
                 crowd,
             });
         }
@@ -369,9 +395,94 @@ impl<'a> LiveBoardBuilder<'a> {
         (delay, false)
     }
 
-    /// Collect the alert messages for the lines that serve the
-    /// station.
+    /// The effect of the active service alerts on one departure.
+    ///
+    /// An alert reaches the departure when it names the trip, the
+    /// route of the line, or a platform of the station. The first
+    /// flag reports a canceling no-service alert, the second a
+    /// disturbance without a delay figure.
+    fn alert_status(&self, trip_id: &str, line: &Line, station: StationId) -> (bool, bool) {
+        let Some(now) = self.now_unix else {
+            return (false, false);
+        };
+        let platforms = &self.network.station(station).platform_stop_ids;
+        let mut canceled = false;
+        let mut alerted = false;
+        for alert in self.rt_alerts {
+            if !alert.is_active(now) {
+                continue;
+            }
+            let informs = alert.informed.iter().any(|entity| {
+                entity.trip_id.as_deref() == Some(trip_id)
+                    || entity.route_id.as_deref() == Some(line.route_id.as_str())
+                    || entity
+                        .stop_id
+                        .as_deref()
+                        .is_some_and(|id| platforms.iter().any(|p| p == id))
+            });
+            if !informs {
+                continue;
+            }
+            canceled = canceled || alert.effect.stops_service();
+            alerted = alerted || alert.effect.disturbs_service();
+        }
+        (canceled, alerted)
+    }
+
+    /// Collect the notices for the station: the legacy alert
+    /// messages, then the texts of the active service alerts.
     fn notices(&self, station: StationId) -> Vec<String> {
+        let mut notices = self.legacy_notices(station);
+        for text in self.rt_alert_notices(station) {
+            if !notices.contains(&text) {
+                notices.push(text);
+            }
+        }
+        notices
+    }
+
+    /// Collect the texts of the active service alerts that name a
+    /// line or a platform of the station.
+    fn rt_alert_notices(&self, station: StationId) -> Vec<String> {
+        let Some(now) = self.now_unix else {
+            return Vec::new();
+        };
+        let station_data = self.network.station(station);
+        let routes: Vec<&str> = station_data
+            .lines
+            .iter()
+            .map(|&id| self.network.line(id).route_id.as_str())
+            .collect();
+        let mut texts = Vec::new();
+        for alert in self.rt_alerts {
+            if !alert.is_active(now) {
+                continue;
+            }
+            let informs = alert.informed.iter().any(|entity| {
+                entity
+                    .route_id
+                    .as_deref()
+                    .is_some_and(|route| routes.contains(&route))
+                    || entity
+                        .stop_id
+                        .as_deref()
+                        .is_some_and(|id| station_data.platform_stop_ids.iter().any(|p| p == id))
+            });
+            if !informs {
+                continue;
+            }
+            if let Some(text) = alert.text() {
+                if !texts.iter().any(|t| t == text) {
+                    texts.push(text.to_string());
+                }
+            }
+        }
+        texts
+    }
+
+    /// Collect the legacy alert messages for the lines that serve the
+    /// station.
+    fn legacy_notices(&self, station: StationId) -> Vec<String> {
         let Some(alerts) = self.alerts else {
             return Vec::new();
         };

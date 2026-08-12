@@ -121,8 +121,14 @@ The crate merges the three data sources into view models:
   can render a fixed layout.
 - `LiveBoardBuilder` decorates the static departure board with live
   layers: delays and cancellations from trip updates, crowd levels
-  from `PCDRealTime`, and notices from the alerts. Every layer is
-  optional.
+  from `PCDRealTime`, notices from the legacy alerts, and the
+  GTFS-Realtime service alerts. Every layer is optional.
+- A service alert reaches a departure when it names the trip, the
+  route of the line, or a platform of the station, and one of its
+  active periods covers the build time. A no-service alert cancels
+  the departure; reduced service, significant delays, a detour, or
+  a modified service set the row's `alerted` flag, because an alert
+  carries no delay figure. The alert text joins the notices.
 - `match_train_line` maps GTFS route names to the DataMall line
   codes with simple heuristics.
 

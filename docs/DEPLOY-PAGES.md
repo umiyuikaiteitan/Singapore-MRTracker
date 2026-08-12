@@ -65,6 +65,18 @@ per-stop delays and skipped stops. The board files carry the trip
 identifier of every departure, so the page joins the two on the
 client.
 
+The snapshot also decodes the GTFS-Realtime service alerts feed
+into an `alerts` array: the display text, the effect, the active
+periods, and the informed routes, stops, and trips. The board files
+carry the route identifier of every departure and the platforms of
+every station, so the page joins the alerts on the client too: a
+no-service alert cancels the affected departures (`CANC`), the
+disturbance effects turn them red, and the alert text scrolls in
+the ticker. The page applies the active periods against the
+visitor's clock, so an alert takes effect and expires between
+snapshot refreshes. A no-service alert that names a trip is also
+folded into the trips map, which older cached pages understand.
+
 For true per-request freshness, put a small proxy with the key in
 front of DataMall (for example a Cloudflare Worker) and set its URL
 as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
@@ -86,8 +98,8 @@ as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
 | File | Content |
 |------|---------|
 | `data/stations.json` | All stations with their codes. |
-| `data/board/<CODE>.json` | Departures for one station: `[posix_seconds, line, destination, exact, trip_id]` rows for the next 26 hours. An interchange has one alias file per code. |
-| `data/live.json` | Alerts, crowd levels, per-trip delays, and the generation time. The `live-data` branch carries the same shape, refreshed every five minutes. |
+| `data/board/<CODE>.json` | Departures for one station: `[posix_seconds, line, destination, exact, trip_id, route_id]` rows for the next 26 hours, with the station's platforms and route identifiers. An interchange has one alias file per code. |
+| `data/live.json` | Alerts (legacy and GTFS-Realtime), crowd levels, per-trip delays, and the generation time. The `live-data` branch carries the same shape, refreshed every five minutes. |
 
 The page refetches the station file every 10 minutes and the live
 snapshot every 30 seconds.

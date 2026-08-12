@@ -17,13 +17,17 @@ pub fn sgt_from_unix(unix_secs: i64) -> (ServiceDate, GtfsTime) {
     (date, clock)
 }
 
-/// Get the current Singapore date and clock time.
-pub fn sgt_now() -> (ServiceDate, GtfsTime) {
-    let unix = std::time::SystemTime::now()
+/// Get the current POSIX time, in seconds.
+pub fn unix_now() -> i64 {
+    std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("the clock is after 1970")
-        .as_secs() as i64;
-    sgt_from_unix(unix)
+        .as_secs() as i64
+}
+
+/// Get the current Singapore date and clock time.
+pub fn sgt_now() -> (ServiceDate, GtfsTime) {
+    sgt_from_unix(unix_now())
 }
 
 #[cfg(test)]

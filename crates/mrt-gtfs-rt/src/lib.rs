@@ -281,7 +281,51 @@ pub struct Alert {
     pub informed: Vec<InformedEntity>,
 }
 
+impl AlertEffect {
+    /// Report whether the effect removes service entirely.
+    ///
+    /// A board treats an affected departure like a cancellation.
+    pub fn stops_service(self) -> bool {
+        matches!(self, AlertEffect::NoService)
+    }
+
+    /// Report whether the effect disturbs the timetable without
+    /// removing service.
+    ///
+    /// A board marks an affected departure as disturbed, but keeps
+    /// its scheduled time: the alert carries no delay figure.
+    pub fn disturbs_service(self) -> bool {
+        matches!(
+            self,
+            AlertEffect::ReducedService
+                | AlertEffect::SignificantDelays
+                | AlertEffect::Detour
+                | AlertEffect::ModifiedService
+        )
+    }
+}
+
 impl Alert {
+    /// Report whether the alert is active at the given POSIX time.
+    ///
+    /// An alert without active periods is always active, as the
+    /// GTFS-Realtime specification defines. An open start means
+    /// "since forever", an open end means "until further notice".
+    pub fn is_active(&self, unix_secs: u64) -> bool {
+        if self.active_periods.is_empty() {
+            return true;
+        }
+        self.active_periods.iter().any(|period| {
+            period.start.map_or(true, |start| unix_secs >= start)
+                && period.end.map_or(true, |end| unix_secs <= end)
+        })
+    }
+
+    /// Get the best display text: the header, or else the description.
+    pub fn text(&self) -> Option<&str> {
+        self.header.as_deref().or(self.description.as_deref())
+    }
+
     fn from_pb(alert: &pb::Alert) -> Self {
         Alert {
             cause: match alert.cause() {
@@ -550,5 +594,95 @@ mod tests {
             ],
         };
         assert_eq!(best_translation(&text).as_deref(), Some("English"));
+    }
+
+    fn alert_with_periods(periods: Vec<ActivePeriod>) -> Alert {
+        Alert {
+            cause: AlertCause::Unknown,
+            effect: AlertEffect::NoService,
+            header: None,
+            description: None,
+            url: None,
+            active_periods: periods,
+            informed: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn an_alert_without_periods_is_always_active() {
+        assert!(alert_with_periods(Vec::new()).is_active(0));
+        assert!(alert_with_periods(Vec::new()).is_active(u64::MAX));
+    }
+
+    #[test]
+    fn active_periods_bound_the_alert() {
+        let alert = alert_with_periods(vec![ActivePeriod {
+            start: Some(100),
+            end: Some(200),
+        }]);
+        assert!(!alert.is_active(99));
+        assert!(alert.is_active(100));
+        assert!(alert.is_active(200));
+        assert!(!alert.is_active(201));
+    }
+
+    #[test]
+    fn open_ended_periods_stay_active() {
+        let since = alert_with_periods(vec![ActivePeriod {
+            start: Some(100),
+            end: None,
+        }]);
+        assert!(since.is_active(u64::MAX));
+        assert!(!since.is_active(99));
+
+        let until = alert_with_periods(vec![ActivePeriod {
+            start: None,
+            end: Some(200),
+        }]);
+        assert!(until.is_active(0));
+        assert!(!until.is_active(201));
+    }
+
+    #[test]
+    fn any_of_several_periods_activates_the_alert() {
+        let alert = alert_with_periods(vec![
+            ActivePeriod {
+                start: Some(100),
+                end: Some(200),
+            },
+            ActivePeriod {
+                start: Some(400),
+                end: Some(500),
+            },
+        ]);
+        assert!(alert.is_active(150));
+        assert!(!alert.is_active(300));
+        assert!(alert.is_active(450));
+    }
+
+    #[test]
+    fn effects_classify_for_the_board() {
+        assert!(AlertEffect::NoService.stops_service());
+        assert!(!AlertEffect::NoService.disturbs_service());
+        for effect in [
+            AlertEffect::ReducedService,
+            AlertEffect::SignificantDelays,
+            AlertEffect::Detour,
+            AlertEffect::ModifiedService,
+        ] {
+            assert!(effect.disturbs_service(), "{effect:?} must disturb");
+            assert!(!effect.stops_service());
+        }
+        for effect in [
+            AlertEffect::AdditionalService,
+            AlertEffect::Other,
+            AlertEffect::Unknown,
+            AlertEffect::StopMoved,
+            AlertEffect::NoEffect,
+            AlertEffect::AccessibilityIssue,
+        ] {
+            assert!(!effect.stops_service());
+            assert!(!effect.disturbs_service());
+        }
     }
 }
