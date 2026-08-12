@@ -102,7 +102,7 @@ pub struct Route {
 }
 
 /// One row of `trips.txt`. One run of a vehicle along a route.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Trip {
     /// The identifier of the route of the trip.
     pub route_id: String,
@@ -114,16 +114,29 @@ pub struct Trip {
     /// `Marina Bay`.
     #[serde(default)]
     pub trip_headsign: Option<String>,
+    /// The public name of the trip, for example a train number.
+    ///
+    /// This is the only trip identifier that a timetable may show to
+    /// passengers. `trip_id` is an internal key and must stay out of
+    /// passenger-facing output.
+    #[serde(default)]
+    pub trip_short_name: Option<String>,
     /// The direction of travel. `0` and `1` are opposite directions.
     #[serde(default)]
     pub direction_id: Option<u8>,
+    /// The identifier of the block that this trip belongs to.
+    ///
+    /// Consecutive trips of one vehicle share a block. A later
+    /// release can link them into one continuous diagram run.
+    #[serde(default)]
+    pub block_id: Option<String>,
     /// The identifier of the shape of the trip in `shapes.txt`.
     #[serde(default)]
     pub shape_id: Option<String>,
 }
 
 /// One row of `stop_times.txt`. One scheduled call of a trip at a stop.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct StopTime {
     /// The identifier of the trip.
     pub trip_id: String,
@@ -148,6 +161,36 @@ pub struct StopTime {
     /// The drop-off rule. `1` means no drop-off at this stop.
     #[serde(default)]
     pub drop_off_type: Option<u8>,
+    /// The time precision of this call. `1` or empty marks an exact
+    /// time. `0` marks an approximate time that the publisher
+    /// interpolated.
+    #[serde(default)]
+    pub timepoint: Option<u8>,
+    /// The distance travelled along the shape of the trip, in the
+    /// unit of `shapes.txt`.
+    ///
+    /// A diagram uses the value to place a call on a distance axis and
+    /// to weight the interpolation of a missing time.
+    #[serde(default)]
+    pub shape_dist_traveled: Option<f64>,
+}
+
+impl StopTime {
+    /// Report whether passengers may board at this call.
+    ///
+    /// GTFS `pickup_type` `1` means that no pickup is available. Every
+    /// other value, including an empty one, permits boarding.
+    pub fn allows_pickup(&self) -> bool {
+        self.pickup_type != Some(1)
+    }
+
+    /// Report whether the feed marks the times of this call as exact.
+    ///
+    /// GTFS `timepoint` `0` marks times that the publisher
+    /// interpolated. An empty value means an exact time.
+    pub fn is_exact_timepoint(&self) -> bool {
+        self.timepoint != Some(0)
+    }
 }
 
 /// One row of `calendar.txt`. A weekly service pattern.
@@ -258,4 +301,7 @@ pub struct ShapePoint {
     /// The order of the point in the shape. Values increase along the
     /// path.
     pub shape_pt_sequence: u32,
+    /// The distance travelled along the shape up to this point.
+    #[serde(default)]
+    pub shape_dist_traveled: Option<f64>,
 }

@@ -1,0 +1,274 @@
+/* Shared page frame for the timetable and the diagram.
+ *
+ * The theme lives entirely in custom properties, which the generator
+ * writes into a :root block from the configuration. No rule below
+ * hard-codes a brand color, and no rule loads a font file: the font
+ * stack names system and openly licensed families only. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0 0 3rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-stack);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.page {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 0;
+}
+
+/* The accent bar carries the line color, so a reader can tell two
+ * printed pages apart at a glance. */
+.masthead {
+  border-top: 6px solid var(--accent);
+  padding-top: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.masthead .subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.masthead .station-codes {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-left: 0.6rem;
+  vertical-align: 0.15em;
+}
+
+.code-chip {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.65rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.85rem;
+  border-left: 4px solid var(--warn);
+  background: var(--warn-bg);
+  font-size: 0.9rem;
+}
+
+.notice ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Legend                                                            */
+/* ---------------------------------------------------------------- */
+
+.legend {
+  margin: 1.75rem 0 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+}
+
+.legend h2 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.legend ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0.3rem 1.25rem;
+  font-size: 0.86rem;
+}
+
+.legend .symbol {
+  display: inline-block;
+  min-width: 1.3rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- */
+/* Footer                                                            */
+/* ---------------------------------------------------------------- */
+
+.colophon {
+  margin: 2rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.colophon dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0;
+}
+
+.colophon dt {
+  font-weight: 700;
+}
+
+.colophon dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.stale {
+  color: var(--warn-fg);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- */
+/* Controls                                                          */
+/* ---------------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin: 0 0 1rem;
+}
+
+.controls button,
+.controls .toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.3rem;
+  background: var(--panel-bg);
+  color: inherit;
+  cursor: pointer;
+}
+
+.controls button:hover,
+.controls .toggle:hover {
+  border-color: var(--accent);
+}
+
+.controls button:focus-visible,
+.controls .toggle:focus-within,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Nothing on the page needs JavaScript. The controls only appear
+ * once a script has enabled them. */
+.needs-script {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- */
+/* Print                                                             */
+/* ---------------------------------------------------------------- */
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  body {
+    padding: 0;
+    font-size: 10pt;
+    background: #fff;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .controls,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Hour cells and line accents carry meaning, so they must survive
+   * the browser's default of dropping backgrounds. */
+  .hour-cell,
+  .code-chip,
+  .panel-head,
+  .band-row {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* A monochrome profile for a black-and-white printer, and for a
+ * reader who prefers one. The generator adds .monochrome to <html>
+ * when the reader asks for it; a monochrome device gets it for free. */
+@media print and (monochrome) {
+  :root {
+    --hour-bg: #000;
+    --hour-fg: #fff;
+    --accent: #000;
+    --accent-text: #fff;
+    --row-alt: #ececec;
+  }
+}
+
+.monochrome {
+  --hour-bg: #1a1a1a;
+  --hour-fg: #fff;
+  --accent: #1a1a1a;
+  --accent-text: #fff;
+  --row-alt: #efefef;
+}

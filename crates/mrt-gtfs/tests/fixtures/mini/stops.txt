@@ -1,16 +1,38 @@
-stop_id,stop_code,stop_name,stop_lat,stop_lon,location_type,parent_station
-JUR,,Jurong East,1.3331,103.7422,1,
-JUR_NS,NS1,Jurong East,1.3331,103.7421,0,JUR
-JUR_EW,EW24,Jurong East,1.3332,103.7423,0,JUR
-CCK,,Choa Chu Kang,1.3854,103.7443,1,
-CCK_NS,NS4,Choa Chu Kang,1.3854,103.7442,0,CCK
-CCK_BP,BP1,Choa Chu Kang,1.3855,103.7444,0,CCK
-MRB,,Marina Bay,1.2762,103.8544,1,
-MRB_NS,NS27,Marina Bay,1.2762,103.8544,0,MRB
-BNV,,Buona Vista,1.3070,103.7900,1,
-BNV_EW,EW21,Buona Vista,1.3070,103.7900,0,BNV
-RFP,,Raffles Place,1.2840,103.8515,1,
-RFP_EW,EW14,Raffles Place,1.2840,103.8515,0,RFP
-STH_BP,BP2,South View,1.3803,103.7452,0,
-B01,46009,Woodlands Int,1.4360,103.7860,0,
-B02,46701,Woodlands Ave 1,1.4370,103.7880,0,
+stop_id,stop_code,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+JUR,,Jurong East,1.3331,103.7422,1,,
+JUR_NS,NS1,Jurong East,1.3331,103.7421,0,JUR,A
+JUR_EW,EW24,Jurong East,1.3332,103.7423,0,JUR,B
+CCK,,Choa Chu Kang,1.3854,103.7443,1,,
+CCK_NS,NS4,Choa Chu Kang,1.3854,103.7442,0,CCK,A
+CCK_BP,BP1,Choa Chu Kang,1.3855,103.7444,0,CCK,C
+MRB,,Marina Bay,1.2762,103.8544,1,,
+MRB_NS,NS27,Marina Bay,1.2762,103.8544,0,MRB,A
+BNV,,Buona Vista,1.3070,103.7900,1,,
+BNV_EW,EW21,Buona Vista,1.3070,103.7900,0,BNV,A
+RFP,,Raffles Place,1.2840,103.8515,1,,
+RFP_EW,EW14,Raffles Place,1.2840,103.8515,0,RFP,A
+STH_BP,BP2,South View,1.3803,103.7452,0,,
+B01,46009,Woodlands Int,1.4360,103.7860,0,,
+B02,46701,Woodlands Ave 1,1.4370,103.7880,0,,
+WDN,,Woodlands North,1.4482,103.7857,1,,
+WDN_1,TE1,Woodlands North,1.4482,103.7857,0,WDN,1
+WDN_2,TE1,Woodlands North,1.4482,103.7857,0,WDN,2
+WDL,,Woodlands,1.4370,103.7865,1,,
+WDL_1,TE2,Woodlands,1.4370,103.7865,0,WDL,1
+WDL_2,TE2,Woodlands,1.4370,103.7865,0,WDL,2
+WDS,,Woodlands South,1.4272,103.7936,1,,
+WDS_1,TE3,Woodlands South,1.4272,103.7936,0,WDS,1
+WDS_2,TE3,Woodlands South,1.4272,103.7936,0,WDS,2
+SPL,,Springleaf,1.3977,103.8181,1,,
+SPL_1,TE4,Springleaf,1.3977,103.8181,0,SPL,1
+SPL_2,TE4,Springleaf,1.3977,103.8181,0,SPL,2
+BRA,,Branch Alpha,1.4400,103.8100,1,,
+BRA_1,TB1,Branch Alpha,1.4400,103.8100,0,BRA,1
+BRB,,Branch Beta,1.4450,103.8300,1,,
+BRB_1,TB2,Branch Beta,1.4450,103.8300,0,BRB,1
+PGL,,Punggol,1.4053,103.9024,1,,
+PGL_1,PTC,Punggol,1.4053,103.9024,0,PGL,1
+PWA,,Sam Kee,1.4097,103.9050,1,,
+PWA_1,PW1,Sam Kee,1.4097,103.9050,0,PWA,1
+PWB,,Teck Lee,1.4126,103.9064,1,,
+PWB_1,PW2,Teck Lee,1.4126,103.9064,0,PWB,1

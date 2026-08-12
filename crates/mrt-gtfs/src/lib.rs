@@ -58,16 +58,20 @@
 
 pub mod alias;
 mod date;
+mod diag;
 mod error;
 mod feed;
 mod filter;
 mod model;
 mod network;
+mod query;
 mod schedule;
 mod source;
 mod time;
+mod validate;
 
 pub use date::{ServiceDate, Weekday};
+pub use diag::{normalize as normalize_diagnostics, Diagnostic, Severity};
 pub use error::GtfsError;
 pub use feed::GtfsFeed;
 pub use filter::RailFilter;
@@ -78,8 +82,13 @@ pub use model::{
 pub use network::{
     Line, LineId, PatternId, RailNetwork, Station, StationId, StationTransfer, StopPattern,
 };
+pub use query::{
+    FrequencyBand, FrequencyPolicy, MissingTimePolicy, ScheduledCall, TimeExactness, TimeQuality,
+    TripInstance, TripInstanceQuery, TripQueryResult,
+};
 pub use schedule::{BoardEntry, Departure};
-#[cfg(feature = "zip-source")]
-pub use source::ZipSource;
 pub use source::{DirectorySource, FeedSource};
+#[cfg(feature = "zip-source")]
+pub use source::{ZipLimits, ZipOptions, ZipSource, ZipStrictness};
 pub use time::GtfsTime;
+pub use validate::{feed_timezone, validate_feed, ValidationMode, ValidationReport};

@@ -43,6 +43,7 @@ mod client;
 mod error;
 mod key;
 mod model;
+mod snapshot;
 mod transport;
 
 pub use client::{DataMallClient, DEFAULT_BASE_URL};
@@ -52,6 +53,7 @@ pub use model::{
     AffectedSegment, AlertMessage, CrowdForecastDay, CrowdInterval, CrowdLevel, DatasetLink,
     PlatformCrowd, ServiceStatus, StationCrowdForecast, TrainLine, TrainServiceAlerts,
 };
+pub use snapshot::{redact_url, sha256_hex, DataMallSnapshot, MAX_DATASET_BYTES};
 #[cfg(feature = "http-ureq")]
 pub use transport::UreqTransport;
 pub use transport::{Response, Transport, TransportError};

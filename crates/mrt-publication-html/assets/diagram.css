@@ -1,0 +1,198 @@
+/* The time-distance train diagram.
+ *
+ * The SVG carries its own stylesheet so that the standalone file
+ * looks the same as the page. This sheet styles the page frame and
+ * the controls around it. */
+
+.diagram-frame {
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+  overflow: auto;
+}
+
+.diagram-frame svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.filters {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+}
+
+.filters > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.filter-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.filter-groups fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.filter-groups legend {
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.filter-groups label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.1rem 0;
+  overflow-wrap: anywhere;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 0.2rem;
+  border: 1px solid var(--rule);
+  flex: none;
+}
+
+/* The tooltip is a live region, so a screen reader announces the run
+ * that the pointer or the keyboard focus reached. */
+.run-details {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+  font-size: 0.85rem;
+  min-height: 3.5rem;
+}
+
+.run-details h2 {
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.run-details dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.75rem;
+  margin: 0;
+}
+
+.run-details dt {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.run-details dd {
+  margin: 0;
+}
+
+.run-details table {
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.run-details th,
+.run-details td {
+  text-align: left;
+  padding: 0.1rem 0.6rem 0.1rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* The call list is the accessible equivalent of the drawing. It is
+ * always in the document; the script only collapses it once it can
+ * offer the interactive view instead. */
+.call-tables {
+  margin-top: 1.5rem;
+}
+
+.call-tables details {
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--panel-bg);
+}
+
+.call-tables summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.call-tables table {
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+.call-tables th,
+.call-tables td {
+  text-align: left;
+  padding: 0.15rem 0.6rem 0.15rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.band-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.band-list li {
+  padding: 0.4rem 0.65rem;
+  border: 2px dotted var(--accent);
+  border-radius: 0.3rem;
+  background: var(--panel-bg);
+  font-size: 0.88rem;
+}
+
+@page {
+  size: A3 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  .diagram-frame {
+    border: 0;
+    overflow: visible;
+  }
+
+  .diagram-frame svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .filters,
+  .run-details {
+    display: none;
+  }
+
+  .call-tables details {
+    break-inside: avoid;
+  }
+}

@@ -1,0 +1,112 @@
+# The publication configuration for the Singapore train feed.
+#
+# Every option here is a presentation choice. Nothing in this file
+# invents schedule data: a destination, a platform, or a departure
+# time still comes from the feed, or from an explicit override below
+# that the generated page marks as configured.
+#
+# See docs/CONFIGURATION.md for the full reference.
+
+version: 1
+profile: singapore-lta
+timezone: Asia/Singapore
+
+# The service day of a Japanese-style timetable starts in the early
+# morning and runs past midnight, so the last rows read 00, 01, 02, 03
+# and mean the small hours of the next calendar day.
+day_start: "04:00:00"
+day_duration_hours: 24
+
+# bands | expand-approximate | reject-non-exact
+#
+# "bands" is the honest default: headway service that GTFS marks
+# exact_times=0 becomes a range such as "every 4 min approximately",
+# never a list of invented departure minutes.
+frequency_policy: bands
+
+# none | interpolate-bounded | interpolate-unbounded
+missing_time_policy: interpolate-bounded
+
+# en | ja
+language: en
+
+timetable:
+  # single | split-at | balanced | responsive
+  layout: responsive
+  columns: 2
+  show_empty_hours: true
+  # hide | show | show-if-nonzero
+  seconds: show-if-nonzero
+  group_by_platform: true
+  split_by_destination: false
+  mark_first_and_last: true
+  show_trip_short_name: true
+  title:
+    en: "{station} departure timetable"
+    ja: "{station} 発車時刻表"
+
+diagram:
+  # equal | distance | manual
+  station_spacing: equal
+  major_grid_minutes: 60
+  medium_grid_minutes: 30
+  minor_grid_minutes: 10
+  show_dwell: true
+  # never | auto | always
+  show_trip_labels: auto
+  # The GTFS trip_id is an internal key, never a train number. Turn
+  # this on only for debugging; it then appears in the hover details.
+  show_internal_trip_ids: false
+  pixels_per_hour: 240
+  row_height: 34
+  title:
+    en: "{corridor} train diagram"
+    ja: "{corridor} 列車ダイヤグラム"
+
+# Overrides. Each one is explicit, because GTFS does not carry the
+# information and the generator refuses to guess it.
+labels:
+  # Keyed by "<route_id>:<direction_id>". GTFS gives direction_id no
+  # meaning, so a heading such as "Northbound" or a Japanese 上り/下り
+  # can only come from here.
+  direction_overrides: {}
+  # Keyed by the full destination name.
+  destination_abbreviations: {}
+  # Keyed by the GTFS stop_id of the platform.
+  platform_overrides: {}
+  corridor_overrides: {}
+
+theme:
+  # System and openly licensed families only. The generator embeds no
+  # font file and copies no branding.
+  font_stack:
+    - Noto Sans
+    - Noto Sans JP
+    - Hiragino Kaku Gothic ProN
+    - Arial
+    - sans-serif
+  hour_cell: "#1b2a5e"
+  hour_cell_text: "#ffffff"
+  row_alternate: "#eef1f8"
+  background: "#ffffff"
+  text: "#14171f"
+  accent: "#1b2a5e"
+
+# Hand-written corridors for the diagram. Define one when a line has a
+# branch, or when the automatic derivation reports "corridor-split"
+# and puts patterns into separate panels.
+#
+# corridors:
+#   - id: ewl-main
+#     line: EW
+#     label:
+#       en: East West Line
+#     axis:
+#       - EW1
+#       - EW2
+#     branches:
+#       - junction: EW4
+#         axis:
+#           - CG1
+#           - CG2
+corridors: []

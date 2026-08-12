@@ -1,4 +1,8 @@
-shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence
-NS_S1,1.3331,103.7422,1
-NS_S1,1.3854,103.7443,2
-NS_S1,1.2762,103.8544,3
+shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence,shape_dist_traveled
+NS_S1,1.3331,103.7422,1,
+NS_S1,1.3854,103.7443,2,
+NS_S1,1.2762,103.8544,3,
+TE_S1,1.4482,103.7857,1,0
+TE_S1,1.4370,103.7865,2,3000
+TE_S1,1.4272,103.7936,3,6000
+TE_S1,1.3977,103.8181,4,10000

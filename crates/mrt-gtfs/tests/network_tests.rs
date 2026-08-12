@@ -2,9 +2,17 @@
 //! network model, and the schedule queries.
 //!
 //! The tests use the miniature feed in `tests/fixtures/mini`. The feed
-//! models a small Singapore-flavored network: two MRT lines (NSL,
-//! EWL), one LRT line (BPL) with frequency-based service, and one bus
-//! route that the rail filter must remove.
+//! models a small Singapore-flavored network:
+//!
+//! - two MRT lines (NSL, EWL) with fixed schedules, one interchange,
+//!   calendar exceptions, and a trip that runs past midnight,
+//! - one LRT line (BPL) with non-exact headway service,
+//! - the TEL, with two platforms per station, a short-turn trip, an
+//!   exact headway block, a trip with missing intermediate times, a
+//!   pass-through call, and a branch that no single station axis can
+//!   hold together with the main line,
+//! - a Punggol West LRT loop whose first station repeats at the end,
+//! - one bus route that the rail filter must remove.
 
 use std::path::PathBuf;
 
@@ -38,15 +46,15 @@ fn time(s: &str) -> GtfsTime {
 fn the_fixture_feed_loads_completely() {
     let feed = load_feed();
     assert_eq!(feed.agencies.len(), 2);
-    assert_eq!(feed.stops.len(), 15);
-    assert_eq!(feed.routes.len(), 4);
-    assert_eq!(feed.trips.len(), 8);
-    assert_eq!(feed.stop_times.len(), 22);
+    assert_eq!(feed.stops.len(), 37);
+    assert_eq!(feed.routes.len(), 6);
+    assert_eq!(feed.trips.len(), 16);
+    assert_eq!(feed.stop_times.len(), 53);
     assert_eq!(feed.calendar.len(), 2);
     assert_eq!(feed.calendar_dates.len(), 2);
-    assert_eq!(feed.frequencies.len(), 1);
+    assert_eq!(feed.frequencies.len(), 2);
     assert_eq!(feed.transfers.len(), 3);
-    assert_eq!(feed.shapes.len(), 3);
+    assert_eq!(feed.shapes.len(), 7);
 }
 
 // ----------------------------------------------------------------------
@@ -58,7 +66,7 @@ fn the_rail_filter_removes_bus_data() {
     let rail = RailFilter::default().apply(&load_feed());
 
     let route_ids: Vec<&str> = rail.routes.iter().map(|r| r.route_id.as_str()).collect();
-    assert_eq!(route_ids, vec!["NS", "EW", "BP"]);
+    assert_eq!(route_ids, vec!["NS", "EW", "BP", "TE", "PW"]);
 
     assert!(rail.trips.iter().all(|t| t.trip_id != "BUS_T1"));
     assert!(rail.stop_times.iter().all(|st| st.trip_id != "BUS_T1"));
@@ -90,9 +98,11 @@ fn the_rail_filter_removes_bus_data() {
 fn the_network_groups_stops_into_stations() {
     let network = network();
 
-    assert_eq!(network.lines().len(), 3);
-    // JUR, CCK, MRB, BNV, RFP, and the standalone South View stop.
-    assert_eq!(network.stations().len(), 6);
+    assert_eq!(network.lines().len(), 5);
+    // JUR, CCK, MRB, BNV, RFP, the standalone South View stop, four
+    // Thomson-East Coast Line stations, two branch stations, and the
+    // three stations of the Punggol West loop.
+    assert_eq!(network.stations().len(), 15);
 
     let jurong = network.station(network.station_by_code("NS1").unwrap());
     assert_eq!(jurong.name, "Jurong East");
@@ -396,8 +406,8 @@ mod zip_source {
         let bytes = pack_fixture("");
         let mut source = mrt_gtfs::ZipSource::from_reader(std::io::Cursor::new(bytes)).unwrap();
         let feed = GtfsFeed::load(&mut source).unwrap();
-        assert_eq!(feed.stops.len(), 15);
-        assert_eq!(feed.routes.len(), 4);
+        assert_eq!(feed.stops.len(), 37);
+        assert_eq!(feed.routes.len(), 6);
     }
 
     #[test]
@@ -405,7 +415,7 @@ mod zip_source {
         let bytes = pack_fixture("gtfs/");
         let mut source = mrt_gtfs::ZipSource::from_reader(std::io::Cursor::new(bytes)).unwrap();
         let feed = GtfsFeed::load(&mut source).unwrap();
-        assert_eq!(feed.stops.len(), 15);
+        assert_eq!(feed.stops.len(), 37);
     }
 
     #[test]
@@ -415,7 +425,7 @@ mod zip_source {
         let path = dir.path().join("mini.gtfs.zip");
         std::fs::write(&path, bytes).unwrap();
         let feed = GtfsFeed::from_zip_path(&path).unwrap();
-        assert_eq!(feed.trips.len(), 8);
+        assert_eq!(feed.trips.len(), 16);
     }
 }
 
@@ -442,9 +452,8 @@ fn split_route_entries_do_not_make_an_interchange() {
             route_id: route.to_string(),
             service_id: "DAILY".to_string(),
             trip_id: id.to_string(),
-            trip_headsign: None,
             direction_id: Some(0),
-            shape_id: None,
+            ..Default::default()
         }
     }
     fn call(trip: &str, time: &str, stop: &str, seq: u32) -> StopTime {
@@ -454,9 +463,7 @@ fn split_route_entries_do_not_make_an_interchange() {
             departure_time: Some(time.parse().unwrap()),
             stop_id: stop.to_string(),
             stop_sequence: seq,
-            stop_headsign: None,
-            pickup_type: None,
-            drop_off_type: None,
+            ..Default::default()
         }
     }
 

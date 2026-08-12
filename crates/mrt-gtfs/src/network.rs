@@ -103,16 +103,35 @@ pub struct StationTransfer {
 }
 
 /// One scheduled call of a trip at a station.
+///
+/// The call keeps the platform that the trip actually uses, so a
+/// timetable can print the platform of one departure instead of a
+/// platform of the station.
 #[derive(Debug, Clone)]
 pub(crate) struct StopCall {
     pub arrival: Option<GtfsTime>,
     pub departure: Option<GtfsTime>,
+    /// The `stop_id` of the platform that this call uses.
+    pub stop_id: String,
+    /// The `platform_code` of that platform, when the feed supplies one.
+    pub platform_code: Option<String>,
+    /// The per-call destination text, when the feed supplies one.
+    pub stop_headsign: Option<String>,
+    pub pickup_type: Option<u8>,
+    pub drop_off_type: Option<u8>,
+    pub timepoint: Option<u8>,
+    pub shape_dist_traveled: Option<f64>,
 }
 
 impl StopCall {
     /// Get the best departure time: the departure, or else the arrival.
     pub(crate) fn departure_or_arrival(&self) -> Option<GtfsTime> {
         self.departure.or(self.arrival)
+    }
+
+    /// Get the best arrival time: the arrival, or else the departure.
+    pub(crate) fn arrival_or_departure(&self) -> Option<GtfsTime> {
+        self.arrival.or(self.departure)
     }
 }
 
@@ -123,7 +142,14 @@ pub(crate) struct TripSchedule {
     pub line: LineId,
     pub pattern: PatternId,
     pub service: usize,
+    pub service_id: String,
     pub headsign: Option<String>,
+    /// The public trip name, for example a train number.
+    pub short_name: Option<String>,
+    /// The vehicle block that this trip belongs to.
+    pub block_id: Option<String>,
+    /// The GTFS direction of the trip.
+    pub direction: Option<u8>,
     /// One call per station of the pattern, in the same order.
     pub calls: Vec<StopCall>,
     /// The frequency blocks of the trip. Empty for a fixed-schedule
@@ -294,6 +320,21 @@ impl RailNetwork {
             }
             stop_to_station.insert(stop.stop_id.clone(), station_id);
         }
+        // The passenger-facing platform label of each boarding
+        // location. A timetable prints this value and never guesses
+        // one from the direction of travel.
+        let platform_codes: HashMap<&str, Option<String>> = feed
+            .stops
+            .iter()
+            .filter(|s| s.is_boarding_location())
+            .map(|s| {
+                (
+                    s.stop_id.as_str(),
+                    s.platform_code.clone().filter(|c| !c.is_empty()),
+                )
+            })
+            .collect();
+
         let code_index: HashMap<String, StationId> = stations
             .iter()
             .enumerate()
@@ -374,6 +415,13 @@ impl RailNetwork {
                 calls.push(StopCall {
                     arrival: st.arrival_time,
                     departure: st.departure_time,
+                    stop_id: st.stop_id.clone(),
+                    platform_code: platform_codes.get(st.stop_id.as_str()).cloned().flatten(),
+                    stop_headsign: st.stop_headsign.clone().filter(|s| !s.is_empty()),
+                    pickup_type: st.pickup_type,
+                    drop_off_type: st.drop_off_type,
+                    timepoint: st.timepoint,
+                    shape_dist_traveled: st.shape_dist_traveled,
                 });
             }
             let key = (line, trip.direction_id, station_seq.clone());
@@ -392,7 +440,11 @@ impl RailNetwork {
                 line,
                 pattern,
                 service,
+                service_id: trip.service_id.clone(),
                 headsign: trip.trip_headsign.clone().filter(|s| !s.is_empty()),
+                short_name: trip.trip_short_name.clone().filter(|s| !s.is_empty()),
+                block_id: trip.block_id.clone().filter(|s| !s.is_empty()),
+                direction: trip.direction_id,
                 calls,
                 frequencies: freq_by_trip
                     .get(trip.trip_id.as_str())

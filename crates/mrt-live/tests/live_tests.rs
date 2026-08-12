@@ -25,9 +25,7 @@ fn stop_time(trip: &str, time: &str, stop: &str, seq: u32) -> StopTime {
         departure_time: Some(time.parse().unwrap()),
         stop_id: stop.to_string(),
         stop_sequence: seq,
-        stop_headsign: None,
-        pickup_type: None,
-        drop_off_type: None,
+        ..Default::default()
     }
 }
 
@@ -54,7 +52,7 @@ fn tiny_feed() -> GtfsFeed {
             trip_id: "T1".to_string(),
             trip_headsign: Some("Marina Bay".to_string()),
             direction_id: Some(0),
-            shape_id: None,
+            ..Default::default()
         }],
         stop_times: vec![
             stop_time("T1", "08:00:00", "S_NS1", 1),
