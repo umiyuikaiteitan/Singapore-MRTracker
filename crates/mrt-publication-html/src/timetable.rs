@@ -12,10 +12,24 @@ use mrt_publication::{
 };
 
 use crate::escape;
+use crate::nav::{self, PageNav};
 use crate::page;
 
 /// Render a timetable document as one HTML file.
 pub fn render_timetable(document: &TimetableDocument, config: &PublicationConfig) -> String {
+    render_timetable_with_nav(document, config, None)
+}
+
+/// Render a timetable document with a site navigation block.
+///
+/// The block sits under the masthead and carries the `no-print`
+/// class, so a printed page looks exactly like one rendered without
+/// navigation.
+pub fn render_timetable_with_nav(
+    document: &TimetableDocument,
+    config: &PublicationConfig,
+    site_nav: Option<&PageNav>,
+) -> String {
     let labels = Labels::for_language(config.language);
     let accent = document.panels.first().map(|p| &p.line);
     let (accent_color, accent_text) = page::accent_of(
@@ -42,6 +56,9 @@ pub fn render_timetable(document: &TimetableDocument, config: &PublicationConfig
         "{} \u{00B7} {}",
         labels.departures, document.service_day_label
     );
+    if let Some(site_nav) = site_nav {
+        nav::render(&mut out, site_nav);
+    }
     page::masthead(&mut out, title, &subtitle, &document.station.codes);
     page::warnings(&mut out, &document.metadata, labels);
 

@@ -54,14 +54,16 @@
 
 mod diagram;
 pub mod escape;
+pub mod nav;
 mod page;
 mod svg;
 mod timetable;
 
-pub use diagram::{render_diagram, render_diagram_svg};
+pub use diagram::{render_diagram, render_diagram_svg, render_diagram_with_nav};
+pub use nav::{NavGroup, NavLink, PageNav};
 pub use page::CSP;
 pub use svg::{render_svg, SvgMode};
-pub use timetable::render_timetable;
+pub use timetable::{render_timetable, render_timetable_with_nav};
 
 /// Format a service-day time as `HH:MM`, keeping hours past 24.
 pub(crate) fn common_time(time: mrt_gtfs::GtfsTime) -> String {

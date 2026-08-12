@@ -11,10 +11,11 @@ right now", and a **publication** stack that produces printed
 timetables and diagrams.
 
 ```text
-                         ┌──────────────────────┐
-                         │   mrt-schedule-cli   │
-                         │ files, cache, manifest│
-                         └──────────┬───────────┘
+        ┌──────────────────────┐  ┌──────────────────────┐
+        │  mrt-schedule-site   │  │   mrt-schedule-cli   │
+        │ hub, nav, whole site │  │ files, cache, manifest│
+        └──────────┬───────────┘  └──────────┬───────────┘
+                   └─────────────┬───────────┘
 ┌─────────────────┐                 │
 │    mrt-live     │      ┌──────────▼───────────┐
 │ NetworkStatus,  │      │ mrt-publication-html │
@@ -40,8 +41,10 @@ timetables and diagrams.
   output.
 - `mrt-publication-html` knows only `mrt-publication`. It never
   queries the network model.
-- `mrt-schedule-cli` is the only crate in the publication stack that
-  touches files, the clock, or the network.
+- `mrt-schedule-cli` and `mrt-schedule-site` are the only crates in
+  the publication stack that touch files, the clock, or the network.
+  The site generator reuses the command line's atomic writer and YAML
+  reader rather than growing its own.
 - Applications can use any subset of the crates.
 
 ## mrt-gtfs
@@ -225,6 +228,29 @@ that touches the outside world.
 - The exit codes are a contract: 2 usage, 3 source, 4 feed, 5
   unresolved, 6 not representable under the policy, 7 output.
 
+## mrt-schedule-site
+
+Publishes the generated documents as a browsable section of a static
+site, beside the live board and under the same domain.
+
+- `plan.rs` decides what the site contains — which service dates,
+  stations, lines, and diagram windows — before anything is rendered,
+  so the hub, the navigation blocks, and the file names agree on one
+  set of names. Every path it produces is relative, because a GitHub
+  Pages project site lives under `/<repository>/`.
+- `hub.rs` renders the hub: line cards, date tabs, and the station
+  list. The list is markup, not a script that builds one, so the page
+  works without JavaScript; the search box stays hidden until a
+  script can drive it.
+- `build.rs` renders every page through `mrt-publication-html` with a
+  `PageNav` block, and writes each file atomically.
+
+The pages are pre-generated rather than rendered in the browser. That
+keeps one renderer, one set of tests, and one escaping discipline; a
+browser-side renderer would mirror the markup and drift from it. It
+also means a visitor loads one file and can then print it, save it,
+or read it with no signal.
+
 ## mrt-live
 
 The crate merges the three data sources into view models:
@@ -276,6 +302,10 @@ the HTTP status. The library does not panic on bad input data.
   of the markup.
 - Snapshot tests pin the timetable and diagram view models and the
   normalized SVG. Run with `UPDATE_SNAPSHOTS=1` to accept a change.
+- The site tests build the whole section from the fixture and check
+  that every link resolves to a file that exists, that no path is
+  absolute, that the hub lists every station in the document, and
+  that no page can reach the network.
 - Visual tests check the visual grammar of both reference pages and
   refresh the committed examples in `examples/`.
   `scripts/visual-regression.sh` adds a pixel comparison; it needs a

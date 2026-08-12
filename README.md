@@ -39,6 +39,7 @@ own.
 | `crates/mrt-publication` | Project the schedule into timetable and train-diagram view models. Pure: no input, no output. |
 | `crates/mrt-publication-html` | Render those view models as self-contained HTML and standalone SVG. |
 | `crates/mrt-schedule-cli` | The generator: fetch, cache, build, and write timetables and diagrams. |
+| `crates/mrt-schedule-site` | Generate a browsable static site of timetables and diagrams for GitHub Pages. |
 
 Other important paths:
 
@@ -190,6 +191,22 @@ model for another renderer.
 
 `examples/` holds a generated timetable and diagram, built from the
 miniature test feed. See `docs/CLI.md` for the full reference.
+
+### Publish them as a browsable site
+
+`mrt-schedule-site` turns the same generator into a section of the
+GitHub Pages site, beside the live board:
+
+```sh
+cargo run --release -p mrt-schedule-site -- site/timetables data/gtfs_schedule.zip
+```
+
+It writes a hub that lists every line and every station, one
+timetable per station and service date, and one diagram per line,
+date, and time window. The hub's station list is in the document, so
+it works without JavaScript; the search box is an enhancement that
+matches a name or any code in any spelling. See `docs/DEPLOY-PAGES.md`
+for the workflow and the options.
 
 The generator will not invent data. A headway-based service with
 `exact_times=0` becomes `06:30-09:00  every 4 min approximately`

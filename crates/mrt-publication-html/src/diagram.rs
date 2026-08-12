@@ -9,11 +9,21 @@
 use mrt_publication::{DiagramDocument, Labels, PublicationConfig};
 
 use crate::escape;
+use crate::nav::{self, PageNav};
 use crate::page;
 use crate::svg::{render_svg, SvgMode};
 
 /// Render a diagram document as one HTML file.
 pub fn render_diagram(document: &DiagramDocument, config: &PublicationConfig) -> String {
+    render_diagram_with_nav(document, config, None)
+}
+
+/// Render a diagram document with a site navigation block.
+pub fn render_diagram_with_nav(
+    document: &DiagramDocument,
+    config: &PublicationConfig,
+    site_nav: Option<&PageNav>,
+) -> String {
     let labels = Labels::for_language(config.language);
     let accent = document.runs.first().map(|r| &r.line);
     let (accent_color, accent_text) = page::accent_of(
@@ -43,6 +53,9 @@ pub fn render_diagram(document: &DiagramDocument, config: &PublicationConfig) ->
         crate::common_time(document.time_axis.end),
         document.service_day_label
     );
+    if let Some(site_nav) = site_nav {
+        nav::render(&mut out, site_nav);
+    }
     page::masthead(&mut out, title, &subtitle, &[]);
     page::warnings(&mut out, &document.metadata, labels);
     controls(&mut out, labels);
