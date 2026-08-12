@@ -1,0 +1,313 @@
+{
+  "metadata": {
+    "schema_version": "1.0",
+    "generator_version": "snapshot",
+    "feed_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "feed_timestamp": "2026-08-10T00:00:00+08:00",
+    "service_date": "20250505",
+    "timezone": "Asia/Singapore",
+    "generated_from_cache": false,
+    "configuration_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "warnings": [],
+    "diagnostics": [
+      {
+        "severity": "info",
+        "code": "time-interpolated",
+        "message": "computed 2 missing stop time(s) from the shape_dist_traveled of the trip",
+        "subject": "TE_M1"
+      }
+    ]
+  },
+  "station": {
+    "gtfs_id": "WDN",
+    "name": "Woodlands North",
+    "codes": [
+      "TE1"
+    ]
+  },
+  "title": {
+    "en": "Woodlands North departure timetable",
+    "ja": "Woodlands North 発車時刻表"
+  },
+  "service_day_label": "2025-05-05 (Mon)",
+  "day_start": "04:00:00",
+  "day_end": "28:00:00",
+  "panels": [
+    {
+      "key": "te-d0-p1",
+      "line": {
+        "route_id": "TE",
+        "name": "TEL",
+        "long_name": "Thomson-East Coast Line",
+        "color": "#9D5B25",
+        "text_color": "#FFFFFF",
+        "key": "te"
+      },
+      "direction_label": "For Springleaf / Branch Beta / Springleaf Express …",
+      "direction": 0,
+      "platform_label": "Platform 1",
+      "destination_summary": [
+        "Springleaf",
+        "Branch Beta",
+        "Springleaf Express",
+        "Woodlands South"
+      ],
+      "hour_groups": [
+        {
+          "service_hour": 4,
+          "display_hour": 4,
+          "departures": []
+        },
+        {
+          "service_hour": 5,
+          "display_hour": 5,
+          "departures": [
+            {
+              "scheduled_time": "05:00:00",
+              "display_minute": 0,
+              "display_seconds": null,
+              "destination": "Springleaf",
+              "destination_full": "Springleaf",
+              "platform": "1",
+              "trip_short_name": null,
+              "source_trip_id": "TE_F1",
+              "instance_id": "20250505:TE_F1@05:00:00",
+              "exactness": "exact",
+              "flags": [
+                "first-of-day"
+              ]
+            },
+            {
+              "scheduled_time": "05:10:00",
+              "display_minute": 10,
+              "display_seconds": null,
+              "destination": "Springleaf",
+              "destination_full": "Springleaf",
+              "platform": "1",
+              "trip_short_name": null,
+              "source_trip_id": "TE_F1",
+              "instance_id": "20250505:TE_F1@05:10:00",
+              "exactness": "exact",
+              "flags": []
+            },
+            {
+              "scheduled_time": "05:20:00",
+              "display_minute": 20,
+              "display_seconds": null,
+              "destination": "Springleaf",
+              "destination_full": "Springleaf",
+              "platform": "1",
+              "trip_short_name": null,
+              "source_trip_id": "TE_F1",
+              "instance_id": "20250505:TE_F1@05:20:00",
+              "exactness": "exact",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "service_hour": 6,
+          "display_hour": 6,
+          "departures": [
+            {
+              "scheduled_time": "06:00:30",
+              "display_minute": 0,
+              "display_seconds": 30,
+              "destination": "Springleaf",
+              "destination_full": "Springleaf",
+              "platform": "1",
+              "trip_short_name": "T101",
+              "source_trip_id": "TE_T1",
+              "instance_id": "20250505:TE_T1",
+              "exactness": "exact",
+              "flags": []
+            },
+            {
+              "scheduled_time": "06:20:30",
+              "display_minute": 20,
+              "display_seconds": 30,
+              "destination": "Woodlands South",
+              "destination_full": "Woodlands South",
+              "platform": "1",
+              "trip_short_name": "T103",
+              "source_trip_id": "TE_T2",
+              "instance_id": "20250505:TE_T2",
+              "exactness": "exact",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "service_hour": 7,
+          "display_hour": 7,
+          "departures": [
+            {
+              "scheduled_time": "07:00:30",
+              "display_minute": 0,
+              "display_seconds": 30,
+              "destination": "Springleaf",
+              "destination_full": "Springleaf",
+              "platform": "1",
+              "trip_short_name": "T105",
+              "source_trip_id": "TE_M1",
+              "instance_id": "20250505:TE_M1",
+              "exactness": "exact",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "service_hour": 8,
+          "display_hour": 8,
+          "departures": [
+            {
+              "scheduled_time": "08:00:30",
+              "display_minute": 0,
+              "display_seconds": 30,
+              "destination": "Springleaf Express",
+              "destination_full": "Springleaf Express",
+              "platform": "1",
+              "trip_short_name": "T107",
+              "source_trip_id": "TE_P1",
+              "instance_id": "20250505:TE_P1",
+              "exactness": "exact",
+              "flags": []
+            }
+          ]
+        },
+        {
+          "service_hour": 9,
+          "display_hour": 9,
+          "departures": [
+            {
+              "scheduled_time": "09:00:30",
+              "display_minute": 0,
+              "display_seconds": 30,
+              "destination": "Branch Beta",
+              "destination_full": "Branch Beta",
+              "platform": "1",
+              "trip_short_name": "T121",
+              "source_trip_id": "TE_B1",
+              "instance_id": "20250505:TE_B1",
+              "exactness": "exact",
+              "flags": [
+                "last-of-day"
+              ]
+            }
+          ]
+        },
+        {
+          "service_hour": 10,
+          "display_hour": 10,
+          "departures": []
+        },
+        {
+          "service_hour": 11,
+          "display_hour": 11,
+          "departures": []
+        },
+        {
+          "service_hour": 12,
+          "display_hour": 12,
+          "departures": []
+        },
+        {
+          "service_hour": 13,
+          "display_hour": 13,
+          "departures": []
+        },
+        {
+          "service_hour": 14,
+          "display_hour": 14,
+          "departures": []
+        },
+        {
+          "service_hour": 15,
+          "display_hour": 15,
+          "departures": []
+        },
+        {
+          "service_hour": 16,
+          "display_hour": 16,
+          "departures": []
+        },
+        {
+          "service_hour": 17,
+          "display_hour": 17,
+          "departures": []
+        },
+        {
+          "service_hour": 18,
+          "display_hour": 18,
+          "departures": []
+        },
+        {
+          "service_hour": 19,
+          "display_hour": 19,
+          "departures": []
+        },
+        {
+          "service_hour": 20,
+          "display_hour": 20,
+          "departures": []
+        },
+        {
+          "service_hour": 21,
+          "display_hour": 21,
+          "departures": []
+        },
+        {
+          "service_hour": 22,
+          "display_hour": 22,
+          "departures": []
+        },
+        {
+          "service_hour": 23,
+          "display_hour": 23,
+          "departures": []
+        },
+        {
+          "service_hour": 24,
+          "display_hour": 0,
+          "departures": []
+        },
+        {
+          "service_hour": 25,
+          "display_hour": 1,
+          "departures": []
+        },
+        {
+          "service_hour": 26,
+          "display_hour": 2,
+          "departures": []
+        },
+        {
+          "service_hour": 27,
+          "display_hour": 3,
+          "departures": []
+        }
+      ],
+      "column_breaks": [
+        12
+      ],
+      "frequency_notes": []
+    }
+  ],
+  "legend": [
+    {
+      "key": "first",
+      "symbol": "▷",
+      "label": "first departure of the service day"
+    },
+    {
+      "key": "last",
+      "symbol": "◁",
+      "label": "last departure of the service day"
+    },
+    {
+      "key": "platform",
+      "symbol": null,
+      "label": "platform"
+    }
+  ]
+}

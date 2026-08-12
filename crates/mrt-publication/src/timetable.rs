@@ -622,17 +622,28 @@ fn column_breaks(hour_groups: &[HourGroup], config: &PublicationConfig) -> Vec<u
     }
 }
 
-/// Split the hour rows into columns of roughly equal weight.
+/// How many departures fit on one printed line of an hour row.
 ///
-/// The weight of a row is one for the row itself plus one for each
-/// departure, so a column with dense hours does not run far past the
-/// others. The order of the rows never changes.
+/// The value only feeds the column balance, so an approximation is
+/// enough; it stops a busy hour from counting as many empty ones.
+const DEPARTURES_PER_LINE: usize = 6;
+
+/// Split the hour rows into columns of roughly equal height.
+///
+/// The weight of a row is the number of lines that its departures
+/// need, which is what actually decides how tall a column becomes.
+/// Counting departures instead would push a quiet morning and a busy
+/// evening into wildly uneven columns. The order of the rows never
+/// changes.
 fn balanced_breaks(hour_groups: &[HourGroup], columns: usize) -> Vec<usize> {
     if columns <= 1 || hour_groups.len() < 2 {
         return Vec::new();
     }
     let columns = columns.min(hour_groups.len());
-    let weights: Vec<usize> = hour_groups.iter().map(|g| 1 + g.departures.len()).collect();
+    let weights: Vec<usize> = hour_groups
+        .iter()
+        .map(|g| 1 + g.departures.len().saturating_sub(1) / DEPARTURES_PER_LINE)
+        .collect();
     let total: usize = weights.iter().sum();
     let mut breaks = Vec::new();
     let mut carried = 0usize;
@@ -737,12 +748,22 @@ mod tests {
     }
 
     #[test]
-    fn balanced_columns_follow_the_departure_weight() {
-        // The early hours are busy, so the break moves earlier.
+    fn balanced_columns_follow_the_height_of_the_rows() {
+        // Eight hours with nine departures each need two printed lines
+        // apiece; eight quiet hours need one. The break lands where the
+        // two columns come out the same height.
         let mut groups: Vec<HourGroup> = (4..12).map(|h| group(h, 9)).collect();
         groups.extend((12..20).map(|h| group(h, 1)));
-        let breaks = balanced_breaks(&groups, 2);
-        assert_eq!(breaks, vec![4]);
+        assert_eq!(balanced_breaks(&groups, 2), vec![6]);
+    }
+
+    #[test]
+    fn a_sparse_day_still_splits_down_the_middle() {
+        // A feed whose early hours carry a few trains and whose later
+        // hours carry none must not leave one column nearly empty.
+        let mut groups: Vec<HourGroup> = (4..10).map(|h| group(h, 3)).collect();
+        groups.extend((10..28).map(|h| group(h, 0)));
+        assert_eq!(balanced_breaks(&groups, 2), vec![12]);
     }
 
     #[test]

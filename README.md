@@ -18,6 +18,10 @@ maps, destination boards, and LED panels.
   platform crowd density.
 - It merges the static and the live data into render-ready view
   models, and serves a RATIS-style destination board in the browser.
+- It publishes the schedule as printed products: a Japanese-style
+  station departure timetable (発車時刻表) and a planning-style
+  time-distance train diagram (列車ダイヤグラム), as self-contained
+  HTML, standalone SVG, and versioned JSON.
 
 ## Repository layout
 
@@ -32,6 +36,9 @@ own.
 | `crates/mrt-live` | Merge the static network with the live data into view models for maps, boards, and panels. |
 | `crates/mrt-board-web` | Serve a dot-matrix destination board in the browser (draft). |
 | `crates/mrt-board-static` | Generate the board as a static site for GitHub Pages. |
+| `crates/mrt-publication` | Project the schedule into timetable and train-diagram view models. Pure: no input, no output. |
+| `crates/mrt-publication-html` | Render those view models as self-contained HTML and standalone SVG. |
+| `crates/mrt-schedule-cli` | The generator: fetch, cache, build, and write timetables and diagrams. |
 
 Other important paths:
 
@@ -40,6 +47,12 @@ Other important paths:
 | `docs/ARCHITECTURE.md` | The design of the library and the porting notes. |
 | `docs/DATA-SOURCES.md` | The DataMall endpoints and their response formats. |
 | `docs/DEPLOY-PAGES.md` | How to host the board on GitHub Pages. |
+| `docs/SINGAPORE-GTFS-PROFILE.md` | What the LTA train feed carries, and which assumptions are still unverified. |
+| `docs/CLI.md` | The `mrt-schedule-cli` reference. |
+| `docs/CONFIGURATION.md` | Every configuration option. |
+| `docs/KNOWN-LIMITATIONS.md` | What the generator does not do, and why. |
+| `config/singapore.yaml` | A complete, commented configuration. |
+| `examples/` | Generated example pages, refreshed by the tests. |
 | `scripts/regenerate-gtfs-rt.sh` | The generator for the vendored Protocol Buffer code. |
 | `crates/*/examples/` | Small example programs. |
 
@@ -141,6 +154,49 @@ See `docs/DEPLOY-PAGES.md` for the GitHub Pages workflow:
 cargo run --release -p mrt-board-static -- site data/gtfs_schedule.zip
 ```
 
+### Generate a timetable and a train diagram
+
+A station departure timetable, in the grammar of a Japanese
+発車時刻表 — dark hour cells, large minute numerals, small
+destination annotations, one panel per platform and direction:
+
+```sh
+cargo run -p mrt-schedule-cli -- timetable \
+  --feed data/gtfs_schedule.zip \
+  --station NS1 \
+  --date 2026-08-10 \
+  --config config/singapore.yaml \
+  --out dist/ns1.html
+```
+
+A planning-style train diagram — time across, stations down, one
+polyline per train:
+
+```sh
+cargo run -p mrt-schedule-cli -- diagram \
+  --feed data/gtfs_schedule.zip \
+  --line EWL \
+  --date 2026-08-10 \
+  --from 05:00:00 --until 10:00:00 \
+  --config config/singapore.yaml \
+  --out dist/ewl.html
+```
+
+Both pages are one self-contained file: no external stylesheet,
+script, font, or image, a `default-src 'none'` policy, readable
+without JavaScript, and printable on A4 and A3. `--format svg` writes
+the drawing on its own, and `--format json` writes the versioned view
+model for another renderer.
+
+`examples/` holds a generated timetable and diagram, built from the
+miniature test feed. See `docs/CLI.md` for the full reference.
+
+The generator will not invent data. A headway-based service with
+`exact_times=0` becomes `06:30-09:00  every 4 min approximately`
+rather than a list of minutes that the feed does not contain; a
+platform appears only when the feed names one; and a GTFS `trip_id`
+never appears as a train number.
+
 ## Library overview
 
 The typical data flow:
@@ -153,6 +209,12 @@ DataMall ──> mrt-datamall ──> GTFS zip ──> mrt-gtfs ──> RailNetw
                                                   mrt-live ──> view models
                                                                      v
                                                   mrt-board-web ──> browser
+
+RailNetwork ──> mrt-publication ──> timetable and diagram documents
+                                                                     v
+                                     mrt-publication-html ──> HTML, SVG
+                                                                     v
+                                     mrt-schedule-cli ──> files, manifest
 ```
 
 A minimal program:
@@ -203,6 +265,12 @@ languages:
   well-known civil calendar algorithms, implemented in the library.
 - **Synchronous code.** Callers wrap the client in the concurrency
   model of their choice.
+- **No invented data.** A renderer prints what the feed carries, or an
+  explicit configuration override, or nothing. Everything it cannot
+  represent becomes a diagnostic rather than a plausible guess.
+- **Deterministic artifacts.** The same feed, service date,
+  configuration, and generator version produce byte-identical files.
+  Generation time lives in the manifest, not in the documents.
 
 ## Development
 
@@ -225,6 +293,18 @@ The file `crates/mrt-gtfs-rt/src/transit_realtime.rs` is generated
 from `gtfs-realtime.proto`. Run `scripts/regenerate-gtfs-rt.sh` to
 update it.
 
+The publication snapshots pin the view models and the drawing. Accept
+an intended change with:
+
+```sh
+UPDATE_SNAPSHOTS=1 cargo test -p mrt-publication-html
+```
+
+`scripts/visual-regression.sh` renders the example pages with a
+headless browser and compares them with the baselines in
+`examples/baseline/`. It needs Chromium, so it stays out of
+`cargo test`.
+
 ## Roadmap
 
 The library is the base for these planned applications:
@@ -233,6 +313,8 @@ The library is the base for these planned applications:
 - Station destination boards (draft in `crates/mrt-board-web`).
 - Physical LED panel drivers.
 - Ports of the core model to other languages.
+- A live overlay on the train diagram: scheduled against actual,
+  from the GTFS-Realtime trip updates.
 
 ## Attribution
 

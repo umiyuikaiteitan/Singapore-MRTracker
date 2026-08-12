@@ -5,24 +5,43 @@ library.
 
 ## Layers
 
-The workspace has four crates. The dependencies point in one
-direction only:
+The dependencies point in one direction only. Two stacks sit on the
+same three source crates: a **live** stack that answers "what is next,
+right now", and a **publication** stack that produces printed
+timetables and diagrams.
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│                      mrt-live                       │
-│   view models: NetworkStatus, LiveBoard             │
-└───────┬──────────────────┬──────────────────┬───────┘
-        │                  │                  │
-┌───────▼───────┐  ┌───────▼───────┐  ┌───────▼───────┐
-│   mrt-gtfs    │  │  mrt-gtfs-rt  │  │  mrt-datamall │
-│ static feeds  │  │  realtime pb  │  │  API client   │
-└───────────────┘  └───────────────┘  └───────────────┘
+                         ┌──────────────────────┐
+                         │   mrt-schedule-cli   │
+                         │ files, cache, manifest│
+                         └──────────┬───────────┘
+┌─────────────────┐                 │
+│    mrt-live     │      ┌──────────▼───────────┐
+│ NetworkStatus,  │      │ mrt-publication-html │
+│ LiveBoard       │      │   HTML, CSS, SVG     │
+└───┬─────┬────┬──┘      └──────────┬───────────┘
+    │     │    │                    │
+    │     │    │         ┌──────────▼───────────┐
+    │     │    │         │   mrt-publication    │
+    │     │    │         │ timetable & diagram  │
+    │     │    │         │     view models      │
+    │     │    │         └──────────┬───────────┘
+    │     │    │                    │
+┌───▼─────┴────┴───┐  ┌─────────────▼──┐  ┌───────────────┐
+│    mrt-gtfs      │  │  mrt-gtfs-rt   │  │  mrt-datamall │
+│  static feeds    │  │  realtime pb   │  │  API client   │
+└──────────────────┘  └────────────────┘  └───────────────┘
 ```
 
 - `mrt-gtfs`, `mrt-gtfs-rt`, and `mrt-datamall` do not know each
   other.
 - `mrt-live` knows all three. It merges their outputs.
+- `mrt-publication` knows only `mrt-gtfs`. It does no input or
+  output.
+- `mrt-publication-html` knows only `mrt-publication`. It never
+  queries the network model.
+- `mrt-schedule-cli` is the only crate in the publication stack that
+  touches files, the clock, or the network.
 - Applications can use any subset of the crates.
 
 ## mrt-gtfs
@@ -40,8 +59,8 @@ The crate has four internal layers. Data flows down:
    `route_type` and cuts every dependent table down to the rail
    subset. The default filter accepts the standard and the extended
    rail route types.
-4. **Network** (`network.rs`, `schedule.rs`). `RailNetwork` links the
-   records:
+4. **Network** (`network.rs`, `schedule.rs`, `query.rs`).
+   `RailNetwork` links the records:
    - Stops collapse into stations. A GTFS parent station groups its
      platforms. A stop without a parent becomes its own station.
    - Routes become lines. Trips with the same line, direction, and
@@ -52,6 +71,30 @@ The crate has four internal layers. Data flows down:
      departure and destination-board requests. A board query also
      examines the previous service day, because trips can run past
      midnight (GTFS times can be greater than `24:00:00`).
+   - `RailNetwork::query_trip_instances` is the renderer-facing API.
+     It returns complete `TripInstance` values with every
+     `ScheduledCall` — platform, headsign, boarding rules, and where
+     each time came from — plus the `FrequencyBand` entries that the
+     policy left unexpanded, plus the diagnostics that explain
+     everything it could not represent. Renderers use this API and
+     never touch the private `TripSchedule`.
+
+Two more modules support it:
+
+- `validate.rs` checks a parsed feed and returns diagnostics. Lenient
+  mode reports what breaks the output; strict mode also reports every
+  deviation from the letter of the specification.
+- `diag.rs` holds `Diagnostic` and `Severity`. A query or a projection
+  reports what it could not do instead of silently dropping data.
+
+### Safety of the zip source
+
+A downloaded archive is untrusted input. `ZipSource` refuses an
+archive before it reads any content when the archive holds an absolute
+entry path, a `..` traversal, a symbolic link, a second copy of a feed
+file, more entries than `ZipLimits::max_entries`, or an expansion
+beyond `ZipLimits::max_total_bytes`. Strict mode additionally requires
+the feed files at the archive root, as standard GTFS specifies.
 
 Supporting types: `GtfsTime` (seconds on a service day) and
 `ServiceDate` (a civil date with weekday math). Both types are
@@ -112,6 +155,76 @@ The crate talks to the LTA DataMall OData API.
 - `get_raw` gives access to endpoints that the crate does not model
   yet.
 
+## mrt-publication
+
+A pure projection crate: no input, no output, no HTML. It takes a
+`RailNetwork`, a `PublicationConfig`, and a `DocumentSeed`, and
+returns serializable documents.
+
+- `timetable.rs` builds a `TimetableDocument`: one panel per line,
+  platform, and direction; hour rows in *service-day* order, so a day
+  that starts at `04:00` ends with `00`, `01`, `02`, `03`; and column
+  breaks weighted by the printed height of each row.
+- `corridor.rs` builds the vertical axis of a diagram. A
+  `CorridorNode` carries a station *and* an occurrence index, because
+  an unrolled loop contains the same station more than once and a
+  `StationId` alone cannot name a position. A pattern joins the spine
+  only when it is a subsequence of it, forwards or backwards;
+  anything else gets its own panel and a diagnostic.
+- `diagram.rs` turns runs into polylines: a horizontal dwell segment
+  where a train stands, a sloped travel segment between stations, and
+  a clean cut at each edge of the requested window. Opposite
+  directions therefore slope opposite ways with no special case.
+- `config.rs` and `text.rs` hold the presentation choices and the
+  interface labels. Feed text is never translated; interface text
+  never leaks into feed text.
+
+The crate's rule is that it never invents schedule data. Destination
+text comes from `stop_headsign`, `trip_headsign`, the real terminus,
+or an explicit override, in that order. A platform comes from the
+platform the run actually uses. Non-exact headway service becomes a
+band, not a list of minutes.
+
+Documents read no clock, so the same feed, date, configuration, and
+generator version produce byte-identical output. Generation time lives
+in the manifest instead.
+
+## mrt-publication-html
+
+Renders the documents as one self-contained file each.
+
+- `escape.rs` holds the only functions that put feed text into markup.
+  Colours and font names pass a strict filter before they reach the
+  stylesheet, so a hostile `route_color` cannot inject a declaration.
+- The pages carry `default-src 'none'`, so they make no network
+  request of any kind.
+- Everything reads without JavaScript: the timetable is a table, and
+  the diagram is an SVG plus a call table for every run. The scripts
+  add zoom, filters, and highlighting, and reveal their own controls,
+  which start hidden.
+- Print profiles cover A4 portrait and landscape for a timetable, A3
+  landscape for a diagram, plus a monochrome profile.
+- No font file and no logo is embedded. The theme names a font stack
+  that ends in a generic family.
+
+## mrt-schedule-cli
+
+The orchestration layer, and the only crate in the publication stack
+that touches the outside world.
+
+- A content-addressed cache stores each archive under its own
+  SHA-256, with `current.json` pointing at the newest.
+- A small YAML reader turns the configuration into a
+  `serde_json::Value`, which serde deserializes into
+  `PublicationConfig`. One schema definition, no second parser.
+- Artifacts are written through a temporary file and an atomic
+  rename.
+- The manifest records the feed hash, the feed timestamp, the
+  configuration hash, the generator version, the artifacts, and the
+  diagnostics. It is the only output that reads a clock.
+- The exit codes are a contract: 2 usage, 3 source, 4 feed, 5
+  unresolved, 6 not representable under the policy, 7 output.
+
 ## mrt-live
 
 The crate merges the three data sources into view models:
@@ -153,8 +266,20 @@ the HTTP status. The library does not panic on bad input data.
 - Integration tests load a miniature Singapore-flavored GTFS feed
   from `crates/mrt-gtfs/tests/fixtures/mini`. The feed contains two
   MRT lines, one frequency-based LRT line, a bus route (which the
-  rail filter must remove), interchanges, calendar exceptions, and a
-  trip past midnight.
+  rail filter must remove), interchanges, calendar exceptions, a trip
+  past midnight, a line with two platforms per station, a short turn,
+  an exact headway block, a trip with missing intermediate times, a
+  pass-through call, a branch that no single station axis can hold
+  with the main line, and a loop whose first station repeats.
+- Security tests build hostile zip archives and check that the loader
+  refuses them, and render a feed whose text fields try to break out
+  of the markup.
+- Snapshot tests pin the timetable and diagram view models and the
+  normalized SVG. Run with `UPDATE_SNAPSHOTS=1` to accept a change.
+- Visual tests check the visual grammar of both reference pages and
+  refresh the committed examples in `examples/`.
+  `scripts/visual-regression.sh` adds a pixel comparison; it needs a
+  browser, so it stays out of `cargo test`.
 - The DataMall client tests replay the official LTA sample
   responses through a mock transport.
 - The GTFS-Realtime tests encode synthetic Protocol Buffer messages
@@ -178,5 +303,9 @@ A port to another language keeps this shape:
    the flat `RailRtFeed` view.
 6. For the API client, mirror the `Transport` seam so the tests stay
    network-free.
+7. For the publication layer, port the projections before the
+   renderers. The view models are plain data, and the JSON snapshots
+   in `crates/mrt-publication-html/tests/snapshots` are the
+   acceptance test for a port.
 
 Copy the test fixtures. They are language-independent.

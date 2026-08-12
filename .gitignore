@@ -12,6 +12,10 @@ secrets/
 /data/
 *.gtfs.zip
 
+# The feed cache and generated artifacts.
+/cache/
+/dist/
+
 # Editor files.
 .idea/
 .vscode/

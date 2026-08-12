@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; style-src &#39;unsafe-inline&#39;; script-src &#39;unsafe-inline&#39;; img-src data:; base-uri &#39;none&#39;; form-action &#39;none&#39;; frame-ancestors &#39;none&#39;">
+<meta name="referrer" content="no-referrer">
+<title>TEL train diagram</title>
+<style>
+:root {
+--font-stack: "Noto Sans", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Arial", sans-serif;
+--bg: #ffffff;
+--fg: #14171f;
+--muted: color-mix(in srgb, #14171f 62%, #ffffff);
+--rule: color-mix(in srgb, #14171f 22%, #ffffff);
+--panel-bg: #eef1f8;
+--row-alt: #eef1f8;
+--hour-bg: #1b2a5e;
+--hour-fg: #ffffff;
+--accent: #9D5B25;
+--accent-text: #FFFFFF;
+--focus: #0b62d6;
+--warn: #b26a00;
+--warn-fg: #8a5200;
+--warn-bg: #fff6e5;
+}
+/* Shared page frame for the timetable and the diagram.
+ *
+ * The theme lives entirely in custom properties, which the generator
+ * writes into a :root block from the configuration. No rule below
+ * hard-codes a brand color, and no rule loads a font file: the font
+ * stack names system and openly licensed families only. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0 0 3rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-stack);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.page {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 0;
+}
+
+/* The accent bar carries the line color, so a reader can tell two
+ * printed pages apart at a glance. */
+.masthead {
+  border-top: 6px solid var(--accent);
+  padding-top: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.masthead .subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.masthead .station-codes {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-left: 0.6rem;
+  vertical-align: 0.15em;
+}
+
+.code-chip {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.65rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.85rem;
+  border-left: 4px solid var(--warn);
+  background: var(--warn-bg);
+  font-size: 0.9rem;
+}
+
+.notice ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Legend                                                            */
+/* ---------------------------------------------------------------- */
+
+.legend {
+  margin: 1.75rem 0 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+}
+
+.legend h2 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.legend ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0.3rem 1.25rem;
+  font-size: 0.86rem;
+}
+
+.legend .symbol {
+  display: inline-block;
+  min-width: 1.3rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- */
+/* Footer                                                            */
+/* ---------------------------------------------------------------- */
+
+.colophon {
+  margin: 2rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.colophon dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0;
+}
+
+.colophon dt {
+  font-weight: 700;
+}
+
+.colophon dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.stale {
+  color: var(--warn-fg);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- */
+/* Controls                                                          */
+/* ---------------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin: 0 0 1rem;
+}
+
+.controls button,
+.controls .toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.3rem;
+  background: var(--panel-bg);
+  color: inherit;
+  cursor: pointer;
+}
+
+.controls button:hover,
+.controls .toggle:hover {
+  border-color: var(--accent);
+}
+
+.controls button:focus-visible,
+.controls .toggle:focus-within,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Nothing on the page needs JavaScript. The controls only appear
+ * once a script has enabled them. */
+.needs-script {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- */
+/* Print                                                             */
+/* ---------------------------------------------------------------- */
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  body {
+    padding: 0;
+    font-size: 10pt;
+    background: #fff;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .controls,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Hour cells and line accents carry meaning, so they must survive
+   * the browser's default of dropping backgrounds. */
+  .hour-cell,
+  .code-chip,
+  .panel-head,
+  .band-row {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* A monochrome profile for a black-and-white printer, and for a
+ * reader who prefers one. The generator adds .monochrome to <html>
+ * when the reader asks for it; a monochrome device gets it for free. */
+@media print and (monochrome) {
+  :root {
+    --hour-bg: #000;
+    --hour-fg: #fff;
+    --accent: #000;
+    --accent-text: #fff;
+    --row-alt: #ececec;
+  }
+}
+
+.monochrome {
+  --hour-bg: #1a1a1a;
+  --hour-fg: #fff;
+  --accent: #1a1a1a;
+  --accent-text: #fff;
+  --row-alt: #efefef;
+}
+/* The time-distance train diagram.
+ *
+ * The SVG carries its own stylesheet so that the standalone file
+ * looks the same as the page. This sheet styles the page frame and
+ * the controls around it. */
+
+.diagram-frame {
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+  overflow: auto;
+}
+
+.diagram-frame svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.filters {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+}
+
+.filters > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.filter-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.filter-groups fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.filter-groups legend {
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.filter-groups label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.1rem 0;
+  overflow-wrap: anywhere;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 0.2rem;
+  border: 1px solid var(--rule);
+  flex: none;
+}
+
+/* The tooltip is a live region, so a screen reader announces the run
+ * that the pointer or the keyboard focus reached. */
+.run-details {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+  font-size: 0.85rem;
+  min-height: 3.5rem;
+}
+
+.run-details h2 {
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.run-details dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.75rem;
+  margin: 0;
+}
+
+.run-details dt {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.run-details dd {
+  margin: 0;
+}
+
+.run-details table {
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.run-details th,
+.run-details td {
+  text-align: left;
+  padding: 0.1rem 0.6rem 0.1rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* The call list is the accessible equivalent of the drawing. It is
+ * always in the document; the script only collapses it once it can
+ * offer the interactive view instead. */
+.call-tables {
+  margin-top: 1.5rem;
+}
+
+.call-tables details {
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--panel-bg);
+}
+
+.call-tables summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.call-tables table {
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+.call-tables th,
+.call-tables td {
+  text-align: left;
+  padding: 0.15rem 0.6rem 0.15rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.band-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.band-list li {
+  padding: 0.4rem 0.65rem;
+  border: 2px dotted var(--accent);
+  border-radius: 0.3rem;
+  background: var(--panel-bg);
+  font-size: 0.88rem;
+}
+
+@page {
+  size: A3 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  .diagram-frame {
+    border: 0;
+    overflow: visible;
+  }
+
+  .diagram-frame svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .filters,
+  .run-details {
+    display: none;
+  }
+
+  .call-tables details {
+    break-inside: avoid;
+  }
+}
+
+</style>
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+<h1>TEL train diagram</h1>
+<p class="subtitle">Train diagram · 05:00 – 10:00 · 2025-05-05 (Mon)</p>
+</header>
+<div class="notice" role="note">
+<strong>Warnings</strong>
+<ul>
+<li>warning [corridor-split] 2 stop pattern group(s) do not fit on one station axis, so the diagram draws them in separate panels; define a corridor in the configuration to place them on one axis</li>
+</ul>
+</div>
+<div class="controls needs-script no-print">
+<button type="button" id="zoom-in">Zoom in</button>
+<button type="button" id="zoom-out">Zoom out</button>
+<button type="button" id="reset-view">Reset view</button>
+<button type="button" id="print-page">Print</button>
+<button type="button" id="download-svg">Download SVG</button>
+<button type="button" id="toggle-mono">Monochrome</button>
+</div>
+<details class="filters needs-script no-print" open>
+<summary>Filters</summary>
+<div class="filter-groups">
+<fieldset><legend>Line</legend>
+<label><input type="checkbox" checked data-filter="line" value="TE"><span class="swatch" style="background:#9D5B25"></span>TEL</label>
+</fieldset>
+<fieldset><legend>Direction</legend>
+<label><input type="checkbox" checked data-filter="direction" value="0">0</label>
+<label><input type="checkbox" checked data-filter="direction" value="1">1</label>
+</fieldset>
+<fieldset><legend>Destination</legend>
+<label><input type="checkbox" checked data-filter="destination" value="Branch Beta">Branch Beta</label>
+<label><input type="checkbox" checked data-filter="destination" value="Springleaf">Springleaf</label>
+<label><input type="checkbox" checked data-filter="destination" value="Woodlands North">Woodlands North</label>
+<label><input type="checkbox" checked data-filter="destination" value="Woodlands South">Woodlands South</label>
+</fieldset>
+</div>
+</details>
+<div class="diagram-frame">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="diagram-svg" role="img" tabindex="0" viewBox="0 0 1408 375" aria-labelledby="svg-title svg-desc">
+<title id="svg-title">TEL train diagram</title>
+<desc id="svg-desc">TEL. Time: 05:00 – 10:00. Stations: 8. Trains: 9. Service date: 2025-05-05 (Mon).</desc>
+<style>
+.plot-bg { fill: var(--svg-bg, #ffffff); }
+.grid-minor { stroke: #d9dee8; stroke-width: 0.5; }
+.grid-medium { stroke: #b8c1d2; stroke-width: 0.8; }
+.grid-major { stroke: #8b97ad; stroke-width: 1.2; }
+.grid-day { stroke: #1b2a5e; stroke-width: 2; stroke-dasharray: 6 3; }
+.station-line { stroke: #c9d0dd; stroke-width: 0.6; }
+.station-line.panel-edge { stroke: #7c879c; stroke-width: 1.2; }
+.axis-label { font-size: 10px; fill: #3a4358; }
+.axis-label.major { font-weight: 700; fill: #1b2a5e; }
+.station-name { font-size: 10.5px; fill: #14171f; }
+.station-code { font-size: 9px; font-weight: 700; fill: #4a5468; }
+.panel-title { font-size: 10px; font-weight: 700; fill: #1b2a5e; letter-spacing: 0.06em; }
+.run path { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.run.approximate path { stroke-dasharray: 5 3; stroke-width: 1.4; }
+.run .hit { stroke: transparent; stroke-width: 9; fill: none; }
+.run .stop-dot { r: 1.9; }
+.run .pass-dot { fill: none; stroke-width: 1; r: 2.2; }
+.run .run-label { font-size: 8.5px; font-weight: 700; paint-order: stroke; stroke: #ffffff; stroke-width: 2.4; }
+.band path { fill: none; stroke-dasharray: 5 3; stroke-width: 1.4; }
+.band .band-fill { fill-opacity: 0.12; stroke: none; }
+.band .band-label { font-size: 9px; font-weight: 700; paint-order: stroke; stroke: #ffffff; stroke-width: 2.4; }
+.frame { fill: none; stroke: #8b97ad; stroke-width: 1; }
+svg[data-highlight] .run { opacity: 0.16; }
+svg[data-highlight] .run:hover,
+svg[data-highlight] .run:focus-within { opacity: 1; }
+.run:focus { outline: none; }
+.run:focus-within path.trace { stroke-width: 3.2; }
+@media print {
+  .run path { stroke-width: 1.1; }
+  .grid-minor { stroke: #e2e6ee; }
+}
+</style>
+<rect class="plot-bg" x="0" y="0" width="1408" height="375"/>
+<g class="grid" aria-hidden="true">
+<line class="grid-major" x1="168" y1="64" x2="168" y2="319"/>
+<line class="grid-minor" x1="208" y1="64" x2="208" y2="319"/>
+<line class="grid-minor" x1="248" y1="64" x2="248" y2="319"/>
+<line class="grid-medium" x1="288" y1="64" x2="288" y2="319"/>
+<line class="grid-minor" x1="328" y1="64" x2="328" y2="319"/>
+<line class="grid-minor" x1="368" y1="64" x2="368" y2="319"/>
+<line class="grid-major" x1="408" y1="64" x2="408" y2="319"/>
+<line class="grid-minor" x1="448" y1="64" x2="448" y2="319"/>
+<line class="grid-minor" x1="488" y1="64" x2="488" y2="319"/>
+<line class="grid-medium" x1="528" y1="64" x2="528" y2="319"/>
+<line class="grid-minor" x1="568" y1="64" x2="568" y2="319"/>
+<line class="grid-minor" x1="608" y1="64" x2="608" y2="319"/>
+<line class="grid-major" x1="648" y1="64" x2="648" y2="319"/>
+<line class="grid-minor" x1="688" y1="64" x2="688" y2="319"/>
+<line class="grid-minor" x1="728" y1="64" x2="728" y2="319"/>
+<line class="grid-medium" x1="768" y1="64" x2="768" y2="319"/>
+<line class="grid-minor" x1="808" y1="64" x2="808" y2="319"/>
+<line class="grid-minor" x1="848" y1="64" x2="848" y2="319"/>
+<line class="grid-major" x1="888" y1="64" x2="888" y2="319"/>
+<line class="grid-minor" x1="928" y1="64" x2="928" y2="319"/>
+<line class="grid-minor" x1="968" y1="64" x2="968" y2="319"/>
+<line class="grid-medium" x1="1008" y1="64" x2="1008" y2="319"/>
+<line class="grid-minor" x1="1048" y1="64" x2="1048" y2="319"/>
+<line class="grid-minor" x1="1088" y1="64" x2="1088" y2="319"/>
+<line class="grid-major" x1="1128" y1="64" x2="1128" y2="319"/>
+<line class="grid-minor" x1="1168" y1="64" x2="1168" y2="319"/>
+<line class="grid-minor" x1="1208" y1="64" x2="1208" y2="319"/>
+<line class="grid-medium" x1="1248" y1="64" x2="1248" y2="319"/>
+<line class="grid-minor" x1="1288" y1="64" x2="1288" y2="319"/>
+<line class="grid-minor" x1="1328" y1="64" x2="1328" y2="319"/>
+<line class="grid-major" x1="1368" y1="64" x2="1368" y2="319"/>
+</g>
+<g class="time-labels">
+<text class="axis-label major" x="168" y="58" text-anchor="middle">05:00</text>
+<text class="axis-label major" x="168" y="333" text-anchor="middle">05:00</text>
+<text class="axis-label major" x="408" y="58" text-anchor="middle">06:00</text>
+<text class="axis-label major" x="408" y="333" text-anchor="middle">06:00</text>
+<text class="axis-label major" x="648" y="58" text-anchor="middle">07:00</text>
+<text class="axis-label major" x="648" y="333" text-anchor="middle">07:00</text>
+<text class="axis-label major" x="888" y="58" text-anchor="middle">08:00</text>
+<text class="axis-label major" x="888" y="333" text-anchor="middle">08:00</text>
+<text class="axis-label major" x="1128" y="58" text-anchor="middle">09:00</text>
+<text class="axis-label major" x="1128" y="333" text-anchor="middle">09:00</text>
+<text class="axis-label major" x="1368" y="58" text-anchor="middle">10:00</text>
+<text class="axis-label major" x="1368" y="333" text-anchor="middle">10:00</text>
+</g>
+<g class="stations">
+<line class="station-line panel-edge" x1="168" y1="64" x2="1368" y2="64"/>
+<text class="station-code" x="158" y="67.5" text-anchor="end">TE1</text>
+<text class="station-name" x="126" y="67.5" text-anchor="end">Woodlands North</text>
+<line class="station-line" x1="168" y1="98" x2="1368" y2="98"/>
+<text class="station-code" x="158" y="101.5" text-anchor="end">TE2</text>
+<text class="station-name" x="126" y="101.5" text-anchor="end">Woodlands</text>
+<line class="station-line" x1="168" y1="132" x2="1368" y2="132"/>
+<text class="station-code" x="158" y="135.5" text-anchor="end">TE3</text>
+<text class="station-name" x="126" y="135.5" text-anchor="end">Woodlands South</text>
+<line class="station-line panel-edge" x1="168" y1="166" x2="1368" y2="166"/>
+<text class="station-code" x="158" y="169.5" text-anchor="end">TE4</text>
+<text class="station-name" x="126" y="169.5" text-anchor="end">Springleaf</text>
+<line class="station-line panel-edge" x1="168" y1="217" x2="1368" y2="217"/>
+<text class="station-code" x="158" y="220.5" text-anchor="end">TE1</text>
+<text class="station-name" x="126" y="220.5" text-anchor="end">Woodlands North</text>
+<line class="station-line" x1="168" y1="251" x2="1368" y2="251"/>
+<text class="station-code" x="158" y="254.5" text-anchor="end">TE2</text>
+<text class="station-name" x="126" y="254.5" text-anchor="end">Woodlands</text>
+<line class="station-line" x1="168" y1="285" x2="1368" y2="285"/>
+<text class="station-code" x="158" y="288.5" text-anchor="end">TB1</text>
+<text class="station-name" x="126" y="288.5" text-anchor="end">Branch Alpha</text>
+<line class="station-line panel-edge" x1="168" y1="319" x2="1368" y2="319"/>
+<text class="station-code" x="158" y="322.5" text-anchor="end">TB2</text>
+<text class="station-name" x="126" y="322.5" text-anchor="end">Branch Beta</text>
+<text class="panel-title" x="172" y="50">Woodlands North – Springleaf</text>
+<text class="panel-title" x="172" y="203">Woodlands North – Branch Beta</text>
+</g>
+<g class="runs">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:00:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<title>TEL → Springleaf · 05:00 – 05:13</title>
+<path class="hit" d="M168 64 L184 98 L200 132 L220 166"/>
+<path class="trace" stroke="#9D5B25" d="M168 64 L184 98 L200 132 L220 166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="168" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="184" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="200" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="220" cy="166"/>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:10:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<title>TEL → Springleaf · 05:10 – 05:23</title>
+<path class="hit" d="M208 64 L224 98 L240 132 L260 166"/>
+<path class="trace" stroke="#9D5B25" d="M208 64 L224 98 L240 132 L260 166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="208" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="224" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="240" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="260" cy="166"/>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_F1@05:20:00" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<title>TEL → Springleaf · 05:20 – 05:33</title>
+<path class="hit" d="M248 64 L264 98 L280 132 L300 166"/>
+<path class="trace" stroke="#9D5B25" d="M248 64 L264 98 L280 132 L300 166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="248" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="264" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="280" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="300" cy="166"/>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<title>T101 · TEL → Springleaf · 06:00 – 06:13</title>
+<path class="hit" d="M408 64 L410 64 L424 98 L426 98 L440 132 L442 132 L460 166"/>
+<path class="trace" stroke="#9D5B25" d="M408 64 L410 64 L424 98 L426 98 L440 132 L442 132 L460 166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="408" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="424" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="440" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="460" cy="166"/>
+<text class="run-label" fill="#9D5B25" x="451" y="145" text-anchor="middle" transform="rotate(62.1 451 145)">T101</text>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T3" data-line="TE" data-direction="1" data-destination="Woodlands North" data-exactness="exact">
+<title>T102 · TEL → Woodlands North · 06:05 – 06:18</title>
+<path class="hit" d="M428 166 L430 166 L448 132 L450 132 L464 98 L466 98 L480 64"/>
+<path class="trace" stroke="#9D5B25" d="M428 166 L430 166 L448 132 L450 132 L464 98 L466 98 L480 64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="428" cy="166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="448" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="464" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="480" cy="64"/>
+<text class="run-label" fill="#9D5B25" x="457" y="111" text-anchor="middle" transform="rotate(-67.62 457 111)">T102</text>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T2" data-line="TE" data-direction="0" data-destination="Woodlands South" data-exactness="exact">
+<title>T103 · TEL → Woodlands South · 06:20 – 06:28</title>
+<path class="hit" d="M488 64 L490 64 L504 98 L506 98 L520 132"/>
+<path class="trace" stroke="#9D5B25" d="M488 64 L490 64 L504 98 L506 98 L520 132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="488" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="504" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="520" cy="132"/>
+<text class="run-label" fill="#9D5B25" x="497" y="77" text-anchor="middle" transform="rotate(67.62 497 77)">T103</text>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_M1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<title>T105 · TEL → Springleaf · 07:00 – 07:13</title>
+<path class="hit" d="M648 64 L650 64 L665 98 L680 132 L700 166"/>
+<path class="trace" stroke="#9D5B25" d="M648 64 L650 64 L665 98 L680 132 L700 166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="648" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="665" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="680" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="700" cy="166"/>
+<text class="run-label" fill="#9D5B25" x="690" y="145" text-anchor="middle" transform="rotate(59.53 690 145)">T105</text>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_P1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact">
+<title>T107 · TEL → Springleaf · 08:00 – 08:13</title>
+<path class="hit" d="M888 64 L890 64 L904 98 L920 132 L922 132 L940 166"/>
+<path class="trace" stroke="#9D5B25" d="M888 64 L890 64 L904 98 L920 132 L922 132 L940 166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="888" cy="64"/>
+<circle class="pass-dot" stroke="#9D5B25" cx="904" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="920" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="940" cy="166"/>
+<text class="run-label" fill="#9D5B25" x="931" y="145" text-anchor="middle" transform="rotate(62.1 931 145)">T107</text>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_B1" data-line="TE" data-direction="0" data-destination="Branch Beta" data-exactness="exact">
+<title>T121 · TEL → Branch Beta · 09:00 – 09:14</title>
+<path class="hit" d="M1128 217 L1130 217 L1144 251 L1146 251 L1164 285 L1166 285 L1184 319"/>
+<path class="trace" stroke="#9D5B25" d="M1128 217 L1130 217 L1144 251 L1146 251 L1164 285 L1166 285 L1184 319"/>
+<circle class="stop-dot" fill="#9D5B25" cx="1128" cy="217"/>
+<circle class="stop-dot" fill="#9D5B25" cx="1144" cy="251"/>
+<circle class="stop-dot" fill="#9D5B25" cx="1164" cy="285"/>
+<circle class="stop-dot" fill="#9D5B25" cx="1184" cy="319"/>
+<text class="run-label" fill="#9D5B25" x="1155" y="264" text-anchor="middle" transform="rotate(62.1 1155 264)">T121</text>
+</g>
+</g>
+<rect class="frame" x="168" y="64" width="1200" height="255"/>
+</svg>
+</div>
+<section class="run-details needs-script no-print" aria-live="polite" aria-labelledby="run-details-heading">
+<h2 id="run-details-heading">Selected train</h2>
+<div id="run-details-body"></div>
+</section>
+<section class="call-tables" aria-labelledby="calls-heading">
+<h2 id="calls-heading">Train calls</h2>
+<details>
+<summary>TEL → Springleaf · 05:00</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>05:00:00</td><td>05:00:00</td><td>1</td></tr>
+<tr><th scope="row">Woodlands</th><td>05:04:00</td><td>05:04:00</td><td>1</td></tr>
+<tr><th scope="row">Woodlands South</th><td>05:08:00</td><td>05:08:00</td><td>1</td></tr>
+<tr><th scope="row">Springleaf</th><td>05:13:00</td><td>05:13:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>TEL → Springleaf · 05:10</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>05:10:00</td><td>05:10:00</td><td>1</td></tr>
+<tr><th scope="row">Woodlands</th><td>05:14:00</td><td>05:14:00</td><td>1</td></tr>
+<tr><th scope="row">Woodlands South</th><td>05:18:00</td><td>05:18:00</td><td>1</td></tr>
+<tr><th scope="row">Springleaf</th><td>05:23:00</td><td>05:23:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>TEL → Springleaf · 05:20</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>05:20:00</td><td>05:20:00</td><td>1</td></tr>
+<tr><th scope="row">Woodlands</th><td>05:24:00</td><td>05:24:00</td><td>1</td></tr>
+<tr><th scope="row">Woodlands South</th><td>05:28:00</td><td>05:28:00</td><td>1</td></tr>
+<tr><th scope="row">Springleaf</th><td>05:33:00</td><td>05:33:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>T101 · TEL → Springleaf · 06:00</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>06:00:00</td><td>06:00:30</td><td>1</td></tr>
+<tr><th scope="row">Woodlands</th><td>06:04:00</td><td>06:04:30</td><td>1</td></tr>
+<tr><th scope="row">Woodlands South</th><td>06:08:00</td><td>06:08:30</td><td>1</td></tr>
+<tr><th scope="row">Springleaf</th><td>06:13:00</td><td>06:13:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>T102 · TEL → Woodlands North · 06:05</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Springleaf</th><td>06:05:00</td><td>06:05:30</td><td>2</td></tr>
+<tr><th scope="row">Woodlands South</th><td>06:10:00</td><td>06:10:30</td><td>2</td></tr>
+<tr><th scope="row">Woodlands</th><td>06:14:00</td><td>06:14:30</td><td>2</td></tr>
+<tr><th scope="row">Woodlands North</th><td>06:18:00</td><td>06:18:00</td><td>2</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>T103 · TEL → Woodlands South · 06:20</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>06:20:00</td><td>06:20:30</td><td>1</td></tr>
+<tr><th scope="row">Woodlands</th><td>06:24:00</td><td>06:24:30</td><td>1</td></tr>
+<tr><th scope="row">Woodlands South</th><td>06:28:00</td><td>06:28:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>T105 · TEL → Springleaf · 07:00</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>07:00:00</td><td>07:00:30</td><td>1</td></tr>
+<tr><th scope="row">Woodlands</th><td>07:04:15</td><td>07:04:15</td><td>1</td></tr>
+<tr><th scope="row">Woodlands South</th><td>07:08:00</td><td>07:08:00</td><td>1</td></tr>
+<tr><th scope="row">Springleaf</th><td>07:13:00</td><td>07:13:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>T107 · TEL → Springleaf · 08:00</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>08:00:00</td><td>08:00:30</td><td>1</td></tr>
+<tr><th scope="row">Woodlands <span class="flag">(the train passes without serving the station)</span></th><td>08:04:00</td><td>08:04:00</td><td>1</td></tr>
+<tr><th scope="row">Woodlands South</th><td>08:08:00</td><td>08:08:30</td><td>1</td></tr>
+<tr><th scope="row">Springleaf</th><td>08:13:00</td><td>08:13:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>T121 · TEL → Branch Beta · 09:00</summary>
+<table>
+<thead><tr><th scope="col">Stations</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Platform</th></tr></thead>
+<tbody>
+<tr><th scope="row">Woodlands North</th><td>09:00:00</td><td>09:00:30</td><td>1</td></tr>
+<tr><th scope="row">Woodlands</th><td>09:04:00</td><td>09:04:30</td><td>1</td></tr>
+<tr><th scope="row">Branch Alpha</th><td>09:09:00</td><td>09:09:30</td><td>1</td></tr>
+<tr><th scope="row">Branch Beta</th><td>09:14:00</td><td>09:14:00</td><td>1</td></tr>
+</tbody>
+</table>
+</details>
+</section>
+<section class="legend" aria-labelledby="legend-heading">
+<h2 id="legend-heading">Legend</h2>
+<ul>
+<li>the train stands at the station</li>
+<li>the train passes without serving the station</li>
+<li><span class="symbol" aria-hidden="true">*</span> time computed between two scheduled times</li>
+</ul>
+</section>
+<footer class="colophon">
+<dl>
+<dt>Service date</dt><dd>2025-05-05 (Mon)</dd>
+<dt>Time zone</dt><dd>Asia/Singapore</dd>
+<dt>Source</dt><dd>2026-08-10T00:00:00+08:00</dd>
+<dt>Feed fingerprint</dt><dd>000000000000</dd>
+<dt>Configuration</dt><dd>000000000000</dd>
+<dt>Generator</dt><dd>example</dd>
+<dt>Schema</dt><dd>1.0</dd>
+</dl>
+<p>This page needs no network access.</p>
+</footer>
+<script type="application/json" id="diagram-data">{"fileName":"te-20250505.svg","labels":{"arrival":"Arrival","departure":"Departure","destination":"Destination","direction":"Direction","exactness":"Show approximate service","line":"Line","platform":"Platform","station":"Stations","train":"Train","tripId":"GTFS trip_id"},"runs":[{"calls":[{"arrival":"05:00:00","departure":"05:00:00","platform":"1","station":"Woodlands North"},{"arrival":"05:04:00","departure":"05:04:00","platform":"1","station":"Woodlands"},{"arrival":"05:08:00","departure":"05:08:00","platform":"1","station":"Woodlands South"},{"arrival":"05:13:00","departure":"05:13:00","platform":"1","station":"Springleaf"}],"destination":"Springleaf","direction":"0","exactness":"Exact","id":"20250505:TE_F1@05:00:00","label":null,"line":"TEL"},{"calls":[{"arrival":"05:10:00","departure":"05:10:00","platform":"1","station":"Woodlands North"},{"arrival":"05:14:00","departure":"05:14:00","platform":"1","station":"Woodlands"},{"arrival":"05:18:00","departure":"05:18:00","platform":"1","station":"Woodlands South"},{"arrival":"05:23:00","departure":"05:23:00","platform":"1","station":"Springleaf"}],"destination":"Springleaf","direction":"0","exactness":"Exact","id":"20250505:TE_F1@05:10:00","label":null,"line":"TEL"},{"calls":[{"arrival":"05:20:00","departure":"05:20:00","platform":"1","station":"Woodlands North"},{"arrival":"05:24:00","departure":"05:24:00","platform":"1","station":"Woodlands"},{"arrival":"05:28:00","departure":"05:28:00","platform":"1","station":"Woodlands South"},{"arrival":"05:33:00","departure":"05:33:00","platform":"1","station":"Springleaf"}],"destination":"Springleaf","direction":"0","exactness":"Exact","id":"20250505:TE_F1@05:20:00","label":null,"line":"TEL"},{"calls":[{"arrival":"06:00:00","departure":"06:00:30","platform":"1","station":"Woodlands North"},{"arrival":"06:04:00","departure":"06:04:30","platform":"1","station":"Woodlands"},{"arrival":"06:08:00","departure":"06:08:30","platform":"1","station":"Woodlands South"},{"arrival":"06:13:00","departure":"06:13:00","platform":"1","station":"Springleaf"}],"destination":"Springleaf","direction":"0","exactness":"Exact","id":"20250505:TE_T1","label":"T101","line":"TEL"},{"calls":[{"arrival":"06:05:00","departure":"06:05:30","platform":"2","station":"Springleaf"},{"arrival":"06:10:00","departure":"06:10:30","platform":"2","station":"Woodlands South"},{"arrival":"06:14:00","departure":"06:14:30","platform":"2","station":"Woodlands"},{"arrival":"06:18:00","departure":"06:18:00","platform":"2","station":"Woodlands North"}],"destination":"Woodlands North","direction":"1","exactness":"Exact","id":"20250505:TE_T3","label":"T102","line":"TEL"},{"calls":[{"arrival":"06:20:00","departure":"06:20:30","platform":"1","station":"Woodlands North"},{"arrival":"06:24:00","departure":"06:24:30","platform":"1","station":"Woodlands"},{"arrival":"06:28:00","departure":"06:28:00","platform":"1","station":"Woodlands South"}],"destination":"Woodlands South","direction":"0","exactness":"Exact","id":"20250505:TE_T2","label":"T103","line":"TEL"},{"calls":[{"arrival":"07:00:00","departure":"07:00:30","platform":"1","station":"Woodlands North"},{"arrival":"07:04:15","departure":"07:04:15","platform":"1","station":"Woodlands"},{"arrival":"07:08:00","departure":"07:08:00","platform":"1","station":"Woodlands South"},{"arrival":"07:13:00","departure":"07:13:00","platform":"1","station":"Springleaf"}],"destination":"Springleaf","direction":"0","exactness":"Exact","id":"20250505:TE_M1","label":"T105","line":"TEL"},{"calls":[{"arrival":"08:00:00","departure":"08:00:30","platform":"1","station":"Woodlands North"},{"arrival":"08:04:00","departure":"08:04:00","platform":"1","station":"Woodlands"},{"arrival":"08:08:00","departure":"08:08:30","platform":"1","station":"Woodlands South"},{"arrival":"08:13:00","departure":"08:13:00","platform":"1","station":"Springleaf"}],"destination":"Springleaf","direction":"0","exactness":"Exact","id":"20250505:TE_P1","label":"T107","line":"TEL"},{"calls":[{"arrival":"09:00:00","departure":"09:00:30","platform":"1","station":"Woodlands North"},{"arrival":"09:04:00","departure":"09:04:30","platform":"1","station":"Woodlands"},{"arrival":"09:09:00","departure":"09:09:30","platform":"1","station":"Branch Alpha"},{"arrival":"09:14:00","departure":"09:14:00","platform":"1","station":"Branch Beta"}],"destination":"Branch Beta","direction":"0","exactness":"Exact","id":"20250505:TE_B1","label":"T121","line":"TEL"}],"viewBox":{"h":375.0,"w":1408.0,"x":0.0,"y":0.0},"zoomVertical":false}</script>
+<script>
+/* Interaction for the train diagram.
+ *
+ * Everything here is an enhancement. Without it the page still shows
+ * the drawing, the legend, the headway bands, and a call table for
+ * every run, and it still prints. The script only adds pan, zoom,
+ * highlighting, filters, and the SVG download.
+ *
+ * The run data comes from a JSON island in the document; the script
+ * never fetches anything, so the page works from a file:// URL and
+ * under a Content-Security-Policy that forbids network access. */
+(function () {
+  "use strict";
+
+  var island = document.getElementById("diagram-data");
+  var svg = document.getElementById("diagram-svg");
+  if (!island || !svg) {
+    return;
+  }
+
+  var data;
+  try {
+    data = JSON.parse(island.textContent);
+  } catch (error) {
+    return;
+  }
+
+  var base = data.viewBox;
+  var view = { x: base.x, y: base.y, w: base.w, h: base.h };
+
+  function applyView() {
+    svg.setAttribute(
+      "viewBox",
+      view.x + " " + view.y + " " + view.w + " " + view.h
+    );
+  }
+
+  function clampView() {
+    var minW = base.w / 40;
+    view.w = Math.min(Math.max(view.w, minW), base.w);
+    view.h = Math.min(Math.max(view.h, base.h / 40), base.h);
+    view.x = Math.min(Math.max(view.x, base.x), base.x + base.w - view.w);
+    view.y = Math.min(Math.max(view.y, base.y), base.y + base.h - view.h);
+  }
+
+  function zoomBy(factor, anchorX, anchorY) {
+    var ax = typeof anchorX === "number" ? anchorX : view.x + view.w / 2;
+    var ay = typeof anchorY === "number" ? anchorY : view.y + view.h / 2;
+    var newW = view.w * factor;
+    var newH = data.zoomVertical ? view.h * factor : view.h;
+    view.x = ax - (ax - view.x) * (newW / view.w);
+    view.y = ay - (ay - view.y) * (newH / view.h);
+    view.w = newW;
+    view.h = newH;
+    clampView();
+    applyView();
+  }
+
+  function resetView() {
+    view = { x: base.x, y: base.y, w: base.w, h: base.h };
+    applyView();
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Controls                                                          */
+  /* ---------------------------------------------------------------- */
+
+  /* The controls carry `needs-script`, which the stylesheet hides.
+   * Removing the class is what reveals them; clearing an inline style
+   * would leave the stylesheet rule in force. */
+  var controls = document.querySelectorAll(".needs-script");
+  for (var i = 0; i < controls.length; i++) {
+    controls[i].classList.remove("needs-script");
+  }
+
+  function on(id, handler) {
+    var node = document.getElementById(id);
+    if (node) {
+      node.addEventListener("click", handler);
+    }
+  }
+
+  on("zoom-in", function () {
+    zoomBy(1 / 1.4);
+  });
+  on("zoom-out", function () {
+    zoomBy(1.4);
+  });
+  on("reset-view", resetView);
+  on("print-page", function () {
+    window.print();
+  });
+  on("toggle-mono", function () {
+    document.documentElement.classList.toggle("monochrome");
+  });
+
+  var download = document.getElementById("download-svg");
+  if (download) {
+    download.addEventListener("click", function () {
+      var clone = svg.cloneNode(true);
+      clone.setAttribute("viewBox", base.x + " " + base.y + " " + base.w + " " + base.h);
+      var text =
+        '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        new XMLSerializer().serializeToString(clone);
+      var blob = new Blob([text], { type: "image/svg+xml" });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = data.fileName || "diagram.svg";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 0);
+    });
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Pan and wheel zoom                                                */
+  /* ---------------------------------------------------------------- */
+
+  var dragging = null;
+
+  function svgPoint(event) {
+    var rect = svg.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return { x: view.x, y: view.y };
+    }
+    return {
+      x: view.x + ((event.clientX - rect.left) / rect.width) * view.w,
+      y: view.y + ((event.clientY - rect.top) / rect.height) * view.h
+    };
+  }
+
+  svg.addEventListener("pointerdown", function (event) {
+    if (event.button !== 0) {
+      return;
+    }
+    dragging = { start: svgPoint(event), x: view.x, y: view.y };
+    svg.setPointerCapture(event.pointerId);
+  });
+
+  svg.addEventListener("pointermove", function (event) {
+    if (!dragging) {
+      return;
+    }
+    var rect = svg.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return;
+    }
+    var dx = ((event.clientX - rect.left) / rect.width) * view.w;
+    var dy = ((event.clientY - rect.top) / rect.height) * view.h;
+    view.x = dragging.x + (dragging.start.x - view.x - dx);
+    view.y = dragging.y + (dragging.start.y - view.y - dy);
+    clampView();
+    applyView();
+  });
+
+  function endDrag(event) {
+    if (dragging) {
+      dragging = null;
+      if (svg.hasPointerCapture && svg.hasPointerCapture(event.pointerId)) {
+        svg.releasePointerCapture(event.pointerId);
+      }
+    }
+  }
+
+  svg.addEventListener("pointerup", endDrag);
+  svg.addEventListener("pointercancel", endDrag);
+
+  svg.addEventListener(
+    "wheel",
+    function (event) {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+      event.preventDefault();
+      var anchor = svgPoint(event);
+      zoomBy(event.deltaY > 0 ? 1.15 : 1 / 1.15, anchor.x, anchor.y);
+    },
+    { passive: false }
+  );
+
+  /* Keyboard panning, so the diagram is usable without a pointer. */
+  svg.addEventListener("keydown", function (event) {
+    var step = view.w / 12;
+    var handled = true;
+    switch (event.key) {
+      case "ArrowLeft":
+        view.x -= step;
+        break;
+      case "ArrowRight":
+        view.x += step;
+        break;
+      case "ArrowUp":
+        view.y -= view.h / 12;
+        break;
+      case "ArrowDown":
+        view.y += view.h / 12;
+        break;
+      case "+":
+      case "=":
+        zoomBy(1 / 1.4);
+        return;
+      case "-":
+        zoomBy(1.4);
+        return;
+      case "0":
+        resetView();
+        return;
+      default:
+        handled = false;
+    }
+    if (handled) {
+      event.preventDefault();
+      clampView();
+      applyView();
+    }
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Highlighting and details                                          */
+  /* ---------------------------------------------------------------- */
+
+  var details = document.getElementById("run-details-body");
+  var runsById = {};
+  for (var r = 0; r < data.runs.length; r++) {
+    runsById[data.runs[r].id] = data.runs[r];
+  }
+
+  function textCell(value) {
+    var cell = document.createElement("td");
+    cell.textContent = value === null || value === undefined ? "—" : value;
+    return cell;
+  }
+
+  function showRun(id) {
+    var run = runsById[id];
+    if (!run || !details) {
+      return;
+    }
+    while (details.firstChild) {
+      details.removeChild(details.firstChild);
+    }
+    var list = document.createElement("dl");
+    var rows = [
+      [data.labels.line, run.line],
+      [data.labels.destination, run.destination],
+      [data.labels.direction, run.direction],
+      [data.labels.exactness, run.exactness]
+    ];
+    if (run.label) {
+      rows.unshift([data.labels.train, run.label]);
+    }
+    if (run.tripId) {
+      rows.push([data.labels.tripId, run.tripId]);
+    }
+    for (var i2 = 0; i2 < rows.length; i2++) {
+      var term = document.createElement("dt");
+      term.textContent = rows[i2][0];
+      var value = document.createElement("dd");
+      value.textContent = rows[i2][1];
+      list.appendChild(term);
+      list.appendChild(value);
+    }
+    details.appendChild(list);
+
+    var table = document.createElement("table");
+    var head = document.createElement("tr");
+    var headings = [
+      data.labels.station,
+      data.labels.arrival,
+      data.labels.departure,
+      data.labels.platform
+    ];
+    for (var h = 0; h < headings.length; h++) {
+      var th = document.createElement("th");
+      th.textContent = headings[h];
+      head.appendChild(th);
+    }
+    table.appendChild(head);
+    for (var c = 0; c < run.calls.length; c++) {
+      var call = run.calls[c];
+      var row = document.createElement("tr");
+      row.appendChild(textCell(call.station));
+      row.appendChild(textCell(call.arrival));
+      row.appendChild(textCell(call.departure));
+      row.appendChild(textCell(call.platform));
+      table.appendChild(row);
+    }
+    details.appendChild(table);
+  }
+
+  function setHighlight(id) {
+    if (id) {
+      svg.setAttribute("data-highlight", id);
+      showRun(id);
+    } else {
+      svg.removeAttribute("data-highlight");
+    }
+  }
+
+  var paths = svg.querySelectorAll("[data-run]");
+  for (var p = 0; p < paths.length; p++) {
+    (function (node) {
+      var id = node.getAttribute("data-run");
+      node.addEventListener("pointerenter", function () {
+        setHighlight(id);
+      });
+      node.addEventListener("focus", function () {
+        setHighlight(id);
+      });
+      node.addEventListener("pointerleave", function () {
+        setHighlight(null);
+      });
+      node.addEventListener("blur", function () {
+        setHighlight(null);
+      });
+    })(paths[p]);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Filters                                                           */
+  /* ---------------------------------------------------------------- */
+
+  function applyFilters() {
+    var checked = {};
+    var boxes = document.querySelectorAll("[data-filter]");
+    for (var b = 0; b < boxes.length; b++) {
+      var kind = boxes[b].getAttribute("data-filter");
+      if (!checked[kind]) {
+        checked[kind] = {};
+      }
+      checked[kind][boxes[b].value] = boxes[b].checked;
+    }
+    var groups = svg.querySelectorAll("[data-run]");
+    for (var g = 0; g < groups.length; g++) {
+      var node = groups[g];
+      var visible = true;
+      var keys = ["line", "direction", "destination", "exactness"];
+      for (var k = 0; k < keys.length; k++) {
+        var set = checked[keys[k]];
+        if (!set) {
+          continue;
+        }
+        var value = node.getAttribute("data-" + keys[k]);
+        if (value !== null && set[value] === false) {
+          visible = false;
+        }
+      }
+      node.style.display = visible ? "" : "none";
+    }
+  }
+
+  var filterBoxes = document.querySelectorAll("[data-filter]");
+  for (var f = 0; f < filterBoxes.length; f++) {
+    filterBoxes[f].addEventListener("change", applyFilters);
+  }
+  applyFilters();
+})();
+
+</script>
+</div>
+</body>
+</html>

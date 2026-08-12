@@ -1,0 +1,31 @@
+{
+  "manifest_version": "1.0",
+  "generator_version": "mrt-schedule-cli 0.1.0",
+  "generated_at": 1786574486,
+  "command": "timetable",
+  "feed_sha256": "0e3ada6441348396e70d6f9f66980a9d250ada081203ed6d80eda33025dd86f9",
+  "feed_source": "crates/mrt-gtfs/tests/fixtures/mini",
+  "feed_from_cache": false,
+  "configuration_sha256": "87939ec890973d095cf2d8d459f88afafedbff6e1192dc6780416d36a9451da0",
+  "configuration_path": "config/singapore.yaml",
+  "service_date": "20250505",
+  "timezone": "Asia/Singapore",
+  "schema_version": "1.0",
+  "artifacts": [
+    {
+      "path": "examples/timetable-woodlands.html",
+      "kind": "timetable",
+      "format": "html",
+      "bytes": 25560,
+      "sha256": "770cf65721da0677313f2bcd9b950fe2fa15ebdde6a21265a9c1798c26821e11"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "time-interpolated",
+      "message": "computed 2 missing stop time(s) from the shape_dist_traveled of the trip",
+      "subject": "TE_M1"
+    }
+  ]
+}
