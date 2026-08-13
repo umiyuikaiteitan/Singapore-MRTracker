@@ -1,0 +1,614 @@
+{
+  "metadata": {
+    "schema_version": "1.0",
+    "generator_version": "snapshot",
+    "feed_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "feed_timestamp": "2026-08-10T00:00:00+08:00",
+    "service_date": "20250505",
+    "timezone": "Asia/Singapore",
+    "generated_from_cache": false,
+    "configuration_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "warnings": [
+      "warning [corridor-split] 2 stop pattern group(s) do not fit on one station axis, so the diagram draws them in separate panels; define a corridor in the configuration to place them on one axis"
+    ],
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "code": "corridor-split",
+        "message": "2 stop pattern group(s) do not fit on one station axis, so the diagram draws them in separate panels; define a corridor in the configuration to place them on one axis"
+      },
+      {
+        "severity": "info",
+        "code": "corridor-separate-panel",
+        "message": "the pattern Woodlands North → Branch Beta needs its own panel"
+      },
+      {
+        "severity": "info",
+        "code": "time-interpolated",
+        "message": "computed 2 missing stop time(s) from the shape_dist_traveled of the trip",
+        "subject": "TE_M1"
+      }
+    ]
+  },
+  "title": {
+    "en": "TEL train diagram",
+    "ja": "TEL 列車ダイヤグラム"
+  },
+  "service_day_label": "2025-05-05 (Mon)",
+  "layout": {
+    "width": 448.0,
+    "height": 375.0,
+    "margin_left": 168.0,
+    "margin_right": 40.0,
+    "margin_top": 64.0,
+    "margin_bottom": 56.0,
+    "plot_width": 240.0,
+    "plot_height": 255.0
+  },
+  "time_axis": {
+    "start": "06:00:00",
+    "end": "07:00:00",
+    "ticks": [
+      {
+        "time": "06:00:00",
+        "x": 168.0,
+        "level": "major",
+        "label": "06:00"
+      },
+      {
+        "time": "06:10:00",
+        "x": 208.0,
+        "level": "minor",
+        "label": null
+      },
+      {
+        "time": "06:20:00",
+        "x": 248.0,
+        "level": "minor",
+        "label": null
+      },
+      {
+        "time": "06:30:00",
+        "x": 288.0,
+        "level": "medium",
+        "label": null
+      },
+      {
+        "time": "06:40:00",
+        "x": 328.0,
+        "level": "minor",
+        "label": null
+      },
+      {
+        "time": "06:50:00",
+        "x": 368.0,
+        "level": "minor",
+        "label": null
+      },
+      {
+        "time": "07:00:00",
+        "x": 408.0,
+        "level": "major",
+        "label": "07:00"
+      }
+    ],
+    "major_minutes": 60,
+    "medium_minutes": 30,
+    "minor_minutes": 10
+  },
+  "corridor": {
+    "id": "te",
+    "label": "TEL",
+    "nodes": [
+      {
+        "key": "WDN#0",
+        "station": {
+          "gtfs_id": "WDN",
+          "name": "Woodlands North",
+          "codes": [
+            "TE1"
+          ]
+        },
+        "occurrence": 0,
+        "y": 0.0,
+        "cumulative_distance": 0.0,
+        "panel": 0
+      },
+      {
+        "key": "WDL#0",
+        "station": {
+          "gtfs_id": "WDL",
+          "name": "Woodlands",
+          "codes": [
+            "TE2"
+          ]
+        },
+        "occurrence": 0,
+        "y": 34.0,
+        "cumulative_distance": 1248.56,
+        "panel": 0
+      },
+      {
+        "key": "WDS#0",
+        "station": {
+          "gtfs_id": "WDS",
+          "name": "Woodlands South",
+          "codes": [
+            "TE3"
+          ]
+        },
+        "occurrence": 0,
+        "y": 68.0,
+        "cumulative_distance": 2594.06,
+        "panel": 0
+      },
+      {
+        "key": "SPL#0",
+        "station": {
+          "gtfs_id": "SPL",
+          "name": "Springleaf",
+          "codes": [
+            "TE4"
+          ]
+        },
+        "occurrence": 0,
+        "y": 102.0,
+        "cumulative_distance": 6857.54,
+        "panel": 0
+      },
+      {
+        "key": "WDN#1",
+        "station": {
+          "gtfs_id": "WDN",
+          "name": "Woodlands North",
+          "codes": [
+            "TE1"
+          ]
+        },
+        "occurrence": 1,
+        "y": 153.0,
+        "cumulative_distance": 0.0,
+        "panel": 1
+      },
+      {
+        "key": "WDL#1",
+        "station": {
+          "gtfs_id": "WDL",
+          "name": "Woodlands",
+          "codes": [
+            "TE2"
+          ]
+        },
+        "occurrence": 1,
+        "y": 187.0,
+        "cumulative_distance": 1248.56,
+        "panel": 1
+      },
+      {
+        "key": "BRA#0",
+        "station": {
+          "gtfs_id": "BRA",
+          "name": "Branch Alpha",
+          "codes": [
+            "TB1"
+          ]
+        },
+        "occurrence": 0,
+        "y": 221.0,
+        "cumulative_distance": 3882.03,
+        "panel": 1
+      },
+      {
+        "key": "BRB#0",
+        "station": {
+          "gtfs_id": "BRB",
+          "name": "Branch Beta",
+          "codes": [
+            "TB2"
+          ]
+        },
+        "occurrence": 0,
+        "y": 255.0,
+        "cumulative_distance": 6173.69,
+        "panel": 1
+      }
+    ],
+    "panels": [
+      {
+        "id": "te-p0",
+        "label": "Woodlands North – Springleaf",
+        "first_node": 0,
+        "last_node": 3
+      },
+      {
+        "id": "te-p1",
+        "label": "Woodlands North – Branch Beta",
+        "first_node": 4,
+        "last_node": 7
+      }
+    ],
+    "height": 255.0,
+    "spaced_by_distance": false
+  },
+  "station_spacing": "equal",
+  "runs": [
+    {
+      "instance_id": "20250505:TE_T1",
+      "source_trip_id": "TE_T1",
+      "line": {
+        "route_id": "TE",
+        "name": "TEL",
+        "long_name": "Thomson-East Coast Line",
+        "color": "#9D5B25",
+        "text_color": "#FFFFFF",
+        "key": "te"
+      },
+      "label": "T101",
+      "direction": 0,
+      "axis_direction": "down",
+      "destination": "Springleaf",
+      "panel": 0,
+      "exactness": "exact",
+      "points": [
+        {
+          "time": "06:00:00",
+          "node": 0,
+          "x": 168.0,
+          "y": 0.0
+        },
+        {
+          "time": "06:00:30",
+          "node": 0,
+          "x": 170.0,
+          "y": 0.0
+        },
+        {
+          "time": "06:04:00",
+          "node": 1,
+          "x": 184.0,
+          "y": 34.0
+        },
+        {
+          "time": "06:04:30",
+          "node": 1,
+          "x": 186.0,
+          "y": 34.0
+        },
+        {
+          "time": "06:08:00",
+          "node": 2,
+          "x": 200.0,
+          "y": 68.0
+        },
+        {
+          "time": "06:08:30",
+          "node": 2,
+          "x": 202.0,
+          "y": 68.0
+        },
+        {
+          "time": "06:13:00",
+          "node": 3,
+          "x": 220.0,
+          "y": 102.0
+        }
+      ],
+      "calls": [
+        {
+          "node": 0,
+          "node_key": "WDN#0",
+          "station": "Woodlands North",
+          "arrival": "06:00:00",
+          "departure": "06:00:30",
+          "platform": "1",
+          "x_arrival": 168.0,
+          "x_departure": 170.0,
+          "y": 0.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 1,
+          "node_key": "WDL#0",
+          "station": "Woodlands",
+          "arrival": "06:04:00",
+          "departure": "06:04:30",
+          "platform": "1",
+          "x_arrival": 184.0,
+          "x_departure": 186.0,
+          "y": 34.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 2,
+          "node_key": "WDS#0",
+          "station": "Woodlands South",
+          "arrival": "06:08:00",
+          "departure": "06:08:30",
+          "platform": "1",
+          "x_arrival": 200.0,
+          "x_departure": 202.0,
+          "y": 68.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 3,
+          "node_key": "SPL#0",
+          "station": "Springleaf",
+          "arrival": "06:13:00",
+          "departure": "06:13:00",
+          "platform": "1",
+          "x_arrival": 220.0,
+          "x_departure": 220.0,
+          "y": 102.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        }
+      ],
+      "clipped_start": false,
+      "clipped_end": false,
+      "label_placement": {
+        "x": 211.0,
+        "y": 85.0,
+        "angle": 62.1
+      }
+    },
+    {
+      "instance_id": "20250505:TE_T3",
+      "source_trip_id": "TE_T3",
+      "line": {
+        "route_id": "TE",
+        "name": "TEL",
+        "long_name": "Thomson-East Coast Line",
+        "color": "#9D5B25",
+        "text_color": "#FFFFFF",
+        "key": "te"
+      },
+      "label": "T102",
+      "direction": 1,
+      "axis_direction": "up",
+      "destination": "Woodlands North",
+      "panel": 0,
+      "exactness": "exact",
+      "points": [
+        {
+          "time": "06:05:00",
+          "node": 3,
+          "x": 188.0,
+          "y": 102.0
+        },
+        {
+          "time": "06:05:30",
+          "node": 3,
+          "x": 190.0,
+          "y": 102.0
+        },
+        {
+          "time": "06:10:00",
+          "node": 2,
+          "x": 208.0,
+          "y": 68.0
+        },
+        {
+          "time": "06:10:30",
+          "node": 2,
+          "x": 210.0,
+          "y": 68.0
+        },
+        {
+          "time": "06:14:00",
+          "node": 1,
+          "x": 224.0,
+          "y": 34.0
+        },
+        {
+          "time": "06:14:30",
+          "node": 1,
+          "x": 226.0,
+          "y": 34.0
+        },
+        {
+          "time": "06:18:00",
+          "node": 0,
+          "x": 240.0,
+          "y": 0.0
+        }
+      ],
+      "calls": [
+        {
+          "node": 3,
+          "node_key": "SPL#0",
+          "station": "Springleaf",
+          "arrival": "06:05:00",
+          "departure": "06:05:30",
+          "platform": "2",
+          "x_arrival": 188.0,
+          "x_departure": 190.0,
+          "y": 102.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 2,
+          "node_key": "WDS#0",
+          "station": "Woodlands South",
+          "arrival": "06:10:00",
+          "departure": "06:10:30",
+          "platform": "2",
+          "x_arrival": 208.0,
+          "x_departure": 210.0,
+          "y": 68.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 1,
+          "node_key": "WDL#0",
+          "station": "Woodlands",
+          "arrival": "06:14:00",
+          "departure": "06:14:30",
+          "platform": "2",
+          "x_arrival": 224.0,
+          "x_departure": 226.0,
+          "y": 34.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 0,
+          "node_key": "WDN#0",
+          "station": "Woodlands North",
+          "arrival": "06:18:00",
+          "departure": "06:18:00",
+          "platform": "2",
+          "x_arrival": 240.0,
+          "x_departure": 240.0,
+          "y": 0.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        }
+      ],
+      "clipped_start": false,
+      "clipped_end": false,
+      "label_placement": {
+        "x": 217.0,
+        "y": 51.0,
+        "angle": -67.62
+      }
+    },
+    {
+      "instance_id": "20250505:TE_T2",
+      "source_trip_id": "TE_T2",
+      "line": {
+        "route_id": "TE",
+        "name": "TEL",
+        "long_name": "Thomson-East Coast Line",
+        "color": "#9D5B25",
+        "text_color": "#FFFFFF",
+        "key": "te"
+      },
+      "label": "T103",
+      "direction": 0,
+      "axis_direction": "down",
+      "destination": "Woodlands South",
+      "panel": 0,
+      "exactness": "exact",
+      "points": [
+        {
+          "time": "06:20:00",
+          "node": 0,
+          "x": 248.0,
+          "y": 0.0
+        },
+        {
+          "time": "06:20:30",
+          "node": 0,
+          "x": 250.0,
+          "y": 0.0
+        },
+        {
+          "time": "06:24:00",
+          "node": 1,
+          "x": 264.0,
+          "y": 34.0
+        },
+        {
+          "time": "06:24:30",
+          "node": 1,
+          "x": 266.0,
+          "y": 34.0
+        },
+        {
+          "time": "06:28:00",
+          "node": 2,
+          "x": 280.0,
+          "y": 68.0
+        }
+      ],
+      "calls": [
+        {
+          "node": 0,
+          "node_key": "WDN#0",
+          "station": "Woodlands North",
+          "arrival": "06:20:00",
+          "departure": "06:20:30",
+          "platform": "1",
+          "x_arrival": 248.0,
+          "x_departure": 250.0,
+          "y": 0.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 1,
+          "node_key": "WDL#0",
+          "station": "Woodlands",
+          "arrival": "06:24:00",
+          "departure": "06:24:30",
+          "platform": "1",
+          "x_arrival": 264.0,
+          "x_departure": 266.0,
+          "y": 34.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        },
+        {
+          "node": 2,
+          "node_key": "WDS#0",
+          "station": "Woodlands South",
+          "arrival": "06:28:00",
+          "departure": "06:28:00",
+          "platform": "1",
+          "x_arrival": 280.0,
+          "x_departure": 280.0,
+          "y": 68.0,
+          "stops": true,
+          "in_window": true,
+          "time_quality": "exact"
+        }
+      ],
+      "clipped_start": false,
+      "clipped_end": false,
+      "label_placement": {
+        "x": 257.0,
+        "y": 17.0,
+        "angle": 67.62
+      }
+    }
+  ],
+  "frequency_bands": [],
+  "legend": [
+    {
+      "key": "stop",
+      "symbol": null,
+      "label": "the train stands at the station"
+    }
+  ],
+  "lines": [
+    {
+      "route_id": "TE",
+      "name": "TEL",
+      "long_name": "Thomson-East Coast Line",
+      "color": "#9D5B25",
+      "text_color": "#FFFFFF",
+      "key": "te"
+    }
+  ],
+  "destinations": [
+    "Springleaf",
+    "Woodlands North",
+    "Woodlands South"
+  ]
+}

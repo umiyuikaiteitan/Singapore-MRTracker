@@ -47,10 +47,32 @@ pub enum GtfsError {
     #[error("the feed contains no calendar.txt and no calendar_dates.txt")]
     NoCalendar,
 
+    /// The requested output cannot be produced under the selected
+    /// policy.
+    ///
+    /// The library raises this error instead of quietly presenting
+    /// approximate data as exact, or dropping service that the caller
+    /// asked for.
+    #[error("the requested output cannot be produced: {0}")]
+    PolicyViolation(String),
+
+    /// The feed fails validation.
+    #[error("the feed is not valid: {0}")]
+    Invalid(String),
+
     /// The zip archive is not valid.
     #[cfg(feature = "zip-source")]
     #[error("zip archive error: {0}")]
     Zip(String),
+
+    /// The zip archive is unsafe to extract.
+    ///
+    /// The loader refuses archives with absolute paths, `..` path
+    /// traversal, symbolic links, ambiguous duplicate feed files, or
+    /// sizes beyond the configured limits.
+    #[cfg(feature = "zip-source")]
+    #[error("the zip archive is not safe to read: {0}")]
+    UnsafeZip(String),
 }
 
 impl GtfsError {

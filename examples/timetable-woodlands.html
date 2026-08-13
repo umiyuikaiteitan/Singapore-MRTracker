@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; style-src &#39;unsafe-inline&#39;; script-src &#39;unsafe-inline&#39;; img-src data:; base-uri &#39;none&#39;; form-action &#39;none&#39;; frame-ancestors &#39;none&#39;">
+<meta name="referrer" content="no-referrer">
+<title>Woodlands departure timetable</title>
+<style>
+:root {
+--font-stack: "Noto Sans", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Arial", sans-serif;
+--bg: #ffffff;
+--fg: #14171f;
+--muted: color-mix(in srgb, #14171f 62%, #ffffff);
+--rule: color-mix(in srgb, #14171f 22%, #ffffff);
+--panel-bg: #eef1f8;
+--row-alt: #eef1f8;
+--hour-bg: #1b2a5e;
+--hour-fg: #ffffff;
+--accent: #9D5B25;
+--accent-text: #FFFFFF;
+--focus: #0b62d6;
+--warn: #b26a00;
+--warn-fg: #8a5200;
+--warn-bg: #fff6e5;
+}
+/* Shared page frame for the timetable and the diagram.
+ *
+ * The theme lives entirely in custom properties, which the generator
+ * writes into a :root block from the configuration. No rule below
+ * hard-codes a brand color, and no rule loads a font file: the font
+ * stack names system and openly licensed families only. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0 0 3rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-stack);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.page {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 0;
+}
+
+/* The accent bar carries the line color, so a reader can tell two
+ * printed pages apart at a glance. */
+.masthead {
+  border-top: 6px solid var(--accent);
+  padding-top: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.masthead .subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.masthead .station-codes {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-left: 0.6rem;
+  vertical-align: 0.15em;
+}
+
+.code-chip {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.65rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.85rem;
+  border-left: 4px solid var(--warn);
+  background: var(--warn-bg);
+  font-size: 0.9rem;
+}
+
+.notice ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Site navigation                                                   */
+/* ---------------------------------------------------------------- */
+
+/* Only a page that belongs to a published site carries this block.
+ * A one-off file has no navigation, and a printed page hides it. */
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.1rem;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+  font-size: 0.85rem;
+}
+
+.site-nav a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-home {
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+}
+
+.site-home:hover {
+  border-color: var(--accent);
+}
+
+.site-name {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.nav-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.nav-group ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-group a {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.nav-group a:hover {
+  border-color: var(--accent);
+}
+
+.nav-group a.current {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- */
+/* Legend                                                            */
+/* ---------------------------------------------------------------- */
+
+.legend {
+  margin: 1.75rem 0 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: var(--panel-bg);
+}
+
+.legend h2 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.legend ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0.3rem 1.25rem;
+  font-size: 0.86rem;
+}
+
+.legend .symbol {
+  display: inline-block;
+  min-width: 1.3rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- */
+/* Footer                                                            */
+/* ---------------------------------------------------------------- */
+
+.colophon {
+  margin: 2rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.colophon dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0;
+}
+
+.colophon dt {
+  font-weight: 700;
+}
+
+.colophon dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.stale {
+  color: var(--warn-fg);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- */
+/* Controls                                                          */
+/* ---------------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin: 0 0 1rem;
+}
+
+.controls button,
+.controls .toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.3rem;
+  background: var(--panel-bg);
+  color: inherit;
+  cursor: pointer;
+}
+
+.controls button:hover,
+.controls .toggle:hover {
+  border-color: var(--accent);
+}
+
+.controls button:focus-visible,
+.controls .toggle:focus-within,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Nothing on the page needs JavaScript. The controls only appear
+ * once a script has enabled them. */
+.needs-script {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- */
+/* Print                                                             */
+/* ---------------------------------------------------------------- */
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  body {
+    padding: 0;
+    font-size: 10pt;
+    background: #fff;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .controls,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Hour cells and line accents carry meaning, so they must survive
+   * the browser's default of dropping backgrounds. */
+  .hour-cell,
+  .code-chip,
+  .panel-head,
+  .band-row {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* A monochrome profile for a black-and-white printer, and for a
+ * reader who prefers one. The generator adds .monochrome to <html>
+ * when the reader asks for it; a monochrome device gets it for free. */
+@media print and (monochrome) {
+  :root {
+    --hour-bg: #000;
+    --hour-fg: #fff;
+    --accent: #000;
+    --accent-text: #fff;
+    --row-alt: #ececec;
+  }
+}
+
+.monochrome {
+  --hour-bg: #1a1a1a;
+  --hour-fg: #fff;
+  --accent: #1a1a1a;
+  --accent-text: #fff;
+  --row-alt: #efefef;
+}
+/* The station departure timetable.
+ *
+ * The visual grammar follows a Japanese 発車時刻表: a strong direction
+ * header, a dark hour column, alternating hour rows, large minute
+ * numerals, and small destination annotations beside each minute. */
+
+.panels {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.panel {
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.9rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--line-color, var(--accent));
+  color: var(--line-text, var(--accent-text));
+}
+
+.panel-head .line-name {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panel-head .direction {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.panel-head .platform {
+  margin-left: auto;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.1rem 0.55rem;
+  border: 2px solid currentColor;
+  border-radius: 0.25rem;
+}
+
+.panel-destinations {
+  margin: 0;
+  padding: 0.35rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel-bg);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* The columns of one panel. Print and wide screens split the hours;
+ * a narrow screen stacks them, so nothing scrolls sideways. */
+.panel-columns {
+  display: grid;
+  gap: 0 1.25rem;
+  grid-template-columns: 1fr;
+  padding: 0.5rem 0.9rem 0.9rem;
+}
+
+/* Paper is always wide enough for the columns, and a printed page
+ * that stacks them wastes half the sheet. The two queries carry the
+ * same rules on purpose: `print` does not match `screen`. */
+@media screen and (min-width: 52rem) {
+  .panel-columns[data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="4"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  .panel-columns[data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="4"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.hours {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  /* Without this the grid stretches the shorter table, and the two
+   * columns end up with different row heights. */
+  align-self: start;
+}
+
+.hours caption {
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 0.3rem 0;
+}
+
+.hours th[scope="col"] {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.2rem 0.3rem;
+  border-bottom: 2px solid var(--rule);
+}
+
+.hours th[scope="col"].col-hour {
+  width: 3.1rem;
+}
+
+.hour-row {
+  border-bottom: 1px solid var(--rule);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.hour-row:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.hour-cell {
+  width: 3.1rem;
+  vertical-align: top;
+  padding: 0.3rem 0.2rem;
+  background: var(--hour-bg);
+  color: var(--hour-fg);
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A row for one of the small hours after midnight. The dagger in the
+ * minute list already carries the meaning; this only softens the
+ * hour cell so the break is visible at a glance. */
+.hour-row.past-midnight .hour-cell {
+  background: color-mix(in srgb, var(--hour-bg) 78%, #ffffff);
+}
+
+.minutes {
+  padding: 0.25rem 0.35rem;
+  vertical-align: top;
+}
+
+.minutes ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+}
+
+.dep {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.12rem;
+  padding: 0.05rem 0.1rem;
+  border-radius: 0.15rem;
+}
+
+.dep .min {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.dep .sec {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dep .dest {
+  font-size: 0.66rem;
+  line-height: 1;
+  color: var(--muted);
+  max-width: 5.5rem;
+  overflow-wrap: anywhere;
+}
+
+.dep .train-name {
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dep .flag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.dep.approximate .min {
+  font-style: italic;
+}
+
+.dep.approximate {
+  border-bottom: 2px dotted var(--accent);
+}
+
+.empty-hour {
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding-left: 0.2rem;
+}
+
+/* A headway band is a range, not a list of departures. It gets its
+ * own row shape so that no reader mistakes it for exact times. */
+.bands {
+  margin: 0.25rem 0.9rem 0.9rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.band-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.75rem;
+  padding: 0.4rem 0.65rem;
+  border: 2px dotted var(--accent);
+  border-radius: 0.3rem;
+  background: var(--panel-bg);
+  font-size: 0.9rem;
+}
+
+.band-row .band-time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.band-row .band-dest {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.no-departures {
+  padding: 1.25rem;
+  border: 1px dashed var(--rule);
+  border-radius: 0.4rem;
+  color: var(--muted);
+}
+
+/* Print profiles. A3 gives the whole service day room to breathe. */
+@media print {
+  .panel {
+    border-color: #666;
+  }
+
+  .panel-columns {
+    padding: 0.3rem 0.5rem 0.5rem;
+  }
+
+  .dep .min {
+    font-size: 11pt;
+  }
+
+  .dep .dest {
+    font-size: 5.5pt;
+    max-width: 4.2rem;
+  }
+
+  .hour-cell {
+    font-size: 11pt;
+  }
+}
+
+</style>
+</head>
+<body>
+<div class="page">
+<header class="masthead">
+<h1>Woodlands departure timetable<span class="station-codes"><span class="code-chip">TE2</span></span></h1>
+<p class="subtitle">Departure timetable · 2025-05-05 (Mon)</p>
+</header>
+<div class="controls needs-script no-print">
+<button type="button" id="print-page">Print</button>
+<button type="button" id="toggle-mono">Monochrome</button>
+</div>
+<div class="panels">
+<section class="panel" id="panel-te-d0-p1" aria-labelledby="panel-te-d0-p1-heading" style="--line-color: #9D5B25;--line-text: #FFFFFF;">
+<div class="panel-head">
+<span class="line-name">TEL</span>
+<h2 class="direction" id="panel-te-d0-p1-heading">For Springleaf / Branch Beta / Woodlands South</h2>
+<span class="platform">Platform 1</span>
+</div>
+<p class="panel-destinations">Springleaf · Branch Beta · Woodlands South</p>
+<div class="panel-columns" data-columns="2">
+<table class="hours">
+<caption class="visually-hidden">TEL · For Springleaf / Branch Beta / Woodlands South · 2025-05-05 (Mon) 1</caption>
+<thead><tr><th scope="col" class="col-hour">Hour</th><th scope="col">Minutes</th></tr></thead>
+<tbody>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">04</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">05</th>
+<td class="minutes"><ol>
+<li class="dep"><span class="visually-hidden">05:04 → Springleaf, Platform 1, first departure of the service day</span>
+<span aria-hidden="true" class="min">04</span><span aria-hidden="true" class="dest" title="Springleaf">Springleaf</span><span aria-hidden="true" class="flag flag-first">▷</span></li>
+<li class="dep"><span class="visually-hidden">05:14 → Springleaf, Platform 1</span>
+<span aria-hidden="true" class="min">14</span><span aria-hidden="true" class="dest" title="Springleaf">Springleaf</span></li>
+<li class="dep"><span class="visually-hidden">05:24 → Springleaf, Platform 1</span>
+<span aria-hidden="true" class="min">24</span><span aria-hidden="true" class="dest" title="Springleaf">Springleaf</span></li>
+</ol></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">06</th>
+<td class="minutes"><ol>
+<li class="dep"><span class="visually-hidden">06:04:30 → Springleaf, Platform 1</span>
+<span aria-hidden="true" class="min">04</span><span aria-hidden="true" class="sec">30</span><span aria-hidden="true" class="dest" title="Springleaf">Springleaf</span><span aria-hidden="true" class="train-name">T101</span></li>
+<li class="dep"><span class="visually-hidden">06:24:30 → Woodlands South, Platform 1</span>
+<span aria-hidden="true" class="min">24</span><span aria-hidden="true" class="sec">30</span><span aria-hidden="true" class="dest" title="Woodlands South">Woodlands South</span><span aria-hidden="true" class="train-name">T103</span></li>
+</ol></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">07</th>
+<td class="minutes"><ol>
+<li class="dep"><span class="visually-hidden">07:04:15 → Springleaf, Platform 1, time computed between two scheduled times</span>
+<span aria-hidden="true" class="min">04</span><span aria-hidden="true" class="sec">15</span><span aria-hidden="true" class="dest" title="Springleaf">Springleaf</span><span aria-hidden="true" class="train-name">T105</span><span aria-hidden="true" class="flag flag-interpolated">*</span></li>
+</ol></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">08</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">09</th>
+<td class="minutes"><ol>
+<li class="dep"><span class="visually-hidden">09:04:30 → Branch Beta, Platform 1, last departure of the service day</span>
+<span aria-hidden="true" class="min">04</span><span aria-hidden="true" class="sec">30</span><span aria-hidden="true" class="dest" title="Branch Beta">Branch Beta</span><span aria-hidden="true" class="train-name">T121</span><span aria-hidden="true" class="flag flag-last">◁</span></li>
+</ol></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">10</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">11</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">12</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">13</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">14</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">15</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+</tbody>
+</table>
+<table class="hours">
+<caption class="visually-hidden">TEL · For Springleaf / Branch Beta / Woodlands South · 2025-05-05 (Mon) 2</caption>
+<thead><tr><th scope="col" class="col-hour">Hour</th><th scope="col">Minutes</th></tr></thead>
+<tbody>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">16</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">17</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">18</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">19</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">20</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">21</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">22</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">23</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">00</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">01</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">02</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">03</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section class="panel" id="panel-te-d1-p2" aria-labelledby="panel-te-d1-p2-heading" style="--line-color: #9D5B25;--line-text: #FFFFFF;">
+<div class="panel-head">
+<span class="line-name">TEL</span>
+<h2 class="direction" id="panel-te-d1-p2-heading">For Woodlands North</h2>
+<span class="platform">Platform 2</span>
+</div>
+<div class="panel-columns" data-columns="2">
+<table class="hours">
+<caption class="visually-hidden">TEL · For Woodlands North · 2025-05-05 (Mon) 1</caption>
+<thead><tr><th scope="col" class="col-hour">Hour</th><th scope="col">Minutes</th></tr></thead>
+<tbody>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">04</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">05</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">06</th>
+<td class="minutes"><ol>
+<li class="dep"><span class="visually-hidden">06:14:30 → Woodlands North, Platform 2, first departure of the service day, last departure of the service day</span>
+<span aria-hidden="true" class="min">14</span><span aria-hidden="true" class="sec">30</span><span aria-hidden="true" class="dest" title="Woodlands North">Woodlands North</span><span aria-hidden="true" class="train-name">T102</span><span aria-hidden="true" class="flag flag-first">▷</span><span aria-hidden="true" class="flag flag-last">◁</span></li>
+</ol></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">07</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">08</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">09</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">10</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">11</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">12</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">13</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">14</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">15</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+</tbody>
+</table>
+<table class="hours">
+<caption class="visually-hidden">TEL · For Woodlands North · 2025-05-05 (Mon) 2</caption>
+<thead><tr><th scope="col" class="col-hour">Hour</th><th scope="col">Minutes</th></tr></thead>
+<tbody>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">16</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">17</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">18</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">19</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">20</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">21</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">22</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row">
+<th scope="row" class="hour-cell">23</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">00</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">01</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">02</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+<tr class="hour-row past-midnight">
+<th scope="row" class="hour-cell">03</th>
+<td class="minutes"><span class="empty-hour" aria-hidden="true">—</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<section class="legend" aria-labelledby="legend-heading">
+<h2 id="legend-heading">Legend</h2>
+<ul>
+<li><span class="symbol" aria-hidden="true">*</span> time computed between two scheduled times</li>
+<li><span class="symbol" aria-hidden="true">▷</span> first departure of the service day</li>
+<li><span class="symbol" aria-hidden="true">◁</span> last departure of the service day</li>
+<li>platform</li>
+</ul>
+</section>
+<footer class="colophon">
+<dl>
+<dt>Service date</dt><dd>2025-05-05 (Mon)</dd>
+<dt>Time zone</dt><dd>Asia/Singapore</dd>
+<dt>Source</dt><dd>2026-08-10T00:00:00+08:00</dd>
+<dt>Feed fingerprint</dt><dd>000000000000</dd>
+<dt>Configuration</dt><dd>000000000000</dd>
+<dt>Generator</dt><dd>example</dd>
+<dt>Schema</dt><dd>1.0</dd>
+</dl>
+<p>This page needs no network access.</p>
+</footer>
+<script>
+/* Page controls for the timetable.
+ *
+ * Everything here is an enhancement. Without it the timetable still
+ * shows every departure and still prints; the buttons simply stay
+ * hidden, because they start with a `needs-script` class. */
+(function () {
+  "use strict";
+
+  /* The controls carry `needs-script`, which the stylesheet hides.
+   * Removing the class is what reveals them; clearing an inline style
+   * would leave the stylesheet rule in force. */
+  var controls = document.querySelectorAll(".needs-script");
+  for (var i = 0; i < controls.length; i++) {
+    controls[i].classList.remove("needs-script");
+  }
+
+  var print = document.getElementById("print-page");
+  if (print) {
+    print.addEventListener("click", function () {
+      window.print();
+    });
+  }
+
+  var mono = document.getElementById("toggle-mono");
+  if (mono) {
+    mono.addEventListener("click", function () {
+      var on = document.documentElement.classList.toggle("monochrome");
+      mono.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    mono.setAttribute("aria-pressed", "false");
+  }
+})();
+
+</script>
+</div>
+</body>
+</html>

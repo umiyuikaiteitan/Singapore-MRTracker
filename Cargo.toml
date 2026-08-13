@@ -7,6 +7,10 @@ members = [
     "crates/mrt-live",
     "crates/mrt-board-web",
     "crates/mrt-board-static",
+    "crates/mrt-publication",
+    "crates/mrt-publication-html",
+    "crates/mrt-schedule-cli",
+    "crates/mrt-schedule-site",
 ]
 
 [workspace.package]
@@ -28,8 +32,12 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 # proxies with their own certificate authority need.
 ureq = { version = "2", features = ["native-certs"] }
 tempfile = "3"
+sha2 = "0.10"
 
 # Internal crates.
 mrt-gtfs = { path = "crates/mrt-gtfs" }
 mrt-gtfs-rt = { path = "crates/mrt-gtfs-rt" }
 mrt-datamall = { path = "crates/mrt-datamall" }
+mrt-publication = { path = "crates/mrt-publication" }
+mrt-publication-html = { path = "crates/mrt-publication-html" }
+mrt-schedule-cli = { path = "crates/mrt-schedule-cli" }

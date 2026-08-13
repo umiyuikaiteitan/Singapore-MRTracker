@@ -32,12 +32,29 @@ jobs:
         with:
           shared-key: "board"
 
-      - name: Generate the static site
-        run: cargo run --release -p mrt-board-static -- site
+      # One download serves both generators: the board writes the site
+      # root, and the timetable section is built from the same archive
+      # so the two never disagree about the schedule.
+      - name: Download the GTFS Schedule feed
+        run: cargo run --release -p mrt-schedule-cli -- fetch --source datamall --out feed.zip
+        env:
+          LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
+
+      - name: Generate the live board
+        run: cargo run --release -p mrt-board-static -- site feed.zip
         env:
           LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
           MRT_DELAYS_URL: https://hw737.user.srcf.net/rail/api/live
           MRT_DELAYS_FALLBACK_URL: https://raw.githubusercontent.com/${{ github.repository }}/live-data/live.json
+
+      - name: Generate the timetables and diagrams
+        run: cargo run --release -p mrt-schedule-site -- site/timetables feed.zip
+        env:
+          MRT_SITE_DAYS: "3"
+          MRT_SITE_CONFIG: config/singapore.yaml
+
+      - name: Report the site size
+        run: du -sh site && du -sh site/timetables && find site -type f | wc -l
 
       - uses: actions/upload-pages-artifact@v3
         with:

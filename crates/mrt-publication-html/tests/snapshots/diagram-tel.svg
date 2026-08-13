@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="diagram-svg" role="img" tabindex="0" width="448" height="375" viewBox="0 0 448 375" aria-labelledby="svg-title svg-desc">
+<title id="svg-title">TEL train diagram</title>
+<desc id="svg-desc">TEL. Time: 06:00 – 07:00. Stations: 8. Trains: 3. Service date: 2025-05-05 (Mon).</desc>
+<style>
+.plot-bg { fill: var(--svg-bg, #ffffff); }
+.grid-minor { stroke: #d9dee8; stroke-width: 0.5; }
+.grid-medium { stroke: #b8c1d2; stroke-width: 0.8; }
+.grid-major { stroke: #8b97ad; stroke-width: 1.2; }
+.grid-day { stroke: #1b2a5e; stroke-width: 2; stroke-dasharray: 6 3; }
+.station-line { stroke: #c9d0dd; stroke-width: 0.6; }
+.station-line.panel-edge { stroke: #7c879c; stroke-width: 1.2; }
+.axis-label { font-size: 10px; fill: #3a4358; }
+.axis-label.major { font-weight: 700; fill: #1b2a5e; }
+.station-name { font-size: 10.5px; fill: #14171f; }
+.station-code { font-size: 9px; font-weight: 700; fill: #4a5468; }
+.panel-title { font-size: 10px; font-weight: 700; fill: #1b2a5e; letter-spacing: 0.06em; }
+.run path { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.run.approximate path { stroke-dasharray: 5 3; stroke-width: 1.4; }
+.run .hit { stroke: transparent; stroke-width: 9; fill: none; }
+.run .stop-dot { r: 1.9; }
+.run .pass-dot { fill: none; stroke-width: 1; r: 2.2; }
+.run .run-label { font-size: 8.5px; font-weight: 700; paint-order: stroke; stroke: #ffffff; stroke-width: 2.4; }
+.band path { fill: none; stroke-dasharray: 5 3; stroke-width: 1.4; }
+.band .band-fill { fill-opacity: 0.12; stroke: none; }
+.band .band-label { font-size: 9px; font-weight: 700; paint-order: stroke; stroke: #ffffff; stroke-width: 2.4; }
+.frame { fill: none; stroke: #8b97ad; stroke-width: 1; }
+svg[data-highlight] .run { opacity: 0.16; }
+svg[data-highlight] .run:hover,
+svg[data-highlight] .run:focus-within { opacity: 1; }
+.run:focus { outline: none; }
+.run:focus-within path.trace { stroke-width: 3.2; }
+@media print {
+.run path { stroke-width: 1.1; }
+.grid-minor { stroke: #e2e6ee; }
+}
+</style>
+<rect class="plot-bg" x="0" y="0" width="448" height="375"/>
+<g class="grid" aria-hidden="true">
+<line class="grid-major" x1="168" y1="64" x2="168" y2="319"/>
+<line class="grid-minor" x1="208" y1="64" x2="208" y2="319"/>
+<line class="grid-minor" x1="248" y1="64" x2="248" y2="319"/>
+<line class="grid-medium" x1="288" y1="64" x2="288" y2="319"/>
+<line class="grid-minor" x1="328" y1="64" x2="328" y2="319"/>
+<line class="grid-minor" x1="368" y1="64" x2="368" y2="319"/>
+<line class="grid-major" x1="408" y1="64" x2="408" y2="319"/>
+</g>
+<g class="time-labels">
+<text class="axis-label major" x="168" y="58" text-anchor="middle">06:00</text>
+<text class="axis-label major" x="168" y="333" text-anchor="middle">06:00</text>
+<text class="axis-label major" x="408" y="58" text-anchor="middle">07:00</text>
+<text class="axis-label major" x="408" y="333" text-anchor="middle">07:00</text>
+</g>
+<g class="stations">
+<line class="station-line panel-edge" x1="168" y1="64" x2="408" y2="64"/>
+<text class="station-code" x="158" y="67.5" text-anchor="end">TE1</text>
+<text class="station-name" x="126" y="67.5" text-anchor="end">Woodlands North</text>
+<line class="station-line" x1="168" y1="98" x2="408" y2="98"/>
+<text class="station-code" x="158" y="101.5" text-anchor="end">TE2</text>
+<text class="station-name" x="126" y="101.5" text-anchor="end">Woodlands</text>
+<line class="station-line" x1="168" y1="132" x2="408" y2="132"/>
+<text class="station-code" x="158" y="135.5" text-anchor="end">TE3</text>
+<text class="station-name" x="126" y="135.5" text-anchor="end">Woodlands South</text>
+<line class="station-line panel-edge" x1="168" y1="166" x2="408" y2="166"/>
+<text class="station-code" x="158" y="169.5" text-anchor="end">TE4</text>
+<text class="station-name" x="126" y="169.5" text-anchor="end">Springleaf</text>
+<line class="station-line panel-edge" x1="168" y1="217" x2="408" y2="217"/>
+<text class="station-code" x="158" y="220.5" text-anchor="end">TE1</text>
+<text class="station-name" x="126" y="220.5" text-anchor="end">Woodlands North</text>
+<line class="station-line" x1="168" y1="251" x2="408" y2="251"/>
+<text class="station-code" x="158" y="254.5" text-anchor="end">TE2</text>
+<text class="station-name" x="126" y="254.5" text-anchor="end">Woodlands</text>
+<line class="station-line" x1="168" y1="285" x2="408" y2="285"/>
+<text class="station-code" x="158" y="288.5" text-anchor="end">TB1</text>
+<text class="station-name" x="126" y="288.5" text-anchor="end">Branch Alpha</text>
+<line class="station-line panel-edge" x1="168" y1="319" x2="408" y2="319"/>
+<text class="station-code" x="158" y="322.5" text-anchor="end">TB2</text>
+<text class="station-name" x="126" y="322.5" text-anchor="end">Branch Beta</text>
+<text class="panel-title" x="172" y="50">Woodlands North – Springleaf</text>
+<text class="panel-title" x="172" y="203">Woodlands North – Branch Beta</text>
+</g>
+<g class="runs">
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T1" data-line="TE" data-direction="0" data-destination="Springleaf" data-exactness="exact" data-panel="0">
+<title>T101 · TEL → Springleaf · 06:00 – 06:13</title>
+<path class="hit" d="M168 64 L170 64 L184 98 L186 98 L200 132 L202 132 L220 166"/>
+<path class="trace" stroke="#9D5B25" d="M168 64 L170 64 L184 98 L186 98 L200 132 L202 132 L220 166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="168" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="184" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="200" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="220" cy="166"/>
+<text class="run-label" fill="#9D5B25" x="211" y="145" text-anchor="middle" transform="rotate(62.1 211 145)">T101</text>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T3" data-line="TE" data-direction="1" data-destination="Woodlands North" data-exactness="exact" data-panel="0">
+<title>T102 · TEL → Woodlands North · 06:05 – 06:18</title>
+<path class="hit" d="M188 166 L190 166 L208 132 L210 132 L224 98 L226 98 L240 64"/>
+<path class="trace" stroke="#9D5B25" d="M188 166 L190 166 L208 132 L210 132 L224 98 L226 98 L240 64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="188" cy="166"/>
+<circle class="stop-dot" fill="#9D5B25" cx="208" cy="132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="224" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="240" cy="64"/>
+<text class="run-label" fill="#9D5B25" x="217" y="111" text-anchor="middle" transform="rotate(-67.62 217 111)">T102</text>
+</g>
+<g class="run" tabindex="0" role="listitem" data-run="20250505:TE_T2" data-line="TE" data-direction="0" data-destination="Woodlands South" data-exactness="exact" data-panel="0">
+<title>T103 · TEL → Woodlands South · 06:20 – 06:28</title>
+<path class="hit" d="M248 64 L250 64 L264 98 L266 98 L280 132"/>
+<path class="trace" stroke="#9D5B25" d="M248 64 L250 64 L264 98 L266 98 L280 132"/>
+<circle class="stop-dot" fill="#9D5B25" cx="248" cy="64"/>
+<circle class="stop-dot" fill="#9D5B25" cx="264" cy="98"/>
+<circle class="stop-dot" fill="#9D5B25" cx="280" cy="132"/>
+<text class="run-label" fill="#9D5B25" x="257" y="77" text-anchor="middle" transform="rotate(67.62 257 77)">T103</text>
+</g>
+</g>
+<rect class="frame" x="168" y="64" width="240" height="255"/>
+</svg>

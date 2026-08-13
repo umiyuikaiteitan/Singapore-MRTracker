@@ -241,6 +241,15 @@ impl<T: Transport> DataMallClient<T> {
         })
     }
 
+    /// Get the download link for any dataset endpoint.
+    ///
+    /// The link is pre-signed and expires after a short time.
+    /// [`DataMallClient::fetch_snapshot`] wraps the request and the
+    /// download into one step, which is what most callers want.
+    pub fn dataset_link_for(&self, path_and_query: &str) -> Result<DatasetLink, DataMallError> {
+        self.dataset_link(path_and_query)
+    }
+
     fn dataset_link(&self, path_and_query: &str) -> Result<DatasetLink, DataMallError> {
         let (url, response) = {
             let (url, response) = self.request(path_and_query)?;

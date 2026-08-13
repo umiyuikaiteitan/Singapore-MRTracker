@@ -1,18 +1,30 @@
-# Deploy the board on GitHub Pages
+# Deploy on GitHub Pages
 
-GitHub Pages serves static files only. The board therefore runs in a
-different shape than the server deployment: a scheduled GitHub
-Actions workflow generates the site, and the browser computes the
-wait times from the visitor's clock. Train schedules are
-deterministic, so the board stays accurate between refreshes.
+The published site has two sections under one domain:
+
+| Path | What it is |
+|------|------------|
+| `/` | The live dot-matrix departure board. |
+| `/timetables/` | Browsable station timetables and train diagrams. |
+
+GitHub Pages serves static files only. Both sections are therefore
+generated ahead of time by a scheduled GitHub Actions workflow, from
+one download of the GTFS Schedule feed. The board computes wait times
+from the visitor's clock; train schedules are deterministic, so it
+stays accurate between refreshes.
 
 ```text
-GitHub Actions "pages" (twice per hour)
-  └─ mrt-board-static + account key (Actions secret)
-       ├─ downloads the GTFS Schedule feed
-       ├─ computes departures per station -> data/board/<CODE>.json
-       ├─ reads alerts, crowd, trip updates -> data/live.json
-       └─ deploys everything to GitHub Pages
+GitHub Actions "pages" (hourly)
+  ├─ mrt-schedule-cli fetch + account key (Actions secret)
+  │    └─ downloads the GTFS Schedule feed once -> feed.zip
+  ├─ mrt-board-static + feed.zip
+  │    ├─ computes departures per station -> data/board/<CODE>.json
+  │    ├─ reads alerts, crowd, trip updates -> data/live.json
+  │    └─ writes the board at the site root
+  ├─ mrt-schedule-site + feed.zip
+  │    └─ writes timetables/ : a hub, one page per station and date,
+  │       one diagram per line, date, and time window
+  └─ deploys everything to GitHub Pages
 
 GitHub Actions "rt-refresh" (every five minutes)
   └─ mrt-rt-snapshot + account key
@@ -98,6 +110,52 @@ as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
 - Without the secret, the run fails at the generate step with a
   clear message.
 
+## The timetable section
+
+`mrt-schedule-site` writes a browsable section beside the board:
+
+```text
+timetables/
+  index.html                   the hub for today
+  day-<YYYYMMDD>.html          the hub for another service date
+  t/<code>-<date>.html         one station departure timetable
+  d/<line>-<date>-<window>.html  one train diagram
+  d/<line>-<date>-<window>.svg   the same drawing on its own
+  data/index.json              the machine-readable index
+```
+
+The hub lists every line and every station. The station list is in
+the document, so it works without JavaScript; the search box is an
+enhancement that appears only once the script runs, and it matches a
+name or any code in any spelling (`ns-1`, `NS 1`, `EW24`).
+
+Each generated page is the same self-contained document that
+`mrt-schedule-cli` writes, plus a navigation block that switches the
+service date, the line, and the diagram window. Every link is
+relative, because a project site lives under `/<repository>/`. The
+navigation carries the `no-print` class, so a printed timetable looks
+exactly like one generated on its own.
+
+The workflow controls the section through the environment:
+
+| Variable | Meaning | Default |
+|----------|---------|---------|
+| `MRT_SITE_DAYS` | How many service dates to cover, from today in Singapore time | `3` |
+| `MRT_SITE_CONFIG` | A publication configuration file | none |
+| `MRT_SITE_TITLE` | The name in the masthead | `Singapore rail timetables` |
+| `MRT_SITE_BOARD_HREF` | Relative link back to the board | `../index.html` |
+| `MRT_SITE_LINES` | Only these route identifiers, comma separated | all |
+
+Raising `MRT_SITE_DAYS` multiplies the page count and the build time:
+the section holds `stations x days` timetables and
+`lines x days x windows` diagrams. Three days covers today, tomorrow,
+and the day after, which answers "now", "tonight", and "the weekend"
+for most of the week. Seven covers every service pattern at roughly
+twice the size.
+
+If a run gets slow or the artifact gets large, lower `MRT_SITE_DAYS`
+first, or narrow `MRT_SITE_LINES`.
+
 ## Data files
 
 | File | Content |
@@ -105,6 +163,7 @@ as `MRT_DELAYS_URL` in `pages.yml` — the page follows whatever URL
 | `data/stations.json` | All stations with their codes. |
 | `data/board/<CODE>.json` | Departures for one station: `[posix_seconds, line, destination, exact, trip_id, route_id]` rows for the next 26 hours, with the station's platforms and route identifiers. An interchange has one alias file per code. |
 | `data/live.json` | Alerts (legacy and GTFS-Realtime), crowd levels, per-trip delays, and the generation time. The `live-data` branch carries the same shape, refreshed every five minutes. |
+| `timetables/data/index.json` | Every station, line, service date, and diagram window that the section covers, with the feed fingerprint. |
 
 The page refetches the station file every 10 minutes and the live
 snapshot every 30 seconds.
@@ -170,8 +229,23 @@ Actions minutes.
 
 ```sh
 export LTA_DATAMALL_ACCOUNT_KEY=<your key>
-cargo run --release -p mrt-board-static -- site
+
+# One download, both sections.
+cargo run --release -p mrt-schedule-cli -- fetch --source datamall --out feed.zip
+cargo run --release -p mrt-board-static -- site feed.zip
+MRT_SITE_DAYS=2 MRT_SITE_CONFIG=config/singapore.yaml \
+  cargo run --release -p mrt-schedule-site -- site/timetables feed.zip
+
 python3 -m http.server --directory site 8000
 ```
 
-Then open <http://localhost:8000>.
+Then open <http://localhost:8000> for the board and
+<http://localhost:8000/timetables/> for the timetables.
+
+Without an account key, pass any local GTFS archive instead of
+`feed.zip`. The miniature test feed works for a quick look:
+
+```sh
+cd crates/mrt-gtfs/tests/fixtures/mini && zip -q /tmp/mini.zip *.txt && cd -
+cargo run -p mrt-schedule-site -- site/timetables /tmp/mini.zip
+```

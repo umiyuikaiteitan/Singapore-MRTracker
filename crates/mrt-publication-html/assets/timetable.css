@@ -1,0 +1,288 @@
+/* The station departure timetable.
+ *
+ * The visual grammar follows a Japanese 発車時刻表: a strong direction
+ * header, a dark hour column, alternating hour rows, large minute
+ * numerals, and small destination annotations beside each minute. */
+
+.panels {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.panel {
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.9rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--line-color, var(--accent));
+  color: var(--line-text, var(--accent-text));
+}
+
+.panel-head .line-name {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panel-head .direction {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.panel-head .platform {
+  margin-left: auto;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.1rem 0.55rem;
+  border: 2px solid currentColor;
+  border-radius: 0.25rem;
+}
+
+.panel-destinations {
+  margin: 0;
+  padding: 0.35rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel-bg);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* The columns of one panel. Print and wide screens split the hours;
+ * a narrow screen stacks them, so nothing scrolls sideways. */
+.panel-columns {
+  display: grid;
+  gap: 0 1.25rem;
+  grid-template-columns: 1fr;
+  padding: 0.5rem 0.9rem 0.9rem;
+}
+
+/* Paper is always wide enough for the columns, and a printed page
+ * that stacks them wastes half the sheet. The two queries carry the
+ * same rules on purpose: `print` does not match `screen`. */
+@media screen and (min-width: 52rem) {
+  .panel-columns[data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="4"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  .panel-columns[data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-columns[data-columns="4"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.hours {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  /* Without this the grid stretches the shorter table, and the two
+   * columns end up with different row heights. */
+  align-self: start;
+}
+
+.hours caption {
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 0.3rem 0;
+}
+
+.hours th[scope="col"] {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.2rem 0.3rem;
+  border-bottom: 2px solid var(--rule);
+}
+
+.hours th[scope="col"].col-hour {
+  width: 3.1rem;
+}
+
+.hour-row {
+  border-bottom: 1px solid var(--rule);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.hour-row:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.hour-cell {
+  width: 3.1rem;
+  vertical-align: top;
+  padding: 0.3rem 0.2rem;
+  background: var(--hour-bg);
+  color: var(--hour-fg);
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A row for one of the small hours after midnight. The dagger in the
+ * minute list already carries the meaning; this only softens the
+ * hour cell so the break is visible at a glance. */
+.hour-row.past-midnight .hour-cell {
+  background: color-mix(in srgb, var(--hour-bg) 78%, #ffffff);
+}
+
+.minutes {
+  padding: 0.25rem 0.35rem;
+  vertical-align: top;
+}
+
+.minutes ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+}
+
+.dep {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.12rem;
+  padding: 0.05rem 0.1rem;
+  border-radius: 0.15rem;
+}
+
+.dep .min {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.dep .sec {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dep .dest {
+  font-size: 0.66rem;
+  line-height: 1;
+  color: var(--muted);
+  max-width: 5.5rem;
+  overflow-wrap: anywhere;
+}
+
+.dep .train-name {
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dep .flag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.dep.approximate .min {
+  font-style: italic;
+}
+
+.dep.approximate {
+  border-bottom: 2px dotted var(--accent);
+}
+
+.empty-hour {
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding-left: 0.2rem;
+}
+
+/* A headway band is a range, not a list of departures. It gets its
+ * own row shape so that no reader mistakes it for exact times. */
+.bands {
+  margin: 0.25rem 0.9rem 0.9rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.band-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.75rem;
+  padding: 0.4rem 0.65rem;
+  border: 2px dotted var(--accent);
+  border-radius: 0.3rem;
+  background: var(--panel-bg);
+  font-size: 0.9rem;
+}
+
+.band-row .band-time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.band-row .band-dest {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.no-departures {
+  padding: 1.25rem;
+  border: 1px dashed var(--rule);
+  border-radius: 0.4rem;
+  color: var(--muted);
+}
+
+/* Print profiles. A3 gives the whole service day room to breathe. */
+@media print {
+  .panel {
+    border-color: #666;
+  }
+
+  .panel-columns {
+    padding: 0.3rem 0.5rem 0.5rem;
+  }
+
+  .dep .min {
+    font-size: 11pt;
+  }
+
+  .dep .dest {
+    font-size: 5.5pt;
+    max-width: 4.2rem;
+  }
+
+  .hour-cell {
+    font-size: 11pt;
+  }
+}

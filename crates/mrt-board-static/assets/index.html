@@ -29,7 +29,16 @@
     min-height: 100vh;
     padding: 24px 12px;
   }
-  .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; }
+  .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .section-link {
+    background: var(--fascia);
+    color: var(--text);
+    border: 1px solid #33343a;
+    border-radius: 6px;
+    padding: 6px 10px;
+    text-decoration: none;
+  }
+  .section-link:hover { border-color: var(--amber); color: var(--amber); }
   select {
     background: var(--fascia);
     color: var(--text);
@@ -88,6 +97,9 @@
   <div class="controls">
     <label for="station">Station</label>
     <select id="station"></select>
+    <!-- The published timetables and train diagrams sit beside this
+         board, under the same domain. -->
+    <a class="section-link" href="timetables/">Timetables &amp; diagrams</a>
   </div>
 
   <div class="fascia">

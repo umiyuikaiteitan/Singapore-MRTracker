@@ -58,31 +58,130 @@ impl FeedSource for DirectorySource {
     }
 }
 
-/// A feed source that reads files from a zip archive.
+/// Safety limits for reading a GTFS zip archive.
 ///
-/// The source finds a feed file also when the archive keeps the feed in
-/// a subdirectory.
+/// A downloaded archive is untrusted input. The limits stop a
+/// decompression bomb and an archive with an unreasonable number of
+/// entries before the loader spends memory on it.
 #[cfg(feature = "zip-source")]
-pub struct ZipSource<R: Read + std::io::Seek> {
-    archive: zip::ZipArchive<R>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ZipLimits {
+    /// The largest number of entries that the archive may contain.
+    pub max_entries: usize,
+    /// The largest total uncompressed size, in bytes.
+    pub max_total_bytes: u64,
+    /// The largest uncompressed size of one entry, in bytes.
+    pub max_entry_bytes: u64,
 }
 
 #[cfg(feature = "zip-source")]
-impl ZipSource<File> {
-    /// Open a zip archive at the given path.
-    pub fn from_path(path: impl AsRef<Path>) -> Result<Self, GtfsError> {
-        let path = path.as_ref();
-        let file = File::open(path).map_err(|e| GtfsError::io(&path.display().to_string(), e))?;
-        Self::from_reader(file)
+impl Default for ZipLimits {
+    /// The defaults hold the official LTA train feed with room to
+    /// spare: 4096 entries, 2 GiB in total, 1 GiB per entry.
+    fn default() -> Self {
+        ZipLimits {
+            max_entries: 4096,
+            max_total_bytes: 2 * 1024 * 1024 * 1024,
+            max_entry_bytes: 1024 * 1024 * 1024,
+        }
+    }
+}
+
+/// How strictly the zip loader reads an archive.
+#[cfg(feature = "zip-source")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ZipStrictness {
+    /// Accept a feed that sits in a subdirectory of the archive, and
+    /// accept a byte-order mark at the start of a file.
+    #[default]
+    Lenient,
+    /// Require the feed files at the root of the archive, as standard
+    /// GTFS specifies.
+    Strict,
+}
+
+/// Options for reading a GTFS zip archive.
+#[cfg(feature = "zip-source")]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ZipOptions {
+    /// The safety limits.
+    pub limits: ZipLimits,
+    /// How strictly to read the archive layout.
+    pub strictness: ZipStrictness,
+}
+
+/// A feed source that reads files from a zip archive.
+///
+/// The source finds a feed file also when the archive keeps the feed in
+/// a subdirectory, unless [`ZipStrictness::Strict`] forbids it.
+///
+/// Every archive passes a safety check before the loader reads a byte
+/// of content. The check rejects absolute entry paths, `..` path
+/// traversal, symbolic links, ambiguous duplicates of one feed file,
+/// and sizes beyond [`ZipLimits`].
+#[cfg(feature = "zip-source")]
+pub struct ZipSource<R: Read + std::io::Seek> {
+    archive: zip::ZipArchive<R>,
+    strictness: ZipStrictness,
+}
+
+#[cfg(feature = "zip-source")]
+impl<R: Read + std::io::Seek> std::fmt::Debug for ZipSource<R> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ZipSource")
+            .field("entries", &self.archive.len())
+            .field("strictness", &self.strictness)
+            .finish()
     }
 }
 
 #[cfg(feature = "zip-source")]
+impl ZipSource<File> {
+    /// Open a zip archive at the given path with the default options.
+    pub fn from_path(path: impl AsRef<Path>) -> Result<Self, GtfsError> {
+        Self::from_path_with(path, &ZipOptions::default())
+    }
+
+    /// Open a zip archive at the given path with explicit options.
+    pub fn from_path_with(path: impl AsRef<Path>, options: &ZipOptions) -> Result<Self, GtfsError> {
+        let path = path.as_ref();
+        let file = File::open(path).map_err(|e| GtfsError::io(&path.display().to_string(), e))?;
+        Self::from_reader_with(file, options)
+    }
+}
+
+/// The GTFS files that this library reads. The duplicate check uses
+/// the list, because a second `stops.txt` makes the feed ambiguous.
+#[cfg(feature = "zip-source")]
+const FEED_FILES: [&str; 10] = [
+    "agency.txt",
+    "stops.txt",
+    "routes.txt",
+    "trips.txt",
+    "stop_times.txt",
+    "calendar.txt",
+    "calendar_dates.txt",
+    "frequencies.txt",
+    "transfers.txt",
+    "shapes.txt",
+];
+
+#[cfg(feature = "zip-source")]
 impl<R: Read + std::io::Seek> ZipSource<R> {
-    /// Open a zip archive from a reader.
+    /// Open a zip archive from a reader with the default options.
     pub fn from_reader(reader: R) -> Result<Self, GtfsError> {
-        let archive = zip::ZipArchive::new(reader).map_err(|e| GtfsError::Zip(e.to_string()))?;
-        Ok(ZipSource { archive })
+        Self::from_reader_with(reader, &ZipOptions::default())
+    }
+
+    /// Open a zip archive from a reader with explicit options.
+    pub fn from_reader_with(reader: R, options: &ZipOptions) -> Result<Self, GtfsError> {
+        let mut archive =
+            zip::ZipArchive::new(reader).map_err(|e| GtfsError::Zip(e.to_string()))?;
+        check_archive(&mut archive, options)?;
+        Ok(ZipSource {
+            archive,
+            strictness: options.strictness,
+        })
     }
 
     /// Find the archive entry for a feed file name.
@@ -90,9 +189,115 @@ impl<R: Read + std::io::Seek> ZipSource<R> {
         let suffix = format!("/{name}");
         self.archive
             .file_names()
-            .find(|entry| *entry == name || entry.ends_with(&suffix))
+            .find(|entry| {
+                *entry == name
+                    || (self.strictness == ZipStrictness::Lenient && entry.ends_with(&suffix))
+            })
             .map(str::to_string)
     }
+}
+
+/// Reject an archive that is unsafe or too large to read.
+#[cfg(feature = "zip-source")]
+fn check_archive<R: Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    options: &ZipOptions,
+) -> Result<(), GtfsError> {
+    let limits = options.limits;
+    if archive.len() > limits.max_entries {
+        return Err(GtfsError::UnsafeZip(format!(
+            "the archive has {} entries; the limit is {}",
+            archive.len(),
+            limits.max_entries
+        )));
+    }
+
+    let mut total: u64 = 0;
+    let mut seen: Vec<(String, String)> = Vec::new();
+    for index in 0..archive.len() {
+        let entry = archive
+            .by_index_raw(index)
+            .map_err(|e| GtfsError::Zip(e.to_string()))?;
+        let raw_name = entry.name().to_string();
+        check_entry_name(&raw_name)?;
+
+        // A symbolic link inside an archive can point anywhere on the
+        // file system. The loader never follows one.
+        const S_IFMT: u32 = 0o170_000;
+        const S_IFLNK: u32 = 0o120_000;
+        if entry.unix_mode().is_some_and(|m| m & S_IFMT == S_IFLNK) {
+            return Err(GtfsError::UnsafeZip(format!(
+                "entry \"{raw_name}\" is a symbolic link"
+            )));
+        }
+
+        if entry.is_dir() {
+            continue;
+        }
+        let size = entry.size();
+        if size > limits.max_entry_bytes {
+            return Err(GtfsError::UnsafeZip(format!(
+                "entry \"{raw_name}\" expands to {size} bytes; the limit is {}",
+                limits.max_entry_bytes
+            )));
+        }
+        total = total.saturating_add(size);
+        if total > limits.max_total_bytes {
+            return Err(GtfsError::UnsafeZip(format!(
+                "the archive expands to more than {} bytes",
+                limits.max_total_bytes
+            )));
+        }
+
+        // A feed file that appears twice makes the feed ambiguous.
+        let base = raw_name.rsplit('/').next().unwrap_or(&raw_name);
+        if FEED_FILES.contains(&base) {
+            if options.strictness == ZipStrictness::Strict && raw_name != base {
+                return Err(GtfsError::UnsafeZip(format!(
+                    "strict mode expects \"{base}\" at the root of the archive, \
+                     but the archive stores it as \"{raw_name}\""
+                )));
+            }
+            if let Some((_, first)) = seen.iter().find(|(name, _)| name == base) {
+                return Err(GtfsError::UnsafeZip(format!(
+                    "the archive contains \"{base}\" twice: \"{first}\" and \"{raw_name}\""
+                )));
+            }
+            seen.push((base.to_string(), raw_name.clone()));
+        }
+    }
+    Ok(())
+}
+
+/// Reject an entry name that could escape the extraction directory.
+///
+/// The library never writes the entries to disk, but a caller might,
+/// and a traversal name is a reliable sign of a hostile archive.
+#[cfg(feature = "zip-source")]
+fn check_entry_name(name: &str) -> Result<(), GtfsError> {
+    let unsafe_name =
+        |reason: &str| Err(GtfsError::UnsafeZip(format!("entry \"{name}\" {reason}")));
+    if name.is_empty() {
+        return unsafe_name("has an empty name");
+    }
+    if name.contains('\0') {
+        return unsafe_name("contains a null byte");
+    }
+    if name.starts_with('/') || name.starts_with('\\') {
+        return unsafe_name("is an absolute path");
+    }
+    // A Windows drive letter, for example "C:\feed\stops.txt".
+    let bytes = name.as_bytes();
+    if bytes.len() > 1 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
+        return unsafe_name("is an absolute path");
+    }
+    if name
+        .split(['/', '\\'])
+        .any(|component| component == ".." || component == "...")
+    {
+        return unsafe_name("escapes its directory with \"..\"");
+    }
+    Ok(())
 }
 
 #[cfg(feature = "zip-source")]
