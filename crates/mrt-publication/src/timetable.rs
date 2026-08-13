@@ -390,7 +390,7 @@ pub fn build_timetable(
                     b.instance_id.as_str(),
                 ))
         });
-        builder.bands.sort_by(|a, b| a.start.cmp(&b.start));
+        builder.bands.sort_by_key(|band| band.start);
         if config.timetable.mark_first_and_last {
             if let Some(first) = builder.departures.first_mut() {
                 first.flags.push(DepartureFlag::FirstOfDay);

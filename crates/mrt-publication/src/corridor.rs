@@ -544,7 +544,7 @@ fn assemble(
 
     // Longer paths first, so a branch run matches the branch path
     // rather than the shorter main-axis prefix.
-    paths.sort_by(|a, b| b.stations.len().cmp(&a.stations.len()));
+    paths.sort_by_key(|path| std::cmp::Reverse(path.stations.len()));
 
     if want_distance && !spaced_by_distance {
         diagnostics.push(Diagnostic::warning(
