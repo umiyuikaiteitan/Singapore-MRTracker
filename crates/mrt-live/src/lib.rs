@@ -11,9 +11,10 @@
 //! - the decoded GTFS-Realtime data from `mrt-gtfs-rt`,
 //!
 //! and produces flat structures that a renderer shows directly: a
-//! per-line network status and a live destination board. All view
-//! models serialize with `serde`, so a web map, a destination board,
-//! or an LED panel driver can consume them as JSON.
+//! per-line network status, a live destination board, and a snapshot
+//! of the whole network for a live map. All view models serialize with
+//! `serde`, so a web map, a destination board, or an LED panel driver
+//! can consume them as JSON.
 //!
 //! This crate does no input/output. The application fetches the data
 //! and passes it in. This keeps render loops testable and fast.
@@ -44,6 +45,13 @@
 //! ```
 
 #![warn(missing_docs)]
+
+mod map;
+
+pub use map::{
+    Freshness, FreshnessState, MapBand, MapEdge, MapLine, MapStation, MapTrain, NetworkSnapshot,
+    NetworkSnapshotBuilder, PositionQuality, TrainLocation,
+};
 
 use serde::Serialize;
 

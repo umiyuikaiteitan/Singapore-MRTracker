@@ -6,8 +6,10 @@ what the map can honestly show given the data LTA publishes, where the
 code goes, what it borrows from the OpenFantasyMap project, and how it
 should look.
 
-It is a plan, not a record of something built. Nothing in this document
-has been implemented yet.
+It is a plan, and the phases record their own progress. Phase 1 is
+implemented: the map view model lives in `crates/mrt-live/src/map.rs`
+with its tests and committed snapshot beside it. Phase 0 remains open —
+it needs a real DataMall account key. Phases 2 to 4 are not started.
 
 ## What the proof of concept is
 
