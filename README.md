@@ -36,6 +36,8 @@ own.
 | `crates/mrt-live` | Merge the static network with the live data into view models for maps, boards, and panels. |
 | `crates/mrt-board-web` | Serve a dot-matrix destination board in the browser (draft). |
 | `crates/mrt-board-static` | Generate the board as a static site for GitHub Pages. |
+| `crates/mrt-map-web` | Serve the live schematic train map in the browser (proof of concept). |
+| `crates/mrt-map-static` | Generate the map as a static site for GitHub Pages, separate from the board. |
 | `crates/mrt-publication` | Project the schedule into timetable and train-diagram view models. Pure: no input, no output. |
 | `crates/mrt-publication-html` | Render those view models as self-contained HTML and standalone SVG. |
 | `crates/mrt-schedule-cli` | The generator: fetch, cache, build, and write timetables and diagrams. |
@@ -154,6 +156,29 @@ See `docs/DEPLOY-PAGES.md` for the GitHub Pages workflow:
 
 ```sh
 cargo run --release -p mrt-board-static -- site data/gtfs_schedule.zip
+```
+
+### Run the map UI
+
+The live map is its own site, separate from the board, so it deploys
+on its own subdomain:
+
+```sh
+cargo run -p mrt-map-web
+```
+
+Then open <http://127.0.0.1:8601>. The server takes the same feed
+argument as the board (`cargo run -p mrt-map-web --
+data/gtfs_schedule.zip`), listens where `MRT_MAP_ADDR` says, and draws
+the OpenFantasyMap layout named by `MRT_MAP_LAYOUT` (the default is
+the miniature fixture layout, `config/layout-mini.geojson` — a layout
+of the real network is future work). Without an account key every
+train is schedule-only and the page says so.
+
+To host the map without a server, generate it as a static site:
+
+```sh
+cargo run --release -p mrt-map-static -- map-site data/gtfs_schedule.zip
 ```
 
 ### Generate a timetable and a train diagram

@@ -322,6 +322,7 @@
         "index": 0
       },
       "progress": 0.0,
+      "edge_secs": null,
       "destination": "Raffles Place",
       "quality": "at-station",
       "delay_secs": -20,
@@ -339,6 +340,7 @@
         "to": 1
       },
       "progress": 0.3181818181818182,
+      "edge_secs": 660,
       "destination": "Marina Bay",
       "quality": "interpolated-realtime",
       "delay_secs": 60,
@@ -356,6 +358,7 @@
         "to": 1
       },
       "progress": 0.23076923076923078,
+      "edge_secs": 1170,
       "destination": "Jurong East",
       "quality": "schedule-only",
       "delay_secs": null,
@@ -373,6 +376,7 @@
         "to": 13
       },
       "progress": 0.6,
+      "edge_secs": 150,
       "destination": "Punggol",
       "quality": "schedule-only",
       "delay_secs": null,
@@ -390,6 +394,7 @@
         "to": 7
       },
       "progress": 0.14285714285714285,
+      "edge_secs": 210,
       "destination": "Springleaf",
       "quality": "schedule-only",
       "delay_secs": null,

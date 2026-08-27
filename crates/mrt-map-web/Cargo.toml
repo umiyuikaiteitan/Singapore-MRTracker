@@ -1,0 +1,20 @@
+[package]
+name = "mrt-map-web"
+description = "Serve the live schematic train map in the browser."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+mrt-gtfs.workspace = true
+mrt-gtfs-rt.workspace = true
+mrt-datamall.workspace = true
+# The map renders a NetworkSnapshot over a BoundLayout. Both view
+# models live in mrt-live, upstream of every renderer.
+mrt-live = { path = "../mrt-live" }
+serde.workspace = true
+serde_json.workspace = true
+tiny_http = "0.12"

@@ -224,6 +224,15 @@ pub struct MapTrain {
     /// How far along the edge the run has travelled, from 0 to 1. The
     /// value is 0 for a run standing at a station.
     pub progress: f64,
+    /// The adjusted scheduled time from the departure behind to the
+    /// arrival ahead, in seconds, for a run that lies on an edge.
+    ///
+    /// It is the bound on local motion. A renderer that advances a
+    /// train between two polls knows from `progress` and this value
+    /// when the run is due at the station ahead, and must stop there
+    /// rather than extrapolate past it. A run standing at a station
+    /// carries `None`.
+    pub edge_secs: Option<u32>,
     /// The destination text.
     pub destination: String,
     /// Where the position comes from.
@@ -691,6 +700,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
                         index,
                     },
                     progress: 0.0,
+                    edge_secs: None,
                     destination,
                     quality: quality(true, has_update, computed(call.quality)),
                     delay_secs: call.delay_secs,
@@ -735,6 +745,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
                     to: trip.calls[ahead].station,
                 },
                 progress,
+                edge_secs: Some(span.max(0) as u32),
                 destination,
                 quality: quality(false, has_update, interpolated),
                 delay_secs: back.delay_secs,

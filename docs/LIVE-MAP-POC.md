@@ -11,9 +11,15 @@ implemented: the map view model lives in `crates/mrt-live/src/map.rs`
 with its tests and committed snapshot beside it. Phase 2 is
 implemented: the layout reader and the binder live in
 `crates/mrt-live/src/layout.rs`, and the layout of the miniature
-fixture network is committed as `config/layout-mini.geojson`. Phase 0
-remains open — it needs a real DataMall account key. Phases 3 and 4
-are not started.
+fixture network is committed as `config/layout-mini.geojson`. Phase 3
+is implemented, in `crates/mrt-map-web` (the renderer library and the
+map server) and `crates/mrt-map-static` (the static site generator),
+under one constraint the plan did not originally state: **the board UI
+does not change at all — the map is a separate site, deployable on its
+own subdomain**. Where the text below says the map extends the board's
+deployments, that structure is superseded; the semantics are not.
+Phase 0 remains open — it needs a real DataMall account key. Phase 4
+is not started.
 
 ## What the proof of concept is
 
@@ -41,8 +47,11 @@ schematic" below: it is the honest rendering, not a stylistic
 preference.
 
 **Not a phone application.** One self-contained page, readable in a
-desktop or mobile browser, deployable both from `mrt-board-web` and as
-a static page on GitHub Pages.
+desktop or mobile browser, deployable both from a small server and as
+a static page on GitHub Pages. (Originally the plan attached both
+deployments to the board's; the owner's constraint above moved them to
+the map's own crates, `mrt-map-web` and `mrt-map-static`, on their own
+subdomain.)
 
 **Not a replacement for the board.** The board answers "what is next
 here". The map answers "what is the network doing". They share view
@@ -172,8 +181,9 @@ does no input or output, and sits beside `LiveBoard`. Either:
 Prefer `mrt-live` for the proof of concept: it already merges these
 sources, it already has the alert and crowd plumbing, and a second
 crate can be split out later without changing the types. Renderers
-stay strictly downstream: `mrt-board-web` serves the JSON, a static
-generator writes it. Neither the layout file nor the renderer may
+stay strictly downstream: `mrt-map-web` serves the JSON and the page,
+`mrt-map-static` writes them, and both share the markup through
+`mrt-map-web`'s library. Neither the layout file nor the renderer may
 reach back into `RailNetwork`.
 
 ## Phases
@@ -304,9 +314,14 @@ request — the discipline `mrt-publication-html` already follows, and
   `/api/board` every 15 seconds behind a 20-second server-side TTL
   (`crates/mrt-board-web/src/main.rs:40`), and the static site reads a
   `live.json` that a scheduled workflow refreshes
-  (`.github/workflows/rt-refresh.yml`). The map adds
+  (`.github/workflows/rt-refresh.yml`). The map follows the same two
+  shapes in its own crates — the owner's constraint keeps the board
+  untouched — so `mrt-map-web` serves `/api/map-snapshot` behind the
+  same lazy fetch and TTL, and `mrt-map-static` writes a
+  `data/map.json` beside its own page. No new transport mechanism.
+  (This supersedes the original wording, "the map adds
   `/api/map-snapshot` to the server and a `map.json` to the static
-  build. No new transport mechanism.
+  build": nothing was added to the board's server or site.)
 - Between polls the script may **advance the interpolation locally**,
   because the snapshot carries the fraction and the scheduled edge
   duration. It must not extrapolate past the next scheduled arrival:
@@ -324,7 +339,10 @@ with JavaScript disabled. With a fixture snapshot it places trains at
 known positions, and a committed normalized-SVG snapshot pins the
 static layer. The page makes no request other than the snapshot
 fetch. Feed text containing markup renders as text, proven by a test
-in the style of the existing security tests.
+in the style of the existing security tests. This is in place:
+`crates/mrt-map-web/tests/map_page_tests.rs` holds the tests, and
+`crates/mrt-map-web/tests/snapshots/map-mini.svg` is the committed
+SVG snapshot.
 
 ### Phase 4: live polish
 
