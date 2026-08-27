@@ -12,9 +12,10 @@
 //!
 //! and produces flat structures that a renderer shows directly: a
 //! per-line network status, a live destination board, and a snapshot
-//! of the whole network for a live map. All view models serialize with
-//! `serde`, so a web map, a destination board, or an LED panel driver
-//! can consume them as JSON.
+//! of the whole network for a live map. It also reads the schematic
+//! layout that the map is drawn on and binds it to the network. All
+//! view models serialize with `serde`, so a web map, a destination
+//! board, or an LED panel driver can consume them as JSON.
 //!
 //! This crate does no input/output. The application fetches the data
 //! and passes it in. This keeps render loops testable and fast.
@@ -46,8 +47,13 @@
 
 #![warn(missing_docs)]
 
+mod layout;
 mod map;
 
+pub use layout::{
+    BoundLayout, BoundStation, Layout, LayoutBranch, LayoutError, LayoutLine, LayoutPoint,
+    LayoutStation, UncoveredStation, UnmatchedReason, UnmatchedStation,
+};
 pub use map::{
     Freshness, FreshnessState, MapBand, MapEdge, MapLine, MapStation, MapTrain, NetworkSnapshot,
     NetworkSnapshotBuilder, PositionQuality, TrainLocation,

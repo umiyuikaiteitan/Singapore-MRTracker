@@ -13,7 +13,8 @@ mrt-gtfs.workspace = true
 mrt-gtfs-rt.workspace = true
 mrt-datamall.workspace = true
 serde.workspace = true
-thiserror.workspace = true
-
-[dev-dependencies]
+# The schematic layout is an OpenFantasyMap GeoJSON export, and the
+# layout reader walks it as a value so that one bad feature is a
+# diagnostic instead of a failed parse.
 serde_json.workspace = true
+thiserror.workspace = true

@@ -8,8 +8,12 @@ should look.
 
 It is a plan, and the phases record their own progress. Phase 1 is
 implemented: the map view model lives in `crates/mrt-live/src/map.rs`
-with its tests and committed snapshot beside it. Phase 0 remains open —
-it needs a real DataMall account key. Phases 2 to 4 are not started.
+with its tests and committed snapshot beside it. Phase 2 is
+implemented: the layout reader and the binder live in
+`crates/mrt-live/src/layout.rs`, and the layout of the miniature
+fixture network is committed as `config/layout-mini.geojson`. Phase 0
+remains open — it needs a real DataMall account key. Phases 3 and 4
+are not started.
 
 ## What the proof of concept is
 
@@ -252,34 +256,39 @@ Steps:
    segments; `ofm: "station"` carries the name and the arc-length
    position `t` along the line
    (OpenFantasyMap `static/app.js:1660`, `:1697`).
-3. Bind each layout station to a real station. A small binder — a Rust
-   module in the renderer crate, or a build step — joins layout
-   stations to `RailNetwork` stations and reports what it could not
-   match.
+3. Bind each layout station to a real station. A small binder joins
+   layout stations to `RailNetwork` stations and reports what it could
+   not match. It is a module of `mrt-live`, beside the view model and
+   upstream of every renderer, so the layout stays data and the
+   renderer stays downstream.
 
 Binding by name is not good enough: `docs/ARCHITECTURE.md` records
 that two stations share the name `Bukit Panjang`. The layout must
 carry station **codes**, resolved through
 `RailNetwork::station_by_alias`, which already accepts any spelling.
 
-This needs a small change in OpenFantasyMap: a station `code` (or
-`ref`) property that survives export. The change belongs in that
-project, and it is already scheduled there — the mid-term entry of
-workstream 2 in OpenFantasyMap's `docs/ROADMAP.md` commits to station
-identity metadata "so exported stations can be keyed to real network
-station codes", and names this proof of concept as the first external
-consumer of the extracted renderer and the acceptance test for it. The
-export does not carry the property yet: at the commit inspected
-(`5ffd4e9`) an `ofm: "station"` feature holds `id`, `lineId`, `name`,
-and `t` only. Until that work ships, a side-car mapping file keyed by
-layout station id is an acceptable stop-gap, and should be treated as
-one.
+This needed a small change in OpenFantasyMap: a station `code` (or
+`ref`) property that survives export. The change belonged in that
+project, and it has shipped there — the mid-term entry of workstream 2
+in OpenFantasyMap's `docs/ROADMAP.md` commits to station identity
+metadata "so exported stations can be keyed to real network station
+codes", and names this proof of concept as the first external consumer
+of the extracted renderer and the acceptance test for it. At the
+commit inspected (`5ffd4e9`) an `ofm: "station"` feature held `id`,
+`lineId`, `name`, and `t` only; since `8eed2a7` it also carries the
+optional `code`, which is the binding key. The side-car mapping file
+that this plan allowed as a stop-gap is no longer needed.
 
 **Acceptance.** A committed layout file plus a binder that, run
 against a real feed, reports zero unmatched stations in both
 directions, or names every one it could not match. An unmatched
 station is a diagnostic and a visible gap on the page, never a
 silently dropped one. Changing the layout requires no Rust change.
+The fixture half of this is in place: `config/layout-mini.geojson`
+binds against the miniature fixture network with zero unmatched
+stations in both directions, and `crates/mrt-live/tests/layout_tests.rs`
+is that test. The run against a real feed waits on phase 0 and its
+account key.
 
 ### Phase 3: the renderer
 
@@ -439,7 +448,7 @@ The rules in `README.md:270` and `docs/ARCHITECTURE.md`, one line each.
 |------|-------------------------------------|
 | Explicit input/output | The snapshot builder does no input or output; the caller fetches the feeds and passes them in, as `LiveBoardBuilder` does. Tests use the fixture feed and synthetic trip updates. |
 | Plain data models | `NetworkSnapshot` is flat: index ids for lines, patterns, and stations, plain fields, `Serialize`. No graph objects, no back-references. |
-| Small dependency set | No new dependency. `serde` for the view model, the existing crates for everything else. The renderer is hand-written SVG and vanilla JavaScript; the geometry helpers are copied functions, not a package. |
+| Small dependency set | No new workspace dependency. `serde` for the view model, the existing crates for everything else; the layout reader promotes `serde_json`, already used across the workspace, from a dev dependency of `mrt-live` to a real one. The renderer is hand-written SVG and vanilla JavaScript; the geometry helpers are copied functions, not a package. |
 | Synchronous code | The builder is a pure function. Polling is the caller's concern, exactly as it is for the board. |
 | No invented data | The one derived quantity — position — carries a provenance marker, renders as an estimate when it is one, is refused entirely for headway bands and cancelled trips, and degrades to schedule-only when realtime is stale. Everything unplaceable becomes a diagnostic. |
 | Deterministic artefacts | The builder reads no clock; date, clock, and realtime `now` are arguments. Committed JSON snapshots from the fixture are the acceptance test, as they are for the publication view models. |
