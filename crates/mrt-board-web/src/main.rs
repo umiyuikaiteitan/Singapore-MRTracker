@@ -194,7 +194,7 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
         .get("rows")
         .and_then(|r| r.parse().ok())
         .unwrap_or(4)
-        .min(12);
+        .min(48);
 
     // Refresh the live layers, then build the board.
     let (alerts, realtime, rt_alerts, crowd) = live_layers(app, station);

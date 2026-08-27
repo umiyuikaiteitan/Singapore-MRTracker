@@ -90,6 +90,9 @@
   .lamp.ok { background: var(--green); box-shadow: 0 0 7px rgba(53,212,97,.7); }
   .lamp.stale { background: var(--amber); box-shadow: 0 0 7px rgba(229,213,0,.7); }
   .lamp.down { background: var(--red); box-shadow: 0 0 7px rgba(255,75,58,.7); }
+  /* The panel grows with the departure list; past this height the
+     board scrolls inside its fascia instead of growing further. */
+  .panel-wrap { max-height: 70vh; overflow-y: auto; border-radius: 8px; }
   canvas { display: block; width: 100%; height: auto; background: #000; border-radius: 8px; }
   .legend {
     margin-top: 10px;
@@ -116,7 +119,7 @@
         <span id="statusText">starting up</span>
       </span>
     </div>
-    <canvas id="panel"></canvas>
+    <div class="panel-wrap"><canvas id="panel"></canvas></div>
     <div class="legend">
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
@@ -160,23 +163,52 @@ const FONT = {
   ",":[0x00,0x00,0x00,0x00,0x0C,0x04,0x08], "~":[0x00,0x00,0x08,0x15,0x02,0x00,0x00],
 };
 
-/* Panel geometry, in dots. */
+/* Panel geometry, in dots. The panel height follows the number of
+   departure rows on screen, with at least the classic four. */
 const CHAR_W = 6, CHAR_H = 8;        // one glyph cell with spacing
 const COLS_CHARS = 36;               // characters per line
 const MARGIN = 4;                    // dot margin around the content
 const GRID_W = COLS_CHARS * CHAR_W + MARGIN * 2;
 const ROW_PITCH = 10;                // dot rows per board line
-const N_ROWS = 4;                    // arrival rows
-const TICKER_TOP = MARGIN + N_ROWS * ROW_PITCH + 2;
-const GRID_H = TICKER_TOP + CHAR_H + MARGIN;
+const MIN_ROWS = 4;                  // smallest panel, in arrival rows
 const PITCH = 10, RADIUS = 3.4;      // dot pitch and radius in pixels
+
+let nRows = MIN_ROWS;                // arrival rows on the panel now
+let tickerTop = MARGIN + nRows * ROW_PITCH + 2;
+let gridH = tickerTop + CHAR_H + MARGIN;
 
 const AMBER = "#e5d500", GREEN = "#35d461", RED = "#ff4b3a", OFF = "#151509";
 
 const canvas = document.getElementById("panel");
-canvas.width = GRID_W * PITCH;
-canvas.height = GRID_H * PITCH;
 const ctx = canvas.getContext("2d");
+
+/* The unlit dot grid, pre-rendered once per panel size. Repainting
+   it dot by dot every frame would dominate a tall panel. */
+let offGrid = null;
+
+/* Size the panel for the given number of arrival rows. */
+function resizePanel(rows) {
+  nRows = Math.max(rows, MIN_ROWS);
+  tickerTop = MARGIN + nRows * ROW_PITCH + 2;
+  gridH = tickerTop + CHAR_H + MARGIN;
+  canvas.width = GRID_W * PITCH;
+  canvas.height = gridH * PITCH;
+  offGrid = document.createElement("canvas");
+  offGrid.width = canvas.width;
+  offGrid.height = canvas.height;
+  const octx = offGrid.getContext("2d");
+  octx.fillStyle = "#000";
+  octx.fillRect(0, 0, offGrid.width, offGrid.height);
+  octx.fillStyle = OFF;
+  for (let y = 0; y < gridH; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      octx.beginPath();
+      octx.arc(x * PITCH + PITCH / 2, y * PITCH + PITCH / 2, RADIUS, 0, Math.PI * 2);
+      octx.fill();
+    }
+  }
+}
+resizePanel(MIN_ROWS);
 
 /* The lit dots for the current frame: map "x,y" -> color. */
 let litRows = [];    // static rows content: [{text, col, color}]
@@ -219,13 +251,8 @@ function drawText(text, colDot, rowDot, color) {
 }
 
 function render() {
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   // The unlit dot grid gives the panel its texture.
-  for (let y = 0; y < GRID_H; y++) {
-    for (let x = 0; x < GRID_W; x++) drawDot(x, y, OFF);
-  }
+  ctx.drawImage(offGrid, 0, 0);
 
   for (const row of litRows) {
     drawText(row.text, MARGIN + row.col * CHAR_W, MARGIN + row.line * ROW_PITCH, row.color);
@@ -239,11 +266,11 @@ function render() {
     ctx.beginPath();
     ctx.rect(MARGIN * PITCH, 0, (GRID_W - 2 * MARGIN) * PITCH, canvas.height);
     ctx.clip();
-    drawText(tickerText, col, TICKER_TOP, AMBER);
+    drawText(tickerText, col, tickerTop, AMBER);
     ctx.restore();
   } else {
     const text = sgtTime(Date.now(), true) + " SGT";
-    drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W, TICKER_TOP, GREEN);
+    drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W, tickerTop, GREEN);
   }
 }
 
@@ -303,15 +330,26 @@ function setBoard(data) {
   liveCrowd = board.rows.length && board.rows[0].crowd ? board.rows[0].crowd.toLowerCase() : "";
   updateStatus();
 
+  // Group the departures by destination: the destinations in
+  // alphabetical order, and inside each destination the trains in
+  // departure order, numbered 1 for the next train, 2 for the one
+  // after, and so on.
+  const rows = board.rows.slice().sort((a, b) =>
+    a.destination.localeCompare(b.destination) ||
+    a.departs_in_secs - b.departs_in_secs);
+  resizePanel(rows.length);
   litRows = [];
-  board.rows.slice(0, N_ROWS).forEach((row, i) => {
+  let lastDest = null, nth = 0;
+  rows.forEach((row, i) => {
+    nth = row.destination === lastDest ? nth + 1 : 1;
+    lastDest = row.destination;
     const dest = row.destination.toUpperCase().slice(0, 24);
     const wait = waitText(row);
-    litRows.push({ line: i, col: 0, text: String(i + 1), color: AMBER });
+    litRows.push({ line: i, col: 0, text: String(nth), color: AMBER });
     litRows.push({ line: i, col: 2, text: dest, color: AMBER });
     litRows.push({ line: i, col: COLS_CHARS - wait.length, text: wait, color: rowColor(row) });
   });
-  if (!board.rows.length) {
+  if (!rows.length) {
     litRows.push({ line: 1, col: 8, text: "NO TRAIN SERVICE", color: AMBER });
   }
   tickerText = board.notices.length ? board.notices.join("   +++   ").toUpperCase() : "";
@@ -382,7 +420,10 @@ function updateStatus() {
 
 async function refresh() {
   try {
-    const res = await fetch("/api/board?station=" + encodeURIComponent(currentStation));
+    // Ask for every departure of the lookahead window; the panel
+    // grows or scrolls to fit them.
+    const res = await fetch(
+      "/api/board?station=" + encodeURIComponent(currentStation) + "&rows=48");
     if (!res.ok) throw new Error("board fetch failed");
     const data = await res.json();
     fetchedAt = Date.now();

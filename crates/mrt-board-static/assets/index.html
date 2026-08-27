@@ -86,6 +86,9 @@
   .lamp.beat { animation: beat .7s ease-out 1; }
   @keyframes beat { from { transform: scale(2); } to { transform: scale(1); } }
   @media (prefers-reduced-motion: reduce) { .lamp.beat { animation: none; } }
+  /* The panel grows with the departure list; past this height the
+     board scrolls inside its fascia instead of growing further. */
+  .panel-wrap { max-height: 70vh; overflow-y: auto; border-radius: 8px; }
   canvas { display: block; width: 100%; height: auto; background: #000; border-radius: 8px; }
   .legend { margin-top: 10px; font-size: 13px; color: #85858d; }
   .legend b.amber { color: var(--amber); }
@@ -111,7 +114,7 @@
         <span id="statusText">starting up</span>
       </span>
     </div>
-    <canvas id="panel"></canvas>
+    <div class="panel-wrap"><canvas id="panel"></canvas></div>
     <div class="legend">
       <b class="amber">destination</b> ·
       <b class="green">on time</b> ·
@@ -153,23 +156,52 @@ const FONT = {
   ",":[0x00,0x00,0x00,0x00,0x0C,0x04,0x08], "~":[0x00,0x00,0x08,0x15,0x02,0x00,0x00],
 };
 
-/* Panel geometry, in dots. */
+/* Panel geometry, in dots. The panel height follows the number of
+   departure rows on screen, with at least the classic four. */
 const CHAR_W = 6, CHAR_H = 8;
 const COLS_CHARS = 36;
 const MARGIN = 4;
 const GRID_W = COLS_CHARS * CHAR_W + MARGIN * 2;
 const ROW_PITCH = 10;
-const N_ROWS = 4;
-const TICKER_TOP = MARGIN + N_ROWS * ROW_PITCH + 2;
-const GRID_H = TICKER_TOP + CHAR_H + MARGIN;
+const MIN_ROWS = 4;
 const PITCH = 10, RADIUS = 3.4;
+
+let nRows = MIN_ROWS;                // arrival rows on the panel now
+let tickerTop = MARGIN + nRows * ROW_PITCH + 2;
+let gridH = tickerTop + CHAR_H + MARGIN;
 
 const AMBER = "#e5d500", GREEN = "#35d461", RED = "#ff4b3a", OFF = "#151509";
 
 const canvas = document.getElementById("panel");
-canvas.width = GRID_W * PITCH;
-canvas.height = GRID_H * PITCH;
 const ctx = canvas.getContext("2d");
+
+/* The unlit dot grid, pre-rendered once per panel size. Repainting
+   it dot by dot every frame would dominate a tall panel. */
+let offGrid = null;
+
+/* Size the panel for the given number of arrival rows. */
+function resizePanel(rows) {
+  nRows = Math.max(rows, MIN_ROWS);
+  tickerTop = MARGIN + nRows * ROW_PITCH + 2;
+  gridH = tickerTop + CHAR_H + MARGIN;
+  canvas.width = GRID_W * PITCH;
+  canvas.height = gridH * PITCH;
+  offGrid = document.createElement("canvas");
+  offGrid.width = canvas.width;
+  offGrid.height = canvas.height;
+  const octx = offGrid.getContext("2d");
+  octx.fillStyle = "#000";
+  octx.fillRect(0, 0, offGrid.width, offGrid.height);
+  octx.fillStyle = OFF;
+  for (let y = 0; y < gridH; y++) {
+    for (let x = 0; x < GRID_W; x++) {
+      octx.beginPath();
+      octx.arc(x * PITCH + PITCH / 2, y * PITCH + PITCH / 2, RADIUS, 0, Math.PI * 2);
+      octx.fill();
+    }
+  }
+}
+resizePanel(MIN_ROWS);
 
 let board = null;      // data/board/<CODE>.json content
 let live = null;       // data/live.json content
@@ -266,8 +298,15 @@ function alertState(tid, route) {
    it delayed or early, in seconds. */
 const OFF_SCHEDULE_SECS = 60;
 
-/* Compute the next departures from the visitor's clock, with the
-   real-time delays, cancellations, and alerts applied. */
+/* How far ahead the board lists departures, in seconds. The
+   snapshot carries a whole day; the panel shows the next hour. */
+const DISPLAY_WINDOW_SECS = 3600;
+
+/* Compute the upcoming departures from the visitor's clock, with
+   the real-time delays, cancellations, and alerts applied. The
+   rows come grouped by destination: the destinations in
+   alphabetical order, and inside each destination the trains in
+   departure order. */
 function currentRows() {
   if (!board) return [];
   const now = Date.now() / 1000;
@@ -278,7 +317,7 @@ function currentRows() {
     const alert = alertState(tid, route);
     const canceled = state.canceled || alert.canceled;
     const eta = t + (canceled ? 0 : state.delay);
-    if (eta < now - 15) continue;
+    if (eta < now - 15 || eta > now + DISPLAY_WINDOW_SECS) continue;
     rows.push({
       wait: eta - now,
       line, dest,
@@ -288,8 +327,8 @@ function currentRows() {
       canceled,
     });
   }
-  rows.sort((a, b) => a.wait - b.wait);
-  return rows.slice(0, N_ROWS);
+  rows.sort((a, b) => a.dest.localeCompare(b.dest) || a.wait - b.wait);
+  return rows;
 }
 
 /* The color of the wait time: red for a trip that lost time or
@@ -311,15 +350,17 @@ function waitText(row) {
 }
 
 function render() {
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  for (let y = 0; y < GRID_H; y++) {
-    for (let x = 0; x < GRID_W; x++) drawDot(x, y, OFF);
-  }
-
   const rows = currentRows();
+  if (Math.max(rows.length, MIN_ROWS) !== nRows) resizePanel(rows.length);
+  ctx.drawImage(offGrid, 0, 0);
+
+  // Number the trains inside each destination group: 1 for the
+  // next train to that destination, 2 for the one after.
+  let lastDest = null, nth = 0;
   rows.forEach((row, i) => {
-    drawText(String(i + 1), MARGIN, MARGIN + i * ROW_PITCH, AMBER);
+    nth = row.dest === lastDest ? nth + 1 : 1;
+    lastDest = row.dest;
+    drawText(String(nth), MARGIN, MARGIN + i * ROW_PITCH, AMBER);
     drawText(row.dest.toUpperCase().slice(0, 24), MARGIN + 2 * CHAR_W, MARGIN + i * ROW_PITCH, AMBER);
     const wait = waitText(row);
     drawText(wait, MARGIN + (COLS_CHARS - wait.length) * CHAR_W, MARGIN + i * ROW_PITCH, waitColor(row));
@@ -335,11 +376,11 @@ function render() {
     ctx.beginPath();
     ctx.rect(MARGIN * PITCH, 0, (GRID_W - 2 * MARGIN) * PITCH, canvas.height);
     ctx.clip();
-    drawText(tickerText, col, TICKER_TOP, RED);
+    drawText(tickerText, col, tickerTop, RED);
     ctx.restore();
   } else {
     const text = sgtTime(Date.now(), true) + " SGT";
-    drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W, TICKER_TOP, GREEN);
+    drawText(text, MARGIN + (COLS_CHARS - text.length) * CHAR_W, tickerTop, GREEN);
   }
 }
 
