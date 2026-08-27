@@ -52,6 +52,7 @@ Other important paths:
 | `docs/CLI.md` | The `mrt-schedule-cli` reference. |
 | `docs/CONFIGURATION.md` | Every configuration option. |
 | `docs/KNOWN-LIMITATIONS.md` | What the generator does not do, and why. |
+| `docs/LIVE-MAP-POC.md` | The plan for the interactive live train map. |
 | `config/singapore.yaml` | A complete, commented configuration. |
 | `examples/` | Generated example pages, refreshed by the tests. |
 | `scripts/regenerate-gtfs-rt.sh` | The generator for the vendored Protocol Buffer code. |
@@ -326,7 +327,10 @@ headless browser and compares them with the baselines in
 
 The library is the base for these planned applications:
 
-- An interactive live train map.
+- An interactive live train map. See
+  [`docs/LIVE-MAP-POC.md`](docs/LIVE-MAP-POC.md) for the
+  plan: a schematic whole-network map, why the positions are derived
+  rather than measured, and how the map says so.
 - Station destination boards (draft in `crates/mrt-board-web`).
 - Physical LED panel drivers.
 - Ports of the core model to other languages.
