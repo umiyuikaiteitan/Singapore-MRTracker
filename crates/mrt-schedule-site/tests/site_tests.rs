@@ -52,7 +52,15 @@ impl Built {
 }
 
 fn build(days: u32) -> Built {
+    build_prepared(days, |_| {})
+}
+
+/// Build the site after `prepare` has had its way with the output
+/// directory, so a test can sabotage individual target paths.
+fn build_prepared(days: u32, prepare: impl FnOnce(&Path)) -> Built {
     let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("timetables");
+    prepare(&root);
     let network = network();
     let config = PublicationConfig::default();
     let seed = seed();
@@ -65,7 +73,7 @@ fn build(days: u32) -> Built {
         info: &info,
         plan: &plan,
     }
-    .write(&dir.path().join("timetables"))
+    .write(&root)
     .unwrap();
     Built { dir, plan, report }
 }
@@ -295,6 +303,75 @@ fn the_navigation_never_appears_on_paper() {
 }
 
 // ----------------------------------------------------------------------
+// Partial builds
+// ----------------------------------------------------------------------
+
+#[test]
+fn a_failed_page_is_dropped_from_the_hub_and_reported() {
+    // Occupying a target path with a directory makes the atomic write
+    // of that one page fail, which stands in for any per-page failure.
+    let site = build_prepared(2, |root| {
+        std::fs::create_dir_all(root.join("t/te1-20250505.html")).unwrap();
+    });
+
+    assert_eq!(site.report.failures.len(), 1, "{:?}", site.report.failures);
+    assert_eq!(site.report.missing, vec!["t/te1-20250505.html".to_string()]);
+
+    // The hub of the failed date drops the station...
+    let index = site.read("index.html");
+    assert!(!index.contains("href=\"t/te1-20250505.html\""));
+    assert!(!index.contains(">Woodlands North<"));
+    // ...but still lists every other one.
+    let other = site.plan.stations.iter().find(|s| s.key != "te1").unwrap();
+    assert!(index.contains(&format!(
+        "href=\"{}\"",
+        site.plan.timetable_path(other, site.plan.first_date())
+    )));
+
+    // The other service date is unaffected and still lists it.
+    let tomorrow = site.read("day-20250506.html");
+    assert!(tomorrow.contains("href=\"t/te1-20250506.html\""));
+    assert!(tomorrow.contains(">Woodlands North<"));
+
+    // And the machine-readable index names the gap.
+    let data: serde_json::Value = serde_json::from_str(&site.read("data/index.json")).unwrap();
+    assert_eq!(data["missing"][0], "t/te1-20250505.html");
+}
+
+#[test]
+fn a_failed_diagram_drops_only_its_window() {
+    let site = build_prepared(1, |root| {
+        std::fs::create_dir_all(root.join("d/te-20250505-morning.html")).unwrap();
+    });
+    assert!(site
+        .report
+        .missing
+        .contains(&"d/te-20250505-morning.html".to_string()));
+
+    let index = site.read("index.html");
+    assert!(!index.contains("href=\"d/te-20250505-morning.html\""));
+    // The other windows of the line survive...
+    assert!(index.contains("href=\"d/te-20250505-midday.html\""));
+    // ...and another line is untouched.
+    assert!(index.contains("href=\"d/ns-20250505-morning.html\""));
+}
+
+#[test]
+fn a_line_with_no_surviving_window_loses_its_card() {
+    let site = build_prepared(1, |root| {
+        for window in ["morning", "midday", "evening", "night"] {
+            std::fs::create_dir_all(root.join(format!("d/te-20250505-{window}.html"))).unwrap();
+        }
+    });
+    let te = site.plan.lines.iter().find(|l| l.key == "te").unwrap();
+    let index = site.read("index.html");
+    assert!(!index.contains(&format!(">{}</h3>", te.name)));
+    // The others keep their cards.
+    let ns = site.plan.lines.iter().find(|l| l.key == "ns").unwrap();
+    assert!(index.contains(&format!(">{}</h3>", ns.name)));
+}
+
+// ----------------------------------------------------------------------
 // The machine-readable index
 // ----------------------------------------------------------------------
 
@@ -305,6 +382,8 @@ fn the_index_json_describes_the_whole_site() {
 
     assert_eq!(index["schema_version"], "1.0");
     assert_eq!(index["timezone"], "Asia/Singapore");
+    // A clean build promises that nothing is missing.
+    assert_eq!(index["missing"].as_array().unwrap().len(), 0);
     assert_eq!(index["dates"].as_array().unwrap().len(), 2);
     assert_eq!(
         index["stations"].as_array().unwrap().len(),

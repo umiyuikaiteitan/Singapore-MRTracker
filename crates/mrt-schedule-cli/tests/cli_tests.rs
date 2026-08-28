@@ -598,6 +598,122 @@ fn an_empty_cache_cannot_stand_in_for_a_download() {
     );
 }
 
+// A downloaded archive must parse before anything durable changes.
+// The tests below drive the fetch command with a mock transport, so
+// they can serve a corrupt body without a network.
+
+use std::cell::RefCell;
+use std::collections::VecDeque;
+
+use mrt_datamall::{AccountKey, DataMallClient, Response, Transport, TransportError};
+use mrt_schedule_cli::{run::fetch_with, Args, Command};
+
+#[derive(Default)]
+struct MockTransport {
+    responses: RefCell<VecDeque<Response>>,
+}
+
+impl MockTransport {
+    fn queue(&self, status: u16, body: &[u8]) {
+        self.responses.borrow_mut().push_back(Response {
+            status,
+            body: body.to_vec(),
+        });
+    }
+
+    /// Queue the DataMall answer that hands out a download link.
+    fn queue_link(&self) {
+        let body = r#"{"value":[{"timestamp":"2026-08-10T00:00:00+08:00","link":"https://host.example/gtfs.zip?X-Amz-Signature=beef"}]}"#;
+        self.queue(200, body.as_bytes());
+    }
+}
+
+impl Transport for &MockTransport {
+    fn get(&self, _url: &str, _headers: &[(&str, &str)]) -> Result<Response, TransportError> {
+        self.responses
+            .borrow_mut()
+            .pop_front()
+            .ok_or_else(|| TransportError("no queued response".to_string()))
+    }
+}
+
+fn mock_client(transport: &MockTransport) -> DataMallClient<&MockTransport> {
+    DataMallClient::new(AccountKey::new("test-account-key").unwrap(), transport)
+}
+
+fn fetch_args(cache_dir: &Path, out: &Path) -> Args {
+    Args {
+        command: Command::Fetch,
+        datamall: true,
+        cache_dir: cache_dir.to_path_buf(),
+        out: Some(out.display().to_string()),
+        quiet: true,
+        ..Args::default()
+    }
+}
+
+#[test]
+fn a_corrupt_download_leaves_the_cache_and_the_output_untouched() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache_dir = dir.path().join("cache");
+
+    // The cache holds a good archive, and --out holds its bytes.
+    let good = pack_fixture();
+    let store = mrt_schedule_cli::cache::FeedCache::open(&cache_dir).unwrap();
+    let last_good = store
+        .store(
+            &good,
+            Some("2026-08-10T00:00:00+08:00".into()),
+            "GTFSScheduleTrain",
+            1,
+        )
+        .unwrap();
+    let out = dir.path().join("feed.zip");
+    std::fs::write(&out, &good).unwrap();
+
+    // The next download answers with something that is not a feed.
+    let corrupt = b"HTTP error page, not a zip archive";
+    let transport = MockTransport::default();
+    transport.queue_link();
+    transport.queue(200, corrupt);
+
+    let error = fetch_with(&fetch_args(&cache_dir, &out), &mock_client(&transport)).unwrap_err();
+    assert_ne!(error.exit.code(), 0);
+    assert!(
+        error.message.contains("not a usable GTFS feed"),
+        "unexpected message: {}",
+        error.message
+    );
+
+    // current.json still names the last good archive, the corrupt
+    // bytes were never stored, and the output file is untouched.
+    assert_eq!(store.current().unwrap().sha256, last_good.sha256);
+    let corrupt_sha = mrt_datamall::sha256_hex(corrupt);
+    assert!(!store.object_path(&corrupt_sha).exists());
+    assert_eq!(std::fs::read(&out).unwrap(), good);
+}
+
+#[test]
+fn a_good_download_advances_the_cache_and_writes_the_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache_dir = dir.path().join("cache");
+    let out = dir.path().join("feed.zip");
+
+    let good = pack_fixture();
+    let transport = MockTransport::default();
+    transport.queue_link();
+    transport.queue(200, &good);
+
+    let code = fetch_with(&fetch_args(&cache_dir, &out), &mock_client(&transport)).unwrap();
+    assert_eq!(code, ExitCode::Success);
+
+    let store = mrt_schedule_cli::cache::FeedCache::open(&cache_dir).unwrap();
+    let current = store.current().unwrap();
+    assert_eq!(current.sha256, mrt_datamall::sha256_hex(&good));
+    assert!(store.object_path(&current.sha256).exists());
+    assert_eq!(std::fs::read(&out).unwrap(), good);
+}
+
 /// Pack the fixture directory into a zip archive in memory.
 fn pack_fixture() -> Vec<u8> {
     use std::io::Write as _;

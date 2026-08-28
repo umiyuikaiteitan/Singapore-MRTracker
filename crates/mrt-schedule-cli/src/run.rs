@@ -3,7 +3,7 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use mrt_datamall::{sha256_hex, AccountKey, DataMallClient};
+use mrt_datamall::{sha256_hex, AccountKey, DataMallClient, Transport};
 use mrt_gtfs::{
     validate_feed, Diagnostic, GtfsFeed, RailNetwork, ServiceDate, Severity, ValidationMode,
     ZipOptions, ZipSource, ZipStrictness,
@@ -143,8 +143,14 @@ fn acquire(args: &Args) -> Result<FeedSourceResult, CliError> {
     }
 }
 
-/// Download the current feed and store it in the cache.
+/// Download the current feed, validate it, and store it in the cache.
 fn download(args: &Args, cache: &FeedCache) -> Result<FeedSourceResult, CliError> {
+    let client = datamall_client(args)?;
+    download_with(args, cache, &client).map(|(source, _)| source)
+}
+
+/// Build the real DataMall client, with the key from the environment.
+fn datamall_client(args: &Args) -> Result<DataMallClient<mrt_datamall::UreqTransport>, CliError> {
     let key = std::env::var(&args.account_key_env).map_err(|_| {
         CliError::new(
             ExitCode::SourceFailure,
@@ -156,11 +162,34 @@ fn download(args: &Args, cache: &FeedCache) -> Result<FeedSourceResult, CliError
         )
     })?;
     let key = AccountKey::new(key).map_err(CliError::from)?;
+    Ok(DataMallClient::with_key(key))
+}
+
+/// Download the current feed through the given client.
+///
+/// The order matters: nothing durable changes until the downloaded
+/// archive has parsed as a GTFS feed. A corrupt response therefore
+/// never advances `current.json` — the last good cache entry stays the
+/// `--allow-stale` fallback — and the error reaches the caller before
+/// any output file is touched.
+fn download_with<T: Transport>(
+    args: &Args,
+    cache: &FeedCache,
+    client: &DataMallClient<T>,
+) -> Result<(FeedSourceResult, GtfsFeed), CliError> {
     if !args.quiet {
         eprintln!("Requesting the train GTFS Schedule dataset from DataMall ...");
     }
-    let client = DataMallClient::with_key(key);
     let snapshot = client.fetch_gtfs_schedule_snapshot()?;
+    let feed = parse_zip(&snapshot.bytes, args.strict).map_err(|error| {
+        CliError::new(
+            error.exit,
+            format!(
+                "the downloaded archive is not a usable GTFS feed ({error}); \
+                 the cache keeps its previous feed"
+            ),
+        )
+    })?;
     let entry = cache.store(
         &snapshot.bytes,
         snapshot.dataset_timestamp.clone(),
@@ -175,14 +204,17 @@ fn download(args: &Args, cache: &FeedCache) -> Result<FeedSourceResult, CliError
             cache.root().display()
         );
     }
-    Ok(FeedSourceResult {
-        bytes: Some(snapshot.bytes),
-        directory: None,
-        sha256: snapshot.sha256,
-        timestamp: snapshot.dataset_timestamp,
-        origin: snapshot.source_endpoint,
-        from_cache: false,
-    })
+    Ok((
+        FeedSourceResult {
+            bytes: Some(snapshot.bytes),
+            directory: None,
+            sha256: snapshot.sha256,
+            timestamp: snapshot.dataset_timestamp,
+            origin: snapshot.source_endpoint,
+            from_cache: false,
+        },
+        feed,
+    ))
 }
 
 /// Fingerprint a feed directory from the contents of its files.
@@ -211,26 +243,33 @@ fn directory_fingerprint(path: &Path) -> Result<String, CliError> {
     Ok(sha256_hex(&joined))
 }
 
+/// Build the archive-reading options for the chosen strictness.
+fn zip_options(strict: bool) -> ZipOptions {
+    ZipOptions {
+        limits: Default::default(),
+        strictness: if strict {
+            ZipStrictness::Strict
+        } else {
+            ZipStrictness::Lenient
+        },
+    }
+}
+
+/// Parse a zip archive into a GTFS feed.
+fn parse_zip(bytes: &[u8], strict: bool) -> Result<GtfsFeed, CliError> {
+    let mut zip =
+        ZipSource::from_reader_with(std::io::Cursor::new(bytes.to_vec()), &zip_options(strict))?;
+    Ok(GtfsFeed::load(&mut zip)?)
+}
+
 /// Load the feed and build the rail network.
 fn load_network(
     args: &Args,
     source: &FeedSourceResult,
 ) -> Result<(GtfsFeed, RailNetwork), CliError> {
-    let options = ZipOptions {
-        limits: Default::default(),
-        strictness: if args.strict {
-            ZipStrictness::Strict
-        } else {
-            ZipStrictness::Lenient
-        },
-    };
     let feed = match (&source.bytes, &source.directory) {
         (_, Some(directory)) => GtfsFeed::from_dir(directory)?,
-        (Some(bytes), _) => {
-            let mut zip =
-                ZipSource::from_reader_with(std::io::Cursor::new(bytes.clone()), &options)?;
-            GtfsFeed::load(&mut zip)?
-        }
+        (Some(bytes), _) => parse_zip(bytes, args.strict)?,
         _ => {
             return Err(CliError::new(
                 ExitCode::SourceFailure,
@@ -312,8 +351,23 @@ fn seed_of(
 // ----------------------------------------------------------------------
 
 fn fetch(args: &Args) -> Result<ExitCode, CliError> {
+    let client = datamall_client(args)?;
+    fetch_with(args, &client)
+}
+
+/// Run the fetch command through a caller-supplied client.
+///
+/// `fetch` passes the real HTTP client; the tests pass a mock
+/// transport. The download is parsed as a GTFS feed *before* the cache
+/// advances and before `--out` is written, so a corrupt response fails
+/// the run and leaves both the last good cache entry and any existing
+/// output file untouched.
+pub fn fetch_with<T: Transport>(
+    args: &Args,
+    client: &DataMallClient<T>,
+) -> Result<ExitCode, CliError> {
     let cache = FeedCache::open(&args.cache_dir)?;
-    let source = download(args, &cache)?;
+    let (source, feed) = download_with(args, &cache, client)?;
     let bytes = source.bytes.clone().unwrap_or_default();
 
     let mut artifacts = Vec::new();
@@ -326,10 +380,6 @@ fn fetch(args: &Args) -> Result<ExitCode, CliError> {
         }
     }
 
-    // A downloaded archive must be readable before the run reports
-    // success, otherwise a broken download poisons the cache silently.
-    let mut zip = ZipSource::from_reader_with(std::io::Cursor::new(bytes), &ZipOptions::default())?;
-    let feed = GtfsFeed::load(&mut zip)?;
     if !args.quiet {
         eprintln!(
             "The archive holds {} routes, {} stops, and {} trips.",
@@ -461,21 +511,9 @@ fn diagram(args: &Args) -> Result<ExitCode, CliError> {
 
 fn validate(args: &Args) -> Result<ExitCode, CliError> {
     let source = acquire(args)?;
-    let options = ZipOptions {
-        limits: Default::default(),
-        strictness: if args.strict {
-            ZipStrictness::Strict
-        } else {
-            ZipStrictness::Lenient
-        },
-    };
     let feed = match (&source.bytes, &source.directory) {
         (_, Some(directory)) => GtfsFeed::from_dir(directory)?,
-        (Some(bytes), _) => {
-            let mut zip =
-                ZipSource::from_reader_with(std::io::Cursor::new(bytes.clone()), &options)?;
-            GtfsFeed::load(&mut zip)?
-        }
+        (Some(bytes), _) => parse_zip(bytes, args.strict)?,
         _ => {
             return Err(CliError::new(
                 ExitCode::SourceFailure,

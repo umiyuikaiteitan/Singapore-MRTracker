@@ -145,6 +145,19 @@ The workflow controls the section through the environment:
 | `MRT_SITE_TITLE` | The name in the masthead | `Singapore rail timetables` |
 | `MRT_SITE_BOARD_HREF` | Relative link back to the board | `../index.html` |
 | `MRT_SITE_LINES` | Only these route identifiers, comma separated | all |
+| `MRT_SITE_ALLOW_PARTIAL` | `1` accepts a build with failed pages | unset: fail |
+
+A page that cannot be built or written is dropped from every hub —
+the site never links to a file that does not exist — and the missing
+pages are listed on standard error and under `missing` in
+`data/index.json`. By default the
+generator then exits non-zero, so an incomplete site cannot deploy
+silently. Setting `MRT_SITE_ALLOW_PARTIAL=1` accepts such a partial
+site: the hubs still omit the missing pages, only the exit code
+changes. The Pages workflow sets it, on the reasoning that one bad
+station page should not hold back the whole hourly board deploy —
+the next run fills the gap. A build that produced no pages at all
+fails regardless.
 
 Raising `MRT_SITE_DAYS` multiplies the page count and the build time:
 the section holds `stations x days` timetables and
@@ -205,7 +218,7 @@ The status line ends with a lamp and the age of the live data:
 | Lamp | Meaning |
 |------|---------|
 | Green | The last check reached a live source, and the snapshot is current. |
-| Amber | The poll is falling behind (no answer for two minutes), the snapshot is more than 15 minutes old, or the deployment carries no live layer. |
+| Amber | The poll is falling behind (no answer for two minutes), the snapshot is more than 15 minutes old, the deployment carries no live layer, or the last snapshot reached no live source (`live: false`). |
 | Red | The last check reached no source at all. The board keeps the last snapshot on screen and says how long ago it arrived. |
 
 The tooltip on the status line names the exact fetch time, the source

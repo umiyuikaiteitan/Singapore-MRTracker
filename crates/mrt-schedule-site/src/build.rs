@@ -25,6 +25,37 @@ pub struct BuildReport {
     pub bytes: u64,
     /// The pages that could not be built, with the reason.
     pub failures: Vec<String>,
+    /// The site-relative paths of the planned pages that are
+    /// consequently absent. No hub links to any of them.
+    pub missing: Vec<String>,
+}
+
+/// The site-relative paths of the pages a build actually wrote.
+///
+/// The hub is rendered from this set rather than from the plan, so a
+/// page that failed leaves no dangling link behind.
+#[derive(Clone, Debug, Default)]
+pub struct WrittenPages {
+    paths: std::collections::BTreeSet<String>,
+}
+
+impl WrittenPages {
+    fn insert(&mut self, path: String) {
+        self.paths.insert(path);
+    }
+
+    /// Report whether the page at this site-relative path was written.
+    pub fn contains(&self, path: &str) -> bool {
+        self.paths.contains(path)
+    }
+}
+
+/// Decide whether a build with failed pages may still exit zero.
+///
+/// `MRT_SITE_ALLOW_PARTIAL=1` is the only accepted value: the opt-in
+/// must be deliberate, not a leftover truthy string.
+pub fn accepts_partial(value: Option<&str>) -> bool {
+    value == Some("1")
 }
 
 /// Everything the builder needs.
@@ -43,8 +74,15 @@ pub struct SiteBuild<'a> {
 
 impl SiteBuild<'_> {
     /// Write the whole section into `out`.
+    ///
+    /// A page that cannot be built or written is recorded in the
+    /// report and dropped from every hub, so the site never links to a
+    /// file that does not exist. A hub or the index that cannot be
+    /// written is fatal instead: without them the section has no entry
+    /// point, and no partial site can stand.
     pub fn write(&self, out: &Path) -> Result<BuildReport, String> {
         let mut report = BuildReport::default();
+        let mut written = WrittenPages::default();
         std::fs::create_dir_all(out.join("t"))
             .and_then(|_| std::fs::create_dir_all(out.join("d")))
             .map_err(|e| format!("cannot create {}: {e}", out.display()))?;
@@ -55,24 +93,28 @@ impl SiteBuild<'_> {
         let mut done = 0usize;
         for date in &self.plan.dates {
             for station in &self.plan.stations {
-                self.write_timetable(out, station, date, &mut report);
+                self.write_timetable(out, station, date, &mut report, &mut written);
                 done += 1;
                 self.progress(done, total);
             }
             for line in &self.plan.lines {
                 for window in &self.plan.windows {
-                    self.write_diagram(out, line, date, window, &mut report);
+                    self.write_diagram(out, line, date, window, &mut report, &mut written);
                     done += 1;
                     self.progress(done, total);
                 }
             }
         }
 
-        // The hub last: it links to everything above.
+        // The hubs last: they link only to the pages that exist.
         for date in &self.plan.dates {
             let metadata = PublicationMetadata::new(self.seed, date.date, Vec::new());
-            let page = render_hub(self.plan, date, self.config, &metadata, self.info);
-            self.write_file(&out.join(hub_name(self.plan, date)), &page, &mut report);
+            let page = render_hub(self.plan, date, self.config, &metadata, self.info, &written);
+            let path = out.join(hub_name(self.plan, date));
+            write_atomic_str(&path, &page)
+                .map_err(|e| format!("cannot write the hub {}: {e}", path.display()))?;
+            report.files += 1;
+            report.bytes += page.len() as u64;
         }
 
         let index = serde_json::to_string_pretty(&SiteIndex {
@@ -80,10 +122,15 @@ impl SiteBuild<'_> {
             feed_sha256: &self.seed.feed_sha256,
             feed_timestamp: self.seed.feed_timestamp.as_deref(),
             timezone: &self.seed.timezone,
+            missing: &report.missing,
             plan: self.plan,
         })
         .map_err(|e| format!("cannot serialize the site index: {e}"))?;
-        self.write_file(&out.join("data/index.json"), &index, &mut report);
+        let path = out.join("data/index.json");
+        write_atomic_str(&path, &index)
+            .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+        report.files += 1;
+        report.bytes += index.len() as u64;
 
         Ok(report)
     }
@@ -102,7 +149,9 @@ impl SiteBuild<'_> {
         station: &StationEntry,
         date: &DateEntry,
         report: &mut BuildReport,
+        written: &mut WrittenPages,
     ) {
+        let relative = self.plan.timetable_path(station, date);
         let nav = self.timetable_nav(station, date);
         let document = match build_timetable(
             self.network,
@@ -117,15 +166,12 @@ impl SiteBuild<'_> {
                 report
                     .failures
                     .push(format!("{} on {}: {error}", station.name, date.iso));
+                report.missing.push(relative);
                 return;
             }
         };
         let page = render_timetable_with_nav(&document, self.config, Some(&nav));
-        self.write_file(
-            &out.join(self.plan.timetable_path(station, date)),
-            &page,
-            report,
-        );
+        self.write_page(out, relative, &page, report, written);
     }
 
     fn write_diagram(
@@ -135,7 +181,10 @@ impl SiteBuild<'_> {
         date: &DateEntry,
         window: &WindowEntry,
         report: &mut BuildReport,
+        written: &mut WrittenPages,
     ) {
+        let page_path = self.plan.diagram_path(line, date, window);
+        let drawing_path = self.plan.drawing_path(line, date, window);
         let nav = self.diagram_nav(line, date, window);
         let document = match build_diagram(
             self.network,
@@ -152,21 +201,15 @@ impl SiteBuild<'_> {
                     "{} {} on {}: {error}",
                     line.name, window.label, date.iso
                 ));
+                report.missing.push(page_path);
+                report.missing.push(drawing_path);
                 return;
             }
         };
         let page = render_diagram_with_nav(&document, self.config, Some(&nav));
-        self.write_file(
-            &out.join(self.plan.diagram_path(line, date, window)),
-            &page,
-            report,
-        );
+        self.write_page(out, page_path, &page, report, written);
         let drawing = render_diagram_svg(&document, self.config);
-        self.write_file(
-            &out.join(self.plan.drawing_path(line, date, window)),
-            &drawing,
-            report,
-        );
+        self.write_page(out, drawing_path, &drawing, report, written);
     }
 
     /// Build the navigation of a station timetable.
@@ -303,13 +346,25 @@ impl SiteBuild<'_> {
         }
     }
 
-    fn write_file(&self, path: &Path, body: &str, report: &mut BuildReport) {
-        match write_atomic_str(path, body) {
+    /// Write one planned page, recording either the success or the gap.
+    fn write_page(
+        &self,
+        out: &Path,
+        relative: String,
+        body: &str,
+        report: &mut BuildReport,
+        written: &mut WrittenPages,
+    ) {
+        match write_atomic_str(&out.join(&relative), body) {
             Ok(()) => {
                 report.files += 1;
                 report.bytes += body.len() as u64;
+                written.insert(relative);
             }
-            Err(error) => report.failures.push(format!("{}: {error}", path.display())),
+            Err(error) => {
+                report.failures.push(format!("{relative}: {error}"));
+                report.missing.push(relative);
+            }
         }
     }
 }
@@ -321,6 +376,8 @@ struct SiteIndex<'a> {
     feed_sha256: &'a str,
     feed_timestamp: Option<&'a str>,
     timezone: &'a str,
+    /// The planned pages that this build could not produce.
+    missing: &'a [String],
     #[serde(flatten)]
     plan: &'a SitePlan,
 }
@@ -351,5 +408,15 @@ mod tests {
         );
         // The same instant in UTC is still the tenth.
         assert_eq!(today_at_offset(1_786_377_600, 0).to_string(), "20260810");
+    }
+
+    #[test]
+    fn only_an_explicit_opt_in_accepts_a_partial_site() {
+        assert!(accepts_partial(Some("1")));
+        assert!(!accepts_partial(None));
+        assert!(!accepts_partial(Some("")));
+        assert!(!accepts_partial(Some("0")));
+        assert!(!accepts_partial(Some("true")));
+        assert!(!accepts_partial(Some("yes")));
     }
 }

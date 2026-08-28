@@ -11,7 +11,8 @@
 use mrt_publication::{Labels, PublicationConfig, PublicationMetadata};
 use mrt_publication_html::escape;
 
-use crate::plan::{DateEntry, SitePlan};
+use crate::build::WrittenPages;
+use crate::plan::{DateEntry, LineEntry, SitePlan, StationEntry, WindowEntry};
 
 /// What the hub says about itself and where it links back to.
 #[derive(Clone, Debug)]
@@ -36,13 +37,38 @@ impl Default for SiteInfo {
 }
 
 /// Render the hub for one service date.
+///
+/// The hub lists only the pages in `written`: a station whose
+/// timetable failed, or a diagram window that failed, is dropped
+/// rather than linked to a file that does not exist. The build report
+/// carries what is missing.
 pub fn render_hub(
     plan: &SitePlan,
     date: &DateEntry,
     config: &PublicationConfig,
     metadata: &PublicationMetadata,
     info: &SiteInfo,
+    written: &WrittenPages,
 ) -> String {
+    // What this date can actually offer.
+    let stations: Vec<&StationEntry> = plan
+        .stations
+        .iter()
+        .filter(|station| written.contains(&plan.timetable_path(station, date)))
+        .collect();
+    let lines: Vec<(&LineEntry, Vec<&WindowEntry>)> = plan
+        .lines
+        .iter()
+        .filter_map(|line| {
+            let windows: Vec<&WindowEntry> = plan
+                .windows
+                .iter()
+                .filter(|window| written.contains(&plan.diagram_path(line, date, window)))
+                .collect();
+            (!windows.is_empty()).then_some((line, windows))
+        })
+        .collect();
+
     let labels = Labels::for_language(config.language);
     let theme = crate::page::theme_block(config);
     let mut out = String::with_capacity(96 * 1024);
@@ -63,8 +89,8 @@ pub fn render_hub(
         "{} {} \u{00B7} {} stations \u{00B7} {} lines",
         labels.service_date,
         date.short,
-        plan.stations.len(),
-        plan.lines.len()
+        stations.len(),
+        lines.len()
     )));
     out.push_str("</p>\n</header>\n");
 
@@ -84,8 +110,8 @@ pub fn render_hub(
     out.push_str("</p>\n");
 
     render_date_tabs(&mut out, plan, date);
-    render_lines(&mut out, plan, date);
-    render_stations(&mut out, plan, date);
+    render_lines(&mut out, plan, date, &lines);
+    render_stations(&mut out, plan, date, &stations);
 
     crate::page::colophon(&mut out, metadata, labels, plan);
     out.push_str("<script>\n");
@@ -129,15 +155,20 @@ pub fn hub_name(plan: &SitePlan, date: &DateEntry) -> String {
     }
 }
 
-fn render_lines(out: &mut String, plan: &SitePlan, date: &DateEntry) {
-    if plan.lines.is_empty() {
+fn render_lines(
+    out: &mut String,
+    plan: &SitePlan,
+    date: &DateEntry,
+    lines: &[(&LineEntry, Vec<&WindowEntry>)],
+) {
+    if lines.is_empty() {
         return;
     }
     out.push_str(
         "<section class=\"hub-section\" aria-labelledby=\"lines-heading\">\n\
          <h2 id=\"lines-heading\">Train diagrams</h2>\n<ul class=\"line-cards\">\n",
     );
-    for line in &plan.lines {
+    for (line, windows) in lines {
         out.push_str("<li class=\"line-card\"");
         if let Some(color) = &line.color {
             if let Some(safe) = escape::css_color(color) {
@@ -155,7 +186,7 @@ fn render_lines(out: &mut String, plan: &SitePlan, date: &DateEntry) {
             out.push_str("</p>\n");
         }
         out.push_str("<ul>\n");
-        for window in &plan.windows {
+        for window in windows {
             out.push_str("<li><a href=\"");
             out.push_str(&escape::attr(&plan.diagram_path(line, date, window)));
             out.push_str("\" title=\"");
@@ -172,7 +203,12 @@ fn render_lines(out: &mut String, plan: &SitePlan, date: &DateEntry) {
     out.push_str("</ul>\n</section>\n");
 }
 
-fn render_stations(out: &mut String, plan: &SitePlan, date: &DateEntry) {
+fn render_stations(
+    out: &mut String,
+    plan: &SitePlan,
+    date: &DateEntry,
+    stations: &[&StationEntry],
+) {
     out.push_str(
         "<section class=\"hub-section\" aria-labelledby=\"stations-heading\">\n\
          <h2 id=\"stations-heading\">Departure timetables</h2>\n",
@@ -188,11 +224,13 @@ fn render_stations(out: &mut String, plan: &SitePlan, date: &DateEntry) {
          placeholder=\"Name or code, for example Jurong East or NS1\">\n",
     );
     out.push_str("<p class=\"count\" id=\"station-count\">");
-    out.push_str(&escape::text(&format!("{} stations", plan.stations.len())));
+    out.push_str(&escape::text(&format!("{} stations", stations.len())));
     out.push_str("</p>\n</div>\n");
 
-    if plan.stations.is_empty() {
-        out.push_str("<p class=\"no-matches\">This feed carries no station with a public code.</p>\n</section>\n");
+    if stations.is_empty() {
+        out.push_str(
+            "<p class=\"no-matches\">No station timetable is available for this service date.</p>\n</section>\n",
+        );
         return;
     }
 
@@ -206,7 +244,7 @@ fn render_stations(out: &mut String, plan: &SitePlan, date: &DateEntry) {
     };
 
     out.push_str("<ul class=\"stations\" id=\"station-list\">\n");
-    for station in &plan.stations {
+    for station in stations {
         out.push_str("<li class=\"station-row\" data-search=\"");
         out.push_str(&escape::attr(&station.search));
         out.push_str("\"><a href=\"");

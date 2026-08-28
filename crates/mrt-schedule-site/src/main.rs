@@ -19,6 +19,11 @@
 //! | `MRT_SITE_TITLE` | The name in the masthead | `Singapore rail timetables` |
 //! | `MRT_SITE_BOARD_HREF` | Relative link back to the board | `../index.html` |
 //! | `MRT_SITE_LINES` | Only these route identifiers, comma separated | all |
+//! | `MRT_SITE_ALLOW_PARTIAL` | `1` accepts a build with failed pages; the hubs omit them | unset: fail |
+//!
+//! A page that cannot be built is dropped from every hub and listed on
+//! standard error, and the run exits with code 7 — unless
+//! `MRT_SITE_ALLOW_PARTIAL=1` explicitly accepts the partial site.
 
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -162,16 +167,37 @@ fn main() {
         report.bytes as f64 / (1024.0 * 1024.0),
         out.display()
     );
-    for failure in report.failures.iter().take(20) {
-        eprintln!("warning: {failure}");
-    }
-    if report.failures.len() > 20 {
-        eprintln!("warning: and {} more.", report.failures.len() - 20);
-    }
-    // A site with no pages is a failure, however cleanly it ran.
+    // A site with no pages is a failure, however cleanly it ran, and
+    // no opt-in makes it acceptable.
     if report.files == 0 {
         eprintln!("error: the site is empty");
         std::process::exit(7);
+    }
+    // A build with failed pages must not look like success. The hubs
+    // already omit the missing pages, so what was written is
+    // self-consistent, but only an explicit opt-in deploys it.
+    if !report.failures.is_empty() {
+        for failure in report.failures.iter().take(20) {
+            eprintln!("warning: {failure}");
+        }
+        if report.failures.len() > 20 {
+            eprintln!("warning: and {} more.", report.failures.len() - 20);
+        }
+        eprintln!(
+            "warning: {} planned page(s) are missing; no hub links to them",
+            report.missing.len()
+        );
+        if mrt_schedule_site::accepts_partial(
+            std::env::var("MRT_SITE_ALLOW_PARTIAL").ok().as_deref(),
+        ) {
+            eprintln!("warning: MRT_SITE_ALLOW_PARTIAL=1 is set, so the partial site is accepted");
+        } else {
+            eprintln!(
+                "error: the site is incomplete; \
+                 set MRT_SITE_ALLOW_PARTIAL=1 to accept a partial site"
+            );
+            std::process::exit(7);
+        }
     }
 }
 

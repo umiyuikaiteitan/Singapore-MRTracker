@@ -52,6 +52,13 @@ jobs:
         env:
           MRT_SITE_DAYS: "3"
           MRT_SITE_CONFIG: config/singapore.yaml
+          # One bad station or diagram must not hold back the hourly
+          # board deploy. With this opt-in the generator still writes
+          # every page it can, the hubs omit whatever failed (so no
+          # link dangles), and the step log lists what is missing; the
+          # next hourly run fills the gap. Without it the generator
+          # exits non-zero on any failed page.
+          MRT_SITE_ALLOW_PARTIAL: "1"
 
       # The live schematic map, as a section of the same site. The
       # board pages are not touched by it, and a map failure must not
