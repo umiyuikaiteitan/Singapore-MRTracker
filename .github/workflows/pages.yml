@@ -53,8 +53,18 @@ jobs:
           MRT_SITE_DAYS: "3"
           MRT_SITE_CONFIG: config/singapore.yaml
 
+      # The live schematic map, as a section of the same site. The
+      # board pages are not touched by it, and a map failure must not
+      # block the board deploy, so the step may fail on its own.
+      - name: Generate the live map
+        continue-on-error: true
+        run: cargo run --release -p mrt-map-static -- site/map feed.zip
+        env:
+          LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
+          MRT_MAP_LAYOUT: config/layout-mini.geojson
+
       - name: Report the site size
-        run: du -sh site && du -sh site/timetables && find site -type f | wc -l
+        run: du -sh site && du -sh site/timetables && du -sh site/map || true && find site -type f | wc -l
 
       - uses: actions/upload-pages-artifact@v3
         with:
