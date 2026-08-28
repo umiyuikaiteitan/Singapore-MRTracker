@@ -275,9 +275,71 @@ The crate merges the three data sources into view models:
   lines permanently flagged and bury the live disruptions.
 - `match_train_line` maps GTFS route names to the DataMall line
   codes with simple heuristics.
+- `map.rs` builds a `NetworkSnapshot`, the view model of the live
+  map: every line with its live state, every edge between two
+  neighbouring stations, every placed run with a `PositionQuality`
+  marking where its position came from, the headway blocks that carry
+  no individual runs, the alert messages, and a `Freshness` record
+  with three drawn states — live, ageing, stale — and the two
+  thresholds that produced them. `docs/LIVE-MAP-POC.md` is its plan.
+- `layout.rs` reads the schematic that the map is drawn on. The
+  layout is data, authored in OpenFantasyMap, exported as GeoJSON,
+  and committed under `config/`; the binder joins its stations to
+  network stations by station code and never by name, because two
+  stations share the name `Bukit Panjang`. Both directions of the
+  join report what they could not match.
 
 The crate does no input/output. The application fetches the data and
 passes it in. This keeps render loops testable and fast.
+
+## The live overlay on the train diagram
+
+The roadmap lists a live layer on the train diagram, and
+`docs/LIVE-MAP-POC.md` ends its last phase by writing that interface
+down rather than building it. This section is that record. No code
+implements it yet.
+
+The attachment point is the run identifier.
+`docs/SINGAPORE-GTFS-PROFILE.md` already names it: a `MapTrain`
+carries `instance_id` and `source_trip_id`, and a `DiagramRun` carries
+the same two fields with the same meaning — `instance_id` identifies
+one run on one service day, `source_trip_id` is the GTFS `trip_id`
+behind it. Joining the two view models is a lookup on `instance_id`,
+with `source_trip_id` as the fallback when the diagram covers a
+service day the snapshot does not.
+
+The overlay adds two things to a path the diagram has already drawn:
+
+- **A "now" marker.** `Freshness::clock` is the service-day time the
+  snapshot was evaluated at, and the run's `points` already map a
+  `GtfsTime` to an `x` in `DiagramLayout` coordinates. The marker is
+  that `x`, at the `y` of the corridor node the run stands at or the
+  pair it lies between: `TrainLocation` names the station or the two
+  stations, and `progress` gives the share of the way along.
+- **A delay overlay.** `MapTrain::delay_secs` shifts a call, and
+  `DiagramCallView` carries the scheduled `x_arrival` and
+  `x_departure` to shift it from. Scheduled against actual is two
+  polylines — the second the first plus the shift — drawn in the
+  treatment that `PositionQuality` selects, the way the map draws an
+  estimate as an estimate.
+
+What the interface deliberately leaves out:
+
+- It does not recompute the diagram. `mrt-publication` reads no
+  realtime data and stays a pure projection of the schedule. The
+  overlay is a second layer over a document that was already built,
+  and the document stays byte-identical without it.
+- It does not invent a position. A run with no trip update, a run
+  from a non-exact headway block, and a stale realtime layer all lose
+  the overlay and keep the scheduled path, exactly as they do on the
+  map.
+- It does not reverse the dependency direction. `mrt-publication`
+  never learns about `mrt-live`. The join belongs to whichever
+  renderer wants both, the way `mrt-map-web` already sits downstream
+  of a snapshot and a layout at once.
+- It does not become a dispatching display.
+  `docs/KNOWN-LIMITATIONS.md` draws that boundary around the diagram,
+  and a live marker on a scheduled path does not move it.
 
 ## Error handling
 
@@ -300,8 +362,10 @@ the HTTP status. The library does not panic on bad input data.
 - Security tests build hostile zip archives and check that the loader
   refuses them, and render a feed whose text fields try to break out
   of the markup.
-- Snapshot tests pin the timetable and diagram view models and the
-  normalized SVG. Run with `UPDATE_SNAPSHOTS=1` to accept a change.
+- Snapshot tests pin the timetable and diagram view models, the map
+  view model, and the normalized SVG of both the diagram and the map,
+  in its normal and its disrupted state. Run with `UPDATE_SNAPSHOTS=1`
+  to accept a change.
 - The site tests build the whole section from the fixture and check
   that every link resolves to a file that exists, that no path is
   absolute, that the hub lists every station in the document, and

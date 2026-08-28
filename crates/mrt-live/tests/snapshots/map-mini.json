@@ -420,9 +420,13 @@
     "feed_timestamp": 1746399970,
     "now_unix": 1746400000,
     "age_secs": 30,
+    "ageing_secs": 60,
     "staleness_secs": 120,
     "state": "live"
   },
+  "notices": [
+    "NSL: no service."
+  ],
   "diagnostics": [
     {
       "severity": "info",

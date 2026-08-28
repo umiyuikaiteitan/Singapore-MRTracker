@@ -18,8 +18,11 @@ under one constraint the plan did not originally state: **the board UI
 does not change at all — the map is a separate site, deployable on its
 own subdomain**. Where the text below says the map extends the board's
 deployments, that structure is superseded; the semantics are not.
-Phase 0 remains open — it needs a real DataMall account key. Phase 4
-is not started.
+Phase 4 is implemented: the disruption treatment, the three-state
+freshness lamp, the notice area, and the diagram interface, all in the
+map's own crates and in `mrt-live`. Phase 0 is the one item of this
+proof of concept that remains open — it needs a real DataMall account
+key.
 
 ## What the proof of concept is
 
@@ -350,14 +353,45 @@ SVG snapshot.
   and a direction (`crates/mrt-live/src/lib.rs:100`). Grey the line
   and mark the affected segment. A disrupted line is not deleted from
   the map; its trains become schedule-only or disappear according to
-  what the feed says, and the line carries the alert text.
+  what the feed says, and the line carries the alert text. This is in
+  place. The ribbon of a disrupted line keeps its shape and loses its
+  identity colour, and the section the alert names — the edges of the
+  line whose two stations the alert both names, joined along the
+  layout path — is drawn broken. An alert that names no station, or
+  names stations that no edge of the line joins, greys the whole line
+  and marks no section: the map does not guess which part is out, and
+  says so in the diagnostics. The alert messages are network-wide in
+  the legacy payload, so `NetworkSnapshot::notices` carries them and
+  the page shows them in a flat notice area beside one notice per
+  disrupted line, naming the direction, the stations, and the free bus
+  service the alert itself lists.
 - **Freshness.** A lamp with the feed timestamp, in the board's
   grammar: green when the snapshot is current, amber when it is
   ageing, red when it is stale, with the age in words next to it.
+  This is in place. Phase 1 shipped `live`, `stale`, and
+  `unavailable` and left the ageing step to this phase;
+  `FreshnessState::Ageing` now sits between the two, above a second
+  threshold that `NetworkSnapshotBuilder::ageing_secs` configures the
+  way `staleness_secs` already did. An ageing layer still applies:
+  its predictions shift positions, and only a stale one falls back to
+  the schedule. The page maps the states onto the board's three
+  lamps — live green, ageing amber, stale and unavailable both red,
+  because to a reader both mean that nothing on the map is live.
 - **Crowd density, optional.** `PCDRealTime` updates roughly every ten
   minutes. If shown, it belongs on station discs as a low-contrast
   ring, separated from train state and labelled with its own age. It
   is tempting and low-value; leave it out unless it reads cleanly.
+  **The proof of concept ships without it.** Judged against this
+  plan's own bar, it does not read cleanly: a ten-minute-old figure
+  drawn on a map whose whole grammar is freshness would need its own
+  age label beside every disc, and the discs are already carrying the
+  station, the interchange shape, a train pill, and a name. It would
+  also be the only element on the page that is neither a position nor
+  a state of the line, which is exactly the "tempting and low-value"
+  the bullet warns about. The crowd layer stays where it reads today,
+  on the board, where one station is the subject of the whole view.
+  Nothing in the view model blocks it later: `PlatformCrowd` already
+  reaches `mrt-live`, and a station-level field would be additive.
 - **The bridge to the diagram.** The existing roadmap also lists a
   live overlay on the train diagram (`README.md:337`). The
   `NetworkSnapshot` train records carry `instance_id` and
@@ -365,12 +399,20 @@ SVG snapshot.
   attachment points for a live layer
   (`docs/SINGAPORE-GTFS-PROFILE.md:234`). The same records can drive a
   "now" marker on a `DiagramRun`. Phase 4 ends by writing down that
-  interface, not by building it.
+  interface, not by building it. It is written down, in
+  `docs/ARCHITECTURE.md` under "The live overlay on the train
+  diagram": the join, the two things the overlay draws, and the four
+  things it deliberately leaves out.
 
 **Acceptance.** A disrupted line, a stale feed, and an empty realtime
 snapshot each render a state a reader can name without a legend, and
 each is covered by a fixture. The diagram interface is written down in
-`docs/ARCHITECTURE.md`.
+`docs/ARCHITECTURE.md`. This is in place:
+`crates/mrt-map-web/tests/map_page_tests.rs` covers the three states
+from the fixture network, plus an ageing feed, an alert that names no
+station, and alert text that tries to break out of the markup;
+`crates/mrt-map-web/tests/snapshots/map-mini-disrupted.svg` is the
+committed drawing of the disrupted network beside the normal one.
 
 ## What comes from OpenFantasyMap
 
@@ -449,7 +491,7 @@ that would look the same if the subject were a crypto dashboard.
 |------|-------------------------|------------|
 | Trip update coverage is sparse or absent | Most trains are schedule-only; the map animates a timetable | Phase 0 measures it before anything is built. The page states the coverage figure. |
 | Trip updates carry only `delay_secs`, no `stop_updates` | Positions shift uniformly; a train recovering time is drawn wrong | Acceptable, and marked: the quality enumeration distinguishes the two cases. |
-| Realtime feed cadence is unknown | The poll interval and the staleness threshold are guesses | Phase 0 measures the timestamp advance. Set the threshold from the measurement, not from a round number. |
+| Realtime feed cadence is unknown | The poll interval and both freshness thresholds are guesses | Phase 0 measures the timestamp advance. Set the thresholds from the measurement, not from a round number. Until then the builder's defaults are placeholders and say so, and `ageing_secs` and `staleness_secs` are arguments a caller overrides without a code change. |
 | Interpolation error between sparse stations | A train drawn up to a fifth of an edge from its true position | The estimate treatment, and the legend. Do not add easing curves that model acceleration; that would be a second invention on top of the first. |
 | `frequencies.txt` with `exact_times=0` covers much of the LRT | Whole lines carry bands and no trains | Correct behaviour, and it must not look like a bug. Band lines get an explicit label. |
 | No parent stations in the feed | Interchanges split; the schematic and the network model disagree | Phase 0 answers it. The binder reports the mismatch rather than merging by name. |

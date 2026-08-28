@@ -61,6 +61,25 @@ const DEFAULT_WINDOW_SECS: u32 = 3600;
 /// its own value with [`NetworkSnapshotBuilder::staleness_secs`].
 const DEFAULT_STALENESS_SECS: u32 = 120;
 
+/// The default ageing threshold, in seconds.
+///
+/// Below it the realtime layer is current. Above it, and below the
+/// staleness threshold, the layer is *ageing*: the operator's
+/// predictions still apply, and the map says the data is no longer
+/// new. It is the amber step of the lamp grammar that
+/// `docs/LIVE-MAP-POC.md` asks for in phase 4.
+///
+/// Sixty seconds is half of [`DEFAULT_STALENESS_SECS`], and it is the
+/// same minute this project already treats as operationally
+/// meaningful: the board lights a lamp when a run is 60 s off
+/// schedule. The map borrows a figure that already means something
+/// here rather than inventing a second one. Like the staleness
+/// threshold it stays a placeholder until phase 0 measures how often
+/// the feed timestamp actually advances; a caller that has measured
+/// the feed sets its own value with
+/// [`NetworkSnapshotBuilder::ageing_secs`].
+const DEFAULT_AGEING_SECS: u32 = 60;
+
 // ----------------------------------------------------------------------
 // Provenance
 // ----------------------------------------------------------------------
@@ -91,16 +110,36 @@ pub enum PositionQuality {
 }
 
 /// How current the realtime layer of a snapshot is.
+///
+/// The three drawn states are the lamp grammar of the board: current,
+/// ageing, and no longer usable. [`FreshnessState::is_current`] is the
+/// one question the placement code asks — whether the operator's
+/// predictions still apply.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FreshnessState {
-    /// The realtime feed is newer than the staleness threshold.
+    /// The realtime feed is newer than the ageing threshold.
     Live,
+    /// The realtime feed is older than the ageing threshold and newer
+    /// than the staleness threshold. The predictions still apply; the
+    /// data is no longer new, and the map says so.
+    Ageing,
     /// The realtime feed is older than the staleness threshold, or it
     /// carries no timestamp at all. Positions come from the schedule.
     Stale,
     /// The caller supplied no realtime layer.
     Unavailable,
+}
+
+impl FreshnessState {
+    /// Report whether the realtime layer still applies.
+    ///
+    /// A live layer and an ageing one both shift positions; a stale
+    /// one and an absent one do not, and every train falls back to
+    /// [`PositionQuality::ScheduleOnly`].
+    pub fn is_current(self) -> bool {
+        matches!(self, FreshnessState::Live | FreshnessState::Ageing)
+    }
 }
 
 /// The freshness of the realtime layer.
@@ -117,6 +156,9 @@ pub struct Freshness {
     pub now_unix: Option<u64>,
     /// The age of the realtime feed, in seconds.
     pub age_secs: Option<u64>,
+    /// The threshold above which the layer counts as ageing, in
+    /// seconds.
+    pub ageing_secs: u32,
     /// The threshold above which the layer counts as stale, in
     /// seconds.
     pub staleness_secs: u32,
@@ -289,6 +331,16 @@ pub struct NetworkSnapshot {
     pub bands: Vec<MapBand>,
     /// The freshness of the realtime layer.
     pub freshness: Freshness,
+    /// The public alert messages, exactly as
+    /// [`crate::NetworkStatus::messages`] carries them.
+    ///
+    /// A disrupted line names its own stations and direction in
+    /// [`MapLine::state`], but the legacy payload attaches no message
+    /// text to a segment: the messages belong to the network. So the
+    /// snapshot carries them as network notices, and a renderer shows
+    /// them beside the lines it marks rather than claiming one message
+    /// belongs to one line.
+    pub notices: Vec<String>,
     /// Everything the snapshot could not represent: every run that
     /// could not be placed says why.
     pub diagnostics: Vec<Diagnostic>,
@@ -325,6 +377,7 @@ pub struct NetworkSnapshotBuilder<'a> {
     realtime: Option<&'a RailRtFeed>,
     now_unix: Option<u64>,
     alerts: Option<&'a TrainServiceAlerts>,
+    ageing_secs: u32,
     staleness_secs: u32,
     window_secs: u32,
     missing_time_policy: MissingTimePolicy,
@@ -338,6 +391,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
             realtime: None,
             now_unix: None,
             alerts: None,
+            ageing_secs: DEFAULT_AGEING_SECS,
             staleness_secs: DEFAULT_STALENESS_SECS,
             window_secs: DEFAULT_WINDOW_SECS,
             missing_time_policy: MissingTimePolicy::default(),
@@ -372,6 +426,19 @@ impl<'a> NetworkSnapshotBuilder<'a> {
         self
     }
 
+    /// Set the ageing threshold, in seconds. The default is 60.
+    ///
+    /// A realtime feed older than this and newer than the staleness
+    /// threshold is [`FreshnessState::Ageing`]: its predictions still
+    /// apply, and the page reports the age. The staleness test runs
+    /// first, so an ageing threshold at or above the staleness
+    /// threshold simply never fires; the snapshot stays deterministic
+    /// either way.
+    pub fn ageing_secs(mut self, seconds: u32) -> Self {
+        self.ageing_secs = seconds;
+        self
+    }
+
     /// Set the half-width of the query window, in seconds. The default
     /// is 3600.
     ///
@@ -401,7 +468,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
     pub fn build(&self, date: ServiceDate, clock: GtfsTime) -> NetworkSnapshot {
         let mut diagnostics = Vec::new();
         let freshness = self.freshness(date, clock, &mut diagnostics);
-        let live = freshness.state == FreshnessState::Live;
+        let live = freshness.state.is_current();
 
         let query = TripInstanceQuery::new(date)
             .window(
@@ -451,8 +518,18 @@ impl<'a> NetworkSnapshotBuilder<'a> {
             trains,
             bands,
             freshness,
+            notices: self.notices(),
             diagnostics,
         }
+    }
+
+    /// Collect the public alert messages of the legacy feed.
+    ///
+    /// The text is the operator's, unchanged; a renderer escapes it.
+    fn notices(&self) -> Vec<String> {
+        self.alerts
+            .map(|alerts| alerts.messages.iter().map(|m| m.content.clone()).collect())
+            .unwrap_or_default()
     }
 
     // ------------------------------------------------------------------
@@ -536,6 +613,10 @@ impl<'a> NetworkSnapshotBuilder<'a> {
     ///
     /// A feed without a timestamp counts as stale: the snapshot cannot
     /// tell how old it is, and the honest answer is the schedule.
+    ///
+    /// The two thresholds are read in order — stale first, then
+    /// ageing — so the layer degrades in one direction only and a
+    /// caller cannot produce a state that contradicts itself.
     fn freshness(
         &self,
         date: ServiceDate,
@@ -548,6 +629,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
             feed_timestamp: None,
             now_unix: self.now_unix,
             age_secs: None,
+            ageing_secs: self.ageing_secs,
             staleness_secs: self.staleness_secs,
             state: FreshnessState::Unavailable,
         };
@@ -585,6 +667,18 @@ impl<'a> NetworkSnapshotBuilder<'a> {
                     ),
                 ));
                 FreshnessState::Stale
+            }
+            Some(age) if age > u64::from(self.ageing_secs) => {
+                diagnostics.push(Diagnostic::info(
+                    "realtime-ageing",
+                    format!(
+                        "the realtime feed is {age} s old, above the ageing threshold of \
+                         {} s and below the staleness threshold of {} s, so its \
+                         predictions still apply and the page reports the age",
+                        self.ageing_secs, self.staleness_secs
+                    ),
+                ));
+                FreshnessState::Ageing
             }
             Some(_) => FreshnessState::Live,
         };
@@ -898,6 +992,14 @@ mod tests {
             quality(false, true, true),
             PositionQuality::InterpolatedSchedule
         );
+    }
+
+    #[test]
+    fn an_ageing_layer_still_applies_and_a_stale_one_does_not() {
+        assert!(FreshnessState::Live.is_current());
+        assert!(FreshnessState::Ageing.is_current());
+        assert!(!FreshnessState::Stale.is_current());
+        assert!(!FreshnessState::Unavailable.is_current());
     }
 
     #[test]

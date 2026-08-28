@@ -163,6 +163,23 @@ fn the_alerts_set_the_state_of_a_line() {
     assert!(matches!(ewl.state, LineState::Normal));
 }
 
+#[test]
+fn the_alert_messages_reach_the_snapshot_as_network_notices() {
+    let network = network();
+    let alerts = disrupted_alerts();
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_alerts(&alerts)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+
+    // The legacy payload attaches no message to a segment, so the
+    // messages are the network's and the snapshot carries them once.
+    assert_eq!(snapshot.notices, vec!["NSL: no service.".to_string()]);
+
+    // Without alerts there is nothing to say.
+    let quiet = NetworkSnapshotBuilder::new(&network).build(date(), GtfsTime::from_hms(6, 5, 0));
+    assert!(quiet.notices.is_empty());
+}
+
 /// The legacy alert payload of a North South Line disruption.
 fn disrupted_alerts() -> mrt_datamall::TrainServiceAlerts {
     serde_json::from_str(
@@ -446,6 +463,64 @@ fn a_stale_feed_falls_back_to_the_schedule() {
         .trains
         .iter()
         .all(|t| t.quality == PositionQuality::ScheduleOnly));
+}
+
+#[test]
+fn an_ageing_feed_still_carries_its_predictions() {
+    let network = network();
+    // Ninety seconds is past the default ageing threshold of 60 s and
+    // short of the default staleness threshold of 120 s.
+    let realtime = feed(NOW_UNIX - 90, vec![update("NS_T1", Some(120), vec![])]);
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+
+    assert_eq!(snapshot.freshness.state, FreshnessState::Ageing);
+    assert!(snapshot.freshness.state.is_current());
+    assert_eq!(snapshot.freshness.age_secs, Some(90));
+    assert_eq!(snapshot.freshness.ageing_secs, 60);
+    assert_eq!(snapshot.freshness.staleness_secs, 120);
+    assert!(has_diagnostic(&snapshot, "realtime-ageing"));
+
+    // Ageing is not stale: the operator's prediction still shifts the
+    // position, and the provenance says so.
+    let run = train(&snapshot, "NS_T1");
+    assert_eq!(run.quality, PositionQuality::InterpolatedRealtime);
+    assert_eq!(run.delay_secs, Some(120));
+    assert!(
+        (run.progress - 150.0 / 570.0).abs() < 1e-9,
+        "{}",
+        run.progress
+    );
+}
+
+#[test]
+fn the_ageing_threshold_is_the_callers_to_set() {
+    let network = network();
+    let realtime = feed(NOW_UNIX - 30, vec![update("NS_T1", Some(120), vec![])]);
+    let build = |ageing: u32| {
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .ageing_secs(ageing)
+            .build(date(), GtfsTime::from_hms(6, 5, 0))
+            .freshness
+            .state
+    };
+    // A feed 30 s old is live under the default and ageing under a
+    // threshold a caller measured to be tighter.
+    assert_eq!(build(60), FreshnessState::Live);
+    assert_eq!(build(20), FreshnessState::Ageing);
+
+    // The staleness test runs first, so an ageing threshold at or
+    // above it simply never fires.
+    let old = feed(NOW_UNIX - 600, vec![update("NS_T1", Some(120), vec![])]);
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&old, NOW_UNIX)
+        .staleness_secs(120)
+        .ageing_secs(900)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    assert_eq!(snapshot.freshness.state, FreshnessState::Stale);
+    assert!(!snapshot.freshness.state.is_current());
 }
 
 #[test]

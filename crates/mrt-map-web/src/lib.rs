@@ -35,10 +35,10 @@
 
 pub mod clock;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-use mrt_gtfs::{Diagnostic, LineId, RailNetwork, StationId};
-use mrt_live::{BoundLayout, Layout, LayoutPoint, NetworkSnapshot};
+use mrt_gtfs::{alias, Diagnostic, LineId, RailNetwork, StationId};
+use mrt_live::{BoundLayout, Layout, LayoutPoint, LineState, NetworkSnapshot, PositionQuality};
 
 // ----------------------------------------------------------------------
 // The layout
@@ -351,6 +351,14 @@ pub struct MapGeometry {
     pub sections: BTreeMap<String, Vec<ViewPoint>>,
     /// Where a headway band writes its label, keyed by line index.
     pub band_anchors: BTreeMap<usize, ViewPoint>,
+    /// The disrupted lines, keyed by line index, with the polyline of
+    /// every affected section.
+    ///
+    /// A key is present for every line the alerts disrupt, so the
+    /// ribbon can be greyed. The list of polylines is empty when the
+    /// alert names no segment the map can join, which is a line marked
+    /// as a whole and never a guessed section.
+    pub disrupted: BTreeMap<usize, Vec<Vec<ViewPoint>>>,
     /// Everything the drawing could not represent.
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -506,6 +514,81 @@ pub fn map_geometry(snapshot: &NetworkSnapshot, bound: &BoundLayout) -> MapGeome
         band_anchors.insert(id.0, point_at(&line.points, &cumulative, 0.5));
     }
 
+    // Step 7: the affected section of every disrupted line.
+    //
+    // The alert names station codes and a direction, and nothing else.
+    // So the mark is exactly the edges of the line whose two stations
+    // the alert both names, joined along the layout path that already
+    // draws them. A line whose alert names no station, or names
+    // stations that no edge of it joins, is marked as a whole line and
+    // leaves a diagnostic: the map never guesses which part is out.
+    let mut disrupted: BTreeMap<usize, Vec<Vec<ViewPoint>>> = BTreeMap::new();
+    for line in &snapshot.lines {
+        let LineState::Disrupted {
+            stations: codes, ..
+        } = &line.state
+        else {
+            continue;
+        };
+        let mut affected: BTreeSet<usize> = BTreeSet::new();
+        for code in codes {
+            match station_by_code(snapshot, code) {
+                Some(station) if placed.contains_key(&station.0) => {
+                    affected.insert(station.0);
+                }
+                Some(_) => diagnostics.push(
+                    Diagnostic::warning(
+                        "map-disruption-station-undrawn",
+                        "the alert names a station that the layout draws nowhere, so the \
+                         mark cannot reach it",
+                    )
+                    .about(code.clone()),
+                ),
+                None => diagnostics.push(
+                    Diagnostic::warning(
+                        "map-disruption-station-unknown",
+                        "no station of the network answers the code the alert names, so \
+                         the mark cannot reach it",
+                    )
+                    .about(code.clone()),
+                ),
+            }
+        }
+        // One mark per section, not per edge: the two directions of a
+        // line run over the same drawn section, and marking it twice
+        // would lay one set of cuts across the other.
+        let mut marked: BTreeSet<(usize, usize)> = BTreeSet::new();
+        let mut paths: Vec<Vec<ViewPoint>> = Vec::new();
+        for edge in &snapshot.edges {
+            if edge.line != line.line
+                || !affected.contains(&edge.from.0)
+                || !affected.contains(&edge.to.0)
+            {
+                continue;
+            }
+            let pair = (edge.from.0.min(edge.to.0), edge.from.0.max(edge.to.0));
+            if marked.contains(&pair) {
+                continue;
+            }
+            let Some(points) = sections.get(&section_key(edge.line, edge.from, edge.to)) else {
+                continue;
+            };
+            marked.insert(pair);
+            paths.push(points.clone());
+        }
+        if paths.is_empty() {
+            diagnostics.push(
+                Diagnostic::info(
+                    "map-disruption-without-segment",
+                    "the alert names no two neighbouring stations of this line, so the \
+                     map marks the whole line rather than a guessed section",
+                )
+                .about(line.name.clone()),
+            );
+        }
+        disrupted.insert(line.line.0, paths);
+    }
+
     MapGeometry {
         width: fit.width,
         height: fit.height,
@@ -513,8 +596,28 @@ pub fn map_geometry(snapshot: &NetworkSnapshot, bound: &BoundLayout) -> MapGeome
         stations,
         sections,
         band_anchors,
+        disrupted,
         diagnostics,
     }
+}
+
+/// Find the station of the snapshot that answers one public code.
+///
+/// The comparison is `mrt-gtfs`'s alias key, the same one the layout
+/// binder resolves a layout station with, so `NS1`, `ns-1`, and `NS 1`
+/// all name the same station.
+fn station_by_code(snapshot: &NetworkSnapshot, code: &str) -> Option<StationId> {
+    let key = alias::normalize(code);
+    snapshot
+        .stations
+        .iter()
+        .find(|station| {
+            station
+                .codes
+                .iter()
+                .any(|candidate| alias::normalize(candidate) == key)
+        })
+        .map(|station| station.station)
 }
 
 /// The key of one edge in [`MapGeometry::sections`].
@@ -793,7 +896,17 @@ pub fn render_network_svg(snapshot: &NetworkSnapshot, geometry: &MapGeometry) ->
             continue;
         }
         let d = path_of(&line.points);
-        out.push_str("<g class=\"ribbon-group\" data-layout-line=\"");
+        // A disrupted line is not deleted from the map: it keeps its
+        // shape and loses its identity colour, which is the whole
+        // statement the alert supports about the line as a whole.
+        let out_of_service = line
+            .line
+            .is_some_and(|id| geometry.disrupted.contains_key(&id.0));
+        out.push_str(if out_of_service {
+            "<g class=\"ribbon-group disrupted\" data-layout-line=\""
+        } else {
+            "<g class=\"ribbon-group\" data-layout-line=\""
+        });
         out.push_str(&attr(&line.layout_id));
         out.push_str("\">\n");
         out.push_str(&format!("<path class=\"casing\" d=\"{d}\"/>\n"));
@@ -804,6 +917,39 @@ pub fn render_network_svg(snapshot: &NetworkSnapshot, geometry: &MapGeometry) ->
         out.push_str("</g>\n");
     }
     out.push_str("</g>\n");
+
+    // The affected sections, over the greyed ribbons. Each is drawn
+    // twice: once in the grey of a disrupted line, and once in the
+    // background colour as a dashed cut through it, so the section the
+    // alert names reads as a broken line while the rest of the line
+    // stays whole. The grey stroke carries the mark on its own, which
+    // matters where the layout draws no ribbon under the section and
+    // the map falls back to a chord between the two discs — that edge
+    // is the one the trains ride, and marking it there is the same
+    // claim, not a second one. The group only exists when an alert
+    // names a section: nothing is drawn on a normal network.
+    let marks: Vec<&Vec<ViewPoint>> = geometry
+        .disrupted
+        .values()
+        .flatten()
+        .filter(|points| points.len() >= 2)
+        .collect();
+    if !marks.is_empty() {
+        out.push_str("<g class=\"disruptions\" aria-hidden=\"true\">\n");
+        for points in &marks {
+            out.push_str(&format!(
+                "<path class=\"disrupted-section\" d=\"{}\"/>\n",
+                path_of(points)
+            ));
+        }
+        for points in &marks {
+            out.push_str(&format!(
+                "<path class=\"disrupted-cut\" d=\"{}\"/>\n",
+                path_of(points)
+            ));
+        }
+        out.push_str("</g>\n");
+    }
 
     // The headway bands. A block with exact_times=0 has no individual
     // runs, so the line carries a label instead of trains.
@@ -905,15 +1051,27 @@ fn station_title(station: &GeoStation) -> String {
 }
 
 /// Build the text alternative of the drawing.
+///
+/// A disrupted line is greyed and its affected section is drawn
+/// broken, so the description says how many lines are in that state:
+/// the drawing is not the only place the page states it, but a reader
+/// who cannot see the drawing gets the same count.
 fn describe(snapshot: &NetworkSnapshot, geometry: &MapGeometry) -> String {
-    format!(
+    let mut out = format!(
         "A schematic of {} line(s) and {} station(s), on the service day {} at {}. \
          The drawing is not geographic.",
         geometry.lines.len(),
         geometry.stations.len(),
         snapshot.freshness.service_date,
         snapshot.freshness.clock
-    )
+    );
+    if !geometry.disrupted.is_empty() {
+        out.push_str(&format!(
+            " {} line(s) are marked disrupted; the notices name them.",
+            geometry.disrupted.len()
+        ));
+    }
+    out
 }
 
 // ----------------------------------------------------------------------
@@ -1057,6 +1215,7 @@ pub fn render_map_page(input: &MapPageInput) -> String {
         .replace("<!--MAP-GEOMETRY-->", &json_island(&island.to_string()))
         .replace("<!--MAP-STATUS-->", &text(&freshness_words(input.snapshot)))
         .replace("<!--MAP-LAMP-->", freshness_class(input.snapshot))
+        .replace("<!--MAP-NOTICES-->", &render_notices(input.snapshot))
         .replace("<!--MAP-DATE-->", &text(&dated))
         .replace("<!--MAP-DEPLOYMENT-->", &text(input.deployment))
         .replace("<!--MAP-DIAGNOSTICS-->", &render_diagnostics(&diagnostics))
@@ -1092,14 +1251,19 @@ fn connect_extra(snapshot_url: &str) -> String {
 
 /// The lamp class for the freshness of a snapshot.
 ///
-/// The grammar is the board's: green when the data is current, amber
-/// when it has aged, and the unlit state when there is no live layer
-/// at all. Nothing else on the page uses these three colours.
+/// The grammar is the board's three lamps, and the three states of
+/// [`mrt_live::FreshnessState`] map onto them one for one: green while
+/// the realtime layer is current, amber while it is ageing and its
+/// predictions still apply, red once it is stale — and red too when
+/// there is no realtime layer at all, because both mean the same thing
+/// to a reader, that nothing on the map is live. The age in words sits
+/// beside the lamp either way. Nothing else on the page uses these
+/// three colours.
 fn freshness_class(snapshot: &NetworkSnapshot) -> &'static str {
     match snapshot.freshness.state {
-        mrt_live::FreshnessState::Live => "ok",
-        mrt_live::FreshnessState::Stale => "stale",
-        mrt_live::FreshnessState::Unavailable => "",
+        mrt_live::FreshnessState::Live => "live",
+        mrt_live::FreshnessState::Ageing => "ageing",
+        mrt_live::FreshnessState::Stale | mrt_live::FreshnessState::Unavailable => "stale",
     }
 }
 
@@ -1110,6 +1274,10 @@ fn freshness_words(snapshot: &NetworkSnapshot) -> String {
             format!("live \u{00B7} realtime feed {}", ago(age))
         }
         (mrt_live::FreshnessState::Live, None) => "live".to_string(),
+        (mrt_live::FreshnessState::Ageing, Some(age)) => {
+            format!("ageing \u{00B7} realtime feed {}", ago(age))
+        }
+        (mrt_live::FreshnessState::Ageing, None) => "ageing".to_string(),
         (mrt_live::FreshnessState::Stale, Some(age)) => {
             format!("schedule only \u{00B7} realtime feed {}", ago(age))
         }
@@ -1120,6 +1288,78 @@ fn freshness_words(snapshot: &NetworkSnapshot) -> String {
             "schedule only \u{00B7} no realtime layer".to_string()
         }
     }
+}
+
+/// Render the notice area: what the operator said, and what the map
+/// can say about its own realtime coverage.
+///
+/// Everything here comes from the snapshot and passes [`text`] on the
+/// way in. The area does not exist when there is nothing to say, so a
+/// normal network carries no empty panel.
+///
+/// One notice per disrupted line names the line, the direction, the
+/// stations, and the free bus service — all of them fields the alert
+/// itself carries. The alert messages follow, once, as the network
+/// notices they are: the legacy payload attaches no message to a
+/// segment, so the page never claims one belongs to one line.
+fn render_notices(snapshot: &NetworkSnapshot) -> String {
+    let mut items: Vec<String> = Vec::new();
+    for line in &snapshot.lines {
+        let LineState::Disrupted {
+            stations,
+            direction,
+            free_public_bus,
+        } = &line.state
+        else {
+            continue;
+        };
+        let mut parts = vec![format!("{} disrupted", text(&line.name))];
+        if !direction.trim().is_empty() {
+            parts.push(format!("direction {}", text(direction)));
+        }
+        if stations.is_empty() {
+            parts.push("the alert names no station".to_string());
+        } else {
+            parts.push(text(&stations.join(", ")));
+        }
+        if !free_public_bus.is_empty() {
+            parts.push(format!(
+                "free public bus at {}",
+                text(&free_public_bus.join(", "))
+            ));
+        }
+        items.push(format!(
+            "<p class=\"notice disrupted\">{}</p>\n",
+            parts.join(" \u{00B7} ")
+        ));
+    }
+    for message in &snapshot.notices {
+        items.push(format!("<p class=\"notice\">{}</p>\n", text(message)));
+    }
+    // The realtime layer is current, and yet not one run on the map
+    // carries a position from it. That is the empty-snapshot state,
+    // and it is worth a sentence: without one the page looks live and
+    // shows nothing but the timetable.
+    if snapshot.freshness.state.is_current()
+        && !snapshot.trains.is_empty()
+        && snapshot
+            .trains
+            .iter()
+            .all(|train| train.quality == PositionQuality::ScheduleOnly)
+    {
+        items.push(
+            "<p class=\"notice\">The realtime layer names no run drawn on this map, so \
+             every train here comes from the schedule alone.</p>\n"
+                .to_string(),
+        );
+    }
+    if items.is_empty() {
+        return String::new();
+    }
+    format!(
+        "<section class=\"notices\" aria-label=\"Service notices\">\n{}</section>\n",
+        items.concat()
+    )
 }
 
 /// Say an age in words, as the board's status line does.

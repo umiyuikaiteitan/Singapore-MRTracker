@@ -34,9 +34,15 @@
   --rule: #2a2b31;
   --text: #e8e8e8;
   --muted: #85858d;
+  /* The colour a line loses its identity to when the operator reports
+   * it disrupted. It is a neutral grey and nothing else: the line is
+   * still drawn, it just no longer claims to be running. */
+  --grey: #5c5d66;
   /* The three operational colours of the board, reserved for the
-   * freshness lamp and for train delay states. A line keeps its own
-   * identity colour; these never colour a ribbon. */
+   * freshness lamp, for train delay states, and for the rule beside a
+   * disruption notice. A line keeps its own identity colour; these
+   * never colour a ribbon, and a disrupted ribbon greys rather than
+   * turning red. */
   --amber: #e5d500;
   --green: #35d461;
   --red: #ff4b3a;
@@ -100,8 +106,11 @@ body {
   color: var(--muted);
 }
 
-/* The lamp itself. Unlit means there is no realtime layer at all,
- * which is a different statement from a stale one. */
+/* The lamp itself, in the board's three-colour grammar: green while
+ * the realtime layer is current, amber while it is ageing and its
+ * predictions still apply, red once it is stale or absent. Unlit is
+ * the state before the first fetch answers, and nothing else. The age
+ * in words sits beside it in every state. */
 .lamp {
   width: 9px;
   height: 9px;
@@ -109,9 +118,9 @@ body {
   background: #55565e;
   flex: none;
 }
-.lamp.ok { background: var(--green); }
-.lamp.stale { background: var(--amber); }
-.lamp.down { background: var(--red); }
+.lamp.live { background: var(--green); }
+.lamp.ageing { background: var(--amber); }
+.lamp.stale { background: var(--red); }
 
 /* Controls the script reveals. They start hidden, so a page without a
  * script never shows a control that does nothing. */
@@ -146,6 +155,36 @@ svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
   stroke-width: 6;
   stroke-linejoin: round;
   stroke-linecap: round;
+}
+
+/* A disrupted line keeps its shape and loses its colour. Greying is
+ * the whole statement the alert supports about the line as a whole:
+ * it is still there, it is still drawn, and it is not running
+ * normally. The rule sits here rather than on the presentation
+ * attribute so that the identity colour stays in the markup and only
+ * the state is styled. */
+.ribbon-group.disrupted .ribbon { stroke: var(--grey); }
+
+/* The section the alert actually names: the same grey at the ribbon's
+ * weight, then a dashed cut in the background colour, so the section
+ * reads as a broken line and the rest of the disrupted line stays
+ * whole. Nothing is invented — the path spans only the stations the
+ * alert lists, joined along the layout — and a line whose alert names
+ * no section gets no mark at all. No glow, no gradient: a gap is the
+ * strongest flat statement available on a schematic. */
+.disrupted-section {
+  fill: none;
+  stroke: var(--grey);
+  stroke-width: 6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.disrupted-cut {
+  fill: none;
+  stroke: var(--void);
+  stroke-width: 7;
+  stroke-dasharray: 3 7;
+  stroke-linecap: butt;
 }
 
 /* A station is a hollow disc ringed in the line colour: it reads at
@@ -197,6 +236,24 @@ svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
 .legend b.green { color: var(--green); font-weight: 600; }
 .legend b.amber { color: var(--amber); font-weight: 600; }
 .legend b.red { color: var(--red); font-weight: 600; }
+
+/* Notices: the alert text the operator published, and the one
+ * statement the map makes about its own realtime coverage. Flat, and
+ * quiet by design — a rule on the left, no card, no radius, no icon,
+ * no fill — so a notice reads as the operator's sentence rather than
+ * as an alarm the map invented. The rule turns red only on a
+ * disruption notice, which is the same meaning red already carries in
+ * the lamp and on a late train. The section is absent entirely when
+ * there is nothing to say. */
+.notices { margin: 12px 16px 0; max-width: 62em; }
+.notice {
+  margin: 0 0 5px;
+  padding-left: 10px;
+  border-left: 2px solid var(--rule);
+  font-size: 13px;
+  color: var(--muted);
+}
+.notice.disrupted { border-left-color: var(--red); color: var(--text); }
 
 /* The note under the legend states what "live" means here, because a
  * moving dot invites a reader to believe it is a measurement. */
@@ -260,6 +317,8 @@ svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
 <!--MAP-SVG-->
 </main>
 
+<!--MAP-NOTICES-->
+
 <div class="legend no-print">
   <span class="key">
     <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true"><rect x="6" y="2" width="13" height="6" rx="1.2" fill="#b9b9c0"/></svg>
@@ -272,6 +331,10 @@ svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
   <span class="key">
     <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true"><rect x="6.5" y="2.5" width="12" height="5" rx="1.2" fill="none" stroke="#b9b9c0" stroke-width="1.6"/></svg>
     schedule only
+  </span>
+  <span class="key">
+    <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true"><path d="M0 5 L26 5" stroke="#5c5d66" stroke-width="6" stroke-dasharray="4 3"/></svg>
+    disrupted, on the section the alert names
   </span>
   <span class="key">
     <b class="green">on time</b> · <b class="amber">early</b> · <b class="red">delayed 60 s or more</b>
@@ -570,15 +633,22 @@ function updateStatus() {
   var parts = [];
   var state = "";
   if (snapshot) {
+    /* The same three-state mapping the page was rendered with: green
+     * while the layer is current, amber while it is ageing, red once
+     * it is stale or absent. The words always carry the age. */
     var freshness = snapshot.freshness;
     if (freshness.state === "live") {
       parts.push("live");
-      state = "ok";
+      state = "live";
+    } else if (freshness.state === "ageing") {
+      parts.push("ageing");
+      state = "ageing";
     } else if (freshness.state === "stale") {
       parts.push("schedule only");
       state = "stale";
     } else {
       parts.push("schedule only · no realtime layer");
+      state = "stale";
     }
     if (freshness.age_secs != null) {
       parts.push("realtime feed " + ago(freshness.age_secs));
@@ -586,20 +656,22 @@ function updateStatus() {
     parts.push(snapshot.trains.length + " trains");
   }
   if (failedAt > fetchedAt) {
+    /* A page that cannot reach its one URL is not live, whatever the
+     * last snapshot said. Red, like a stale feed. */
     parts.push("connection lost " + ago((Date.now() - failedAt) / 1000));
-    state = "down";
+    state = "stale";
   } else if (fetchedAt) {
     var age = (Date.now() - fetchedAt) / 1000;
     parts.push("fetched " + ago(age));
     /* A poll that has missed three of its own intervals is behind,
-     * whatever the feed says. */
-    if (age > GEO.pollSecs * 3) state = "stale";
+     * whatever the feed says: the page itself is ageing. */
+    if (age > GEO.pollSecs * 3 && state !== "stale") state = "ageing";
   } else {
     parts.push("waiting for the snapshot");
   }
-  lampEl.classList.toggle("ok", state === "ok");
+  lampEl.classList.toggle("live", state === "live");
+  lampEl.classList.toggle("ageing", state === "ageing");
   lampEl.classList.toggle("stale", state === "stale");
-  lampEl.classList.toggle("down", state === "down");
   statusEl.textContent = parts.join(" · ");
 }
 

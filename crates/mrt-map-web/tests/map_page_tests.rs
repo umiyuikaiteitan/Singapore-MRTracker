@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use mrt_gtfs::{GtfsFeed, GtfsTime, RailNetwork, ServiceDate};
 use mrt_gtfs_rt::{RailRtFeed, StopTimeEvent, StopTimeUpdate, TripUpdate};
-use mrt_live::{Layout, NetworkSnapshot, NetworkSnapshotBuilder};
+use mrt_live::{Layout, LineState, NetworkSnapshot, NetworkSnapshotBuilder};
 use mrt_map_web::{
     map_geometry, map_snapshot_json, render_map_page, render_network_svg, MapPageInput,
 };
@@ -98,15 +98,53 @@ fn schedule_page(snapshot_url: &str) -> String {
     })
 }
 
+/// Render the whole page from a snapshot the caller built.
+fn page_of(network: &RailNetwork, snapshot: &NetworkSnapshot) -> String {
+    let layout = bound_layout(network);
+    render_map_page(&MapPageInput {
+        snapshot,
+        layout: &layout,
+        snapshot_url: "/api/map-snapshot",
+        deployment: "test build",
+    })
+}
+
+/// The legacy alert payload of a North South Line disruption.
+///
+/// It names two stations that one edge of the line joins — Jurong East
+/// (`NS1`) and Choa Chu Kang (`NS4`) — so the map has a section to
+/// mark and does not have to guess one.
+fn disrupted_alerts(stations: &str) -> mrt_datamall::TrainServiceAlerts {
+    serde_json::from_str(&format!(
+        r#"{{
+            "Status": 2,
+            "AffectedSegments": [
+                {{
+                    "Line": "NSL",
+                    "Direction": "Both",
+                    "Stations": "{stations}",
+                    "FreePublicBus": "NS1",
+                    "FreeMRTShuttle": "",
+                    "MRTShuttleDirection": ""
+                }}
+            ],
+            "Message": [{{"Content": "NSL: no service.", "CreatedDate": ""}}]
+        }}"#
+    ))
+    .unwrap()
+}
+
 // ----------------------------------------------------------------------
 // The committed SVG snapshot
 // ----------------------------------------------------------------------
 
-fn svg_snapshot_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/snapshots/map-mini.svg")
+fn svg_snapshot_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/snapshots")
+        .join(name)
 }
 
-/// Compare the rendered SVG with the stored snapshot, or write it.
+/// Compare a rendered SVG with the stored snapshot, or write it.
 ///
 /// To accept an intended change, run
 ///
@@ -115,18 +153,11 @@ fn svg_snapshot_path() -> PathBuf {
 /// ```
 ///
 /// and review the diff.
-#[test]
-fn the_network_svg_is_stable() {
-    let network = network();
-    let snapshot = schedule_snapshot(&network);
-    let layout = bound_layout(&network);
-    let geometry = map_geometry(&snapshot, &layout);
-    let actual = render_network_svg(&snapshot, &geometry);
-
-    let path = svg_snapshot_path();
+fn assert_svg_snapshot(name: &str, actual: &str) {
+    let path = svg_snapshot_path(name);
     if std::env::var("UPDATE_SNAPSHOTS").is_ok() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(&path, &actual).unwrap();
+        std::fs::write(&path, actual).unwrap();
         return;
     }
     let expected = std::fs::read_to_string(&path).unwrap_or_else(|_| {
@@ -151,11 +182,39 @@ fn the_network_svg_is_stable() {
 }
 
 #[test]
-fn the_svg_snapshot_file_is_committed() {
+fn the_network_svg_is_stable() {
+    let network = network();
+    let snapshot = schedule_snapshot(&network);
+    let layout = bound_layout(&network);
+    let geometry = map_geometry(&snapshot, &layout);
+    assert_svg_snapshot("map-mini.svg", &render_network_svg(&snapshot, &geometry));
+}
+
+#[test]
+fn the_disrupted_network_svg_is_stable() {
+    // The same drawing with one line disrupted: the ribbon greys and
+    // the section the alert names is cut. The snapshot pins both.
+    let network = network();
+    let alerts = disrupted_alerts("NS1,NS4");
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_alerts(&alerts)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    let layout = bound_layout(&network);
+    let geometry = map_geometry(&snapshot, &layout);
+    assert_svg_snapshot(
+        "map-mini-disrupted.svg",
+        &render_network_svg(&snapshot, &geometry),
+    );
+}
+
+#[test]
+fn the_svg_snapshot_files_are_committed() {
     // A snapshot that only exists on the machine that wrote it is no
     // snapshot at all.
-    let path = svg_snapshot_path();
-    assert!(path.metadata().is_ok_and(|m| m.len() > 0), "{path:?}");
+    for name in ["map-mini.svg", "map-mini-disrupted.svg"] {
+        let path = svg_snapshot_path(name);
+        assert!(path.metadata().is_ok_and(|m| m.len() > 0), "{path:?}");
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -258,6 +317,147 @@ fn the_only_network_target_is_the_snapshot_url() {
     assert!(page.contains("data-snapshot-url=\"https://raw.example.com/live/map.json\""));
 }
 
+// ----------------------------------------------------------------------
+// The three states of the acceptance criteria
+// ----------------------------------------------------------------------
+
+#[test]
+fn a_disrupted_line_greys_and_its_named_section_is_marked() {
+    let network = network();
+    let alerts = disrupted_alerts("NS1,NS4");
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_alerts(&alerts)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    let page = page_of(&network, &snapshot);
+
+    // The line is not deleted: it keeps its ribbon and takes the
+    // disrupted class, which is what greys it.
+    assert!(page.contains("<g class=\"ribbon-group disrupted\""));
+    // The section the alert names is cut out of it. Jurong East and
+    // Choa Chu Kang are joined by one edge of the line, so exactly one
+    // section is marked.
+    assert_eq!(page.matches("<path class=\"disrupted-section\"").count(), 1);
+    // Only the disrupted line greys; the others keep their identity.
+    assert!(page.contains("<g class=\"ribbon-group\" data-layout-line=\"line-ewl\""));
+
+    // The state is named in words, from the fields the alert carries
+    // and from nothing else.
+    assert!(page.contains("<p class=\"notice disrupted\">"));
+    assert!(page.contains("NSL disrupted"));
+    assert!(page.contains("direction Both"));
+    assert!(page.contains("NS1, NS4"));
+    assert!(page.contains("free public bus at NS1"));
+    // The alert text reaches the page as the network notice it is.
+    assert!(page.contains("<p class=\"notice\">NSL: no service.</p>"));
+
+    // The trains of a disrupted line are still drawn from what the
+    // feed says: the line loses its colour, not its service.
+    assert!(page.contains("<g class=\"trains\" id=\"map-trains\"></g>"));
+    assert!(snapshot.trains.iter().any(|train| train.line.0 == 0));
+}
+
+#[test]
+fn an_alert_without_stations_marks_the_line_and_not_a_guess() {
+    let network = network();
+    let alerts = disrupted_alerts("");
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_alerts(&alerts)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    let page = page_of(&network, &snapshot);
+
+    // The line greys, and nothing on it is marked: the alert names no
+    // station, so the map has no section it may claim.
+    assert!(page.contains("<g class=\"ribbon-group disrupted\""));
+    assert!(!page.contains("<path class=\"disrupted-section\""));
+    assert!(page.contains("the alert names no station"));
+    // The gap is reported rather than hidden.
+    assert!(page.contains("map-disruption-without-segment"));
+}
+
+#[test]
+fn a_stale_feed_reads_red_with_its_age_in_words() {
+    let network = network();
+    let realtime = RailRtFeed {
+        feed_timestamp: Some(NOW_UNIX - 600),
+        trip_updates: vec![TripUpdate {
+            trip_id: Some("NS_T1".to_string()),
+            delay_secs: Some(120),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    let page = page_of(&network, &snapshot);
+
+    // Red, and the age is in words beside it.
+    assert!(page.contains("<span class=\"lamp stale\""));
+    assert!(page.contains("schedule only \u{00B7} realtime feed 10 min ago"));
+    // The prediction is not applied, and the page says why.
+    assert!(page.contains("realtime-stale"));
+}
+
+#[test]
+fn an_ageing_feed_reads_amber_and_keeps_its_predictions() {
+    let network = network();
+    let realtime = RailRtFeed {
+        feed_timestamp: Some(NOW_UNIX - 80),
+        trip_updates: vec![TripUpdate {
+            trip_id: Some("NS_T1".to_string()),
+            delay_secs: Some(120),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    let page = page_of(&network, &snapshot);
+
+    assert!(page.contains("<span class=\"lamp ageing\""));
+    assert!(page.contains("ageing \u{00B7} realtime feed 80 s ago"));
+    // Amber is not red: the run still carries the operator's delay.
+    let run = snapshot
+        .trains
+        .iter()
+        .find(|train| train.source_trip_id == "NS_T1")
+        .expect("NS_T1 is running at 06:05");
+    assert_eq!(run.delay_secs, Some(120));
+}
+
+#[test]
+fn an_empty_realtime_snapshot_says_what_it_is() {
+    let network = network();
+    // A feed that arrived, is current, and names no run at all.
+    let realtime = RailRtFeed {
+        feed_timestamp: Some(NOW_UNIX - 10),
+        trip_updates: Vec::new(),
+        ..Default::default()
+    };
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    let page = page_of(&network, &snapshot);
+
+    // The lamp is green, because the feed itself is current, and the
+    // page has to say plainly that nothing on the map came from it.
+    assert!(page.contains("<span class=\"lamp live\""));
+    assert!(page.contains("The realtime layer names no run drawn on this map"));
+    assert!(page.contains("realtime-without-trip-updates"));
+    assert!(!snapshot.trains.is_empty());
+}
+
+#[test]
+fn a_normal_network_carries_no_notice_area() {
+    // The notice area exists only when there is something to say.
+    let page = schedule_page("/api/map-snapshot");
+    assert!(!page.contains("<section class=\"notices\""));
+    assert!(!page.contains("<path class=\"disrupted-section\""));
+    assert!(!page.contains("ribbon-group disrupted"));
+    assert!(page.contains("<span class=\"lamp stale\""));
+}
+
 #[test]
 fn hostile_feed_text_renders_inert() {
     let network = network();
@@ -287,4 +487,31 @@ fn hostile_feed_text_renders_inert() {
     // The hostile colour never reaches a presentation attribute; the
     // renderer falls back to the layout colour or the palette.
     assert!(!page.contains("onload"));
+}
+
+#[test]
+fn hostile_alert_text_renders_inert() {
+    let network = network();
+    let mut snapshot = schedule_snapshot(&network);
+
+    // The alert fields are feed text too: the message, the direction,
+    // and the station codes all reach the notice area, and none of
+    // them may reach it as markup.
+    snapshot.notices = vec!["<img src=x onerror=alert(1)>".to_string()];
+    for line in &mut snapshot.lines {
+        if line.name == "NSL" {
+            line.state = LineState::Disrupted {
+                stations: vec!["NS1</p><script>alert(2)</script>".to_string()],
+                direction: "\"><script>alert(3)</script>".to_string(),
+                free_public_bus: vec!["<b>NS1</b>".to_string()],
+            };
+        }
+    }
+    let page = page_of(&network, &snapshot);
+
+    assert!(page.contains("class=\"notice disrupted\""));
+    assert!(!page.contains("<script>alert"));
+    assert!(!page.contains("<img src=x"));
+    assert!(!page.contains("<b>NS1</b>"));
+    assert!(page.contains("&lt;img src=x onerror=alert(1)&gt;"));
 }

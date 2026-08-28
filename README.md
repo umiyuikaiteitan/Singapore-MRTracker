@@ -352,15 +352,21 @@ headless browser and compares them with the baselines in
 
 The library is the base for these planned applications:
 
-- An interactive live train map. See
-  [`docs/LIVE-MAP-POC.md`](docs/LIVE-MAP-POC.md) for the
-  plan: a schematic whole-network map, why the positions are derived
-  rather than measured, and how the map says so.
+- An interactive live train map: a proof of concept, in
+  `crates/mrt-map-web` and `crates/mrt-map-static`, on its own site
+  separate from the board. See
+  [`docs/LIVE-MAP-POC.md`](docs/LIVE-MAP-POC.md) for the plan and what
+  each phase shipped: a schematic whole-network map, why the positions
+  are derived rather than measured, and how the map says so. One phase
+  is still open, and it needs a DataMall account key to verify the feed
+  against.
 - Station destination boards (draft in `crates/mrt-board-web`).
 - Physical LED panel drivers.
 - Ports of the core model to other languages.
 - A live overlay on the train diagram: scheduled against actual,
-  from the GTFS-Realtime trip updates.
+  from the GTFS-Realtime trip updates. The interface is written down
+  in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), under "The live
+  overlay on the train diagram"; nothing implements it yet.
 
 ## Attribution
 
