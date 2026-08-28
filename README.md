@@ -150,6 +150,10 @@ interchange opens the same board.
 
 The board reads Singapore time (UTC+8) wherever it is opened, and the
 status line reports when the page last reached the live status feed.
+Its lamp reports the freshness of the DataMall layers behind the last
+answer, not the local server: green only when they were freshly
+fetched, amber when the board serves aged cache, red when the
+upstream is failing or the server stops answering.
 
 To host the board without a server, generate it as a static site.
 See `docs/DEPLOY-PAGES.md` for the GitHub Pages workflow:

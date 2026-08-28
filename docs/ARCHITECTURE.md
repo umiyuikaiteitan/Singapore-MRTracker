@@ -258,10 +258,18 @@ The crate merges the three data sources into view models:
 - `NetworkStatus::from_alerts` maps the legacy alerts into one
   status entry per known line. The list is stable, so status boards
   can render a fixed layout.
-- `LiveBoardBuilder` decorates the static departure board with live
+- `LiveBoardBuilder` merges the static departure board with live
   layers: delays and cancellations from trip updates, crowd levels
   from `PCDRealTime`, notices from the legacy alerts, and the
   GTFS-Realtime service alerts. Every layer is optional.
+- With a realtime layer the board predicts rather than decorates:
+  each row shows its scheduled time plus the delay the feed reports
+  for it (the per-stop event of the call where the feed names one,
+  otherwise the trip-level delay), and the predicted time drives the
+  wait, the clock time, the row order, the lookahead window, and the
+  row limit. A call the feed marks skipped leaves the board entirely.
+  A canceled run stays visible as `CANC` and keeps its scheduled
+  slot, because nothing predicts a train that will not run.
 - A service alert reaches a departure when it names the trip, the
   route of the line, or a platform of the station, and one of its
   active periods covers the build time. A no-service alert cancels

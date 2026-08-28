@@ -23,6 +23,11 @@
 //!
 //! The `station` parameter takes any code of a station, in any
 //! spelling: `NS1`, `ns-1`, and `EW24` all name Jurong East.
+//!
+//! A board response carries a `live` member with the actual state of
+//! the upstream DataMall layers — `live`, `stale` with the cache age,
+//! `down`, or `off` without an account key — so the page's freshness
+//! lamp reflects the data, not the presence of a key.
 
 mod clock;
 
@@ -39,6 +44,15 @@ use mrt_live::{match_train_line, LiveBoardBuilder};
 /// How long the server reuses fetched live data.
 const LIVE_TTL: Duration = Duration::from_secs(20);
 
+/// Cached live data this many times [`LIVE_TTL`] old is stale: the
+/// board still serves it, but it no longer counts as live.
+const STALE_TTL_MULTIPLE: u32 = 3;
+
+/// Cached live data this many times [`LIVE_TTL`] old carries no live
+/// signal at all any more. A layer whose upstream keeps failing for
+/// this long counts as down.
+const DOWN_TTL_MULTIPLE: u32 = 15;
+
 /// How long the live forwarder reuses one snapshot. DataMall sees at
 /// most one snapshot refresh per minute, whatever the request rate.
 const FORWARDER_TTL: Duration = Duration::from_secs(60);
@@ -46,13 +60,64 @@ const FORWARDER_TTL: Duration = Duration::from_secs(60);
 /// The default listen address. Override with `MRT_BOARD_ADDR`.
 const DEFAULT_ADDR: &str = "127.0.0.1:8600";
 
-/// Cached live data with its fetch time.
+/// One cached live layer: the last successful fetch, and whether the
+/// latest fetch attempt failed.
+struct Layer<T> {
+    /// The last successful fetch: when it landed and what it carried.
+    data: Option<(Instant, T)>,
+    /// `true` when the latest fetch attempt failed. The cached data
+    /// stays on screen, but it is no longer live.
+    failing: bool,
+}
+
+impl<T> Default for Layer<T> {
+    fn default() -> Self {
+        Layer {
+            data: None,
+            failing: false,
+        }
+    }
+}
+
+impl<T> Layer<T> {
+    /// Report whether the cached data is still within the TTL.
+    fn fresh(&self, now: Instant) -> bool {
+        self.data
+            .as_ref()
+            .is_some_and(|(at, _)| now.duration_since(*at) < LIVE_TTL)
+    }
+
+    /// Record one fetch attempt: a success replaces the data, a
+    /// failure keeps it and marks the layer failing.
+    fn record(&mut self, now: Instant, result: Option<T>) {
+        match result {
+            Some(value) => {
+                self.data = Some((now, value));
+                self.failing = false;
+            }
+            None => self.failing = true,
+        }
+    }
+
+    /// The freshness facts of this layer, for the lamp.
+    fn health(&self, now: Instant) -> LayerHealth {
+        LayerHealth {
+            age_secs: self
+                .data
+                .as_ref()
+                .map(|(at, _)| now.duration_since(*at).as_secs()),
+            failing: self.failing,
+        }
+    }
+}
+
+/// Cached live data with its fetch times and failure marks.
 #[derive(Default)]
 struct LiveCache {
-    alerts: Option<(Instant, TrainServiceAlerts)>,
-    realtime: Option<(Instant, RailRtFeed)>,
-    rt_alerts: Option<(Instant, Vec<mrt_gtfs_rt::Alert>)>,
-    crowd: HashMap<&'static str, (Instant, Vec<PlatformCrowd>)>,
+    alerts: Layer<TrainServiceAlerts>,
+    realtime: Layer<RailRtFeed>,
+    rt_alerts: Layer<Vec<mrt_gtfs_rt::Alert>>,
+    crowd: HashMap<&'static str, Layer<Vec<PlatformCrowd>>>,
 }
 
 struct App {
@@ -197,17 +262,17 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
         .min(12);
 
     // Refresh the live layers, then build the board.
-    let (alerts, realtime, rt_alerts, crowd) = live_layers(app, station);
+    let layers = live_layers(app, station);
     let mut builder = LiveBoardBuilder::new(&app.network).max_rows(rows);
-    if let Some(alerts) = &alerts {
+    if let Some(alerts) = &layers.alerts {
         builder = builder.with_alerts(alerts);
     }
-    if let Some(realtime) = &realtime {
+    if let Some(realtime) = &layers.realtime {
         builder = builder.with_realtime(realtime);
     }
     builder = builder
-        .with_crowd(&crowd)
-        .with_rt_alerts(&rt_alerts, clock::unix_now() as u64);
+        .with_crowd(&layers.crowd)
+        .with_rt_alerts(&layers.rt_alerts, clock::unix_now() as u64);
 
     let (date, now) = clock::sgt_now();
     let board = builder.build(station, date, now, 3600);
@@ -215,52 +280,141 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
         "board": board,
         "date": date,
         "clock": now,
-        "live": app.client.is_some(),
+        "live": live_json(app, &layers.health),
     })
     .to_string())
 }
 
+/// The `live` member of a board response: the actual freshness of the
+/// upstream layers, not the presence of an account key.
+fn live_json(app: &App, health: &[LayerHealth]) -> serde_json::Value {
+    if app.client.is_none() {
+        return serde_json::json!({ "state": "off" });
+    }
+    match upstream_state(health) {
+        UpstreamState::Live => serde_json::json!({ "state": "live" }),
+        UpstreamState::Stale { age_secs } => {
+            serde_json::json!({ "state": "stale", "age_secs": age_secs })
+        }
+        UpstreamState::Down => serde_json::json!({ "state": "down" }),
+    }
+}
+
+// ----------------------------------------------------------------------
+// Upstream freshness
+// ----------------------------------------------------------------------
+
+/// The freshness facts of one upstream layer.
+#[derive(Debug, Clone, Copy)]
+struct LayerHealth {
+    /// Seconds since the last successful fetch. `None` when no fetch
+    /// has ever succeeded.
+    age_secs: Option<u64>,
+    /// `true` when the latest fetch attempt failed.
+    failing: bool,
+}
+
+/// The state of the live data behind one board response.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UpstreamState {
+    /// Every layer holds data from a recent successful fetch.
+    Live,
+    /// Some layer serves aged cache or has a failing upstream, but
+    /// live data is still on the board. `age_secs` is the age of the
+    /// oldest cache still served.
+    Stale {
+        /// Seconds since the oldest served layer was fetched.
+        age_secs: u64,
+    },
+    /// Nothing live remains: no layer ever fetched, or every failing
+    /// layer's cache has outlived [`DOWN_TTL_MULTIPLE`].
+    Down,
+}
+
+/// Decide the lamp state from the freshness of the upstream layers.
+///
+/// A layer is live while its latest attempt succeeded and its data is
+/// at most [`STALE_TTL_MULTIPLE`] TTLs old. A layer with older data,
+/// or with a failing upstream, is stale: the board serves its cache
+/// and says so. A layer counts as dead once it has no data, or once
+/// its data outlives [`DOWN_TTL_MULTIPLE`] TTLs. All layers live is
+/// live; all layers dead is down; anything between is stale, aged by
+/// the oldest cache still served.
+fn upstream_state(layers: &[LayerHealth]) -> UpstreamState {
+    let stale_after = LIVE_TTL.as_secs() * u64::from(STALE_TTL_MULTIPLE);
+    let down_after = LIVE_TTL.as_secs() * u64::from(DOWN_TTL_MULTIPLE);
+    let mut all_live = true;
+    let mut any_alive = false;
+    let mut oldest: u64 = 0;
+    for layer in layers {
+        match layer.age_secs {
+            Some(age) if age <= down_after => {
+                any_alive = true;
+                oldest = oldest.max(age);
+                if layer.failing || age > stale_after {
+                    all_live = false;
+                }
+            }
+            // Never fetched, or too old to trust at all.
+            _ => all_live = false,
+        }
+    }
+    if !any_alive {
+        UpstreamState::Down
+    } else if all_live {
+        UpstreamState::Live
+    } else {
+        UpstreamState::Stale { age_secs: oldest }
+    }
+}
+
+/// The live layers behind one board response, with their freshness.
+#[derive(Default)]
+struct LiveLayers {
+    alerts: Option<TrainServiceAlerts>,
+    realtime: Option<RailRtFeed>,
+    rt_alerts: Vec<mrt_gtfs_rt::Alert>,
+    crowd: Vec<PlatformCrowd>,
+    /// One entry per layer this response consulted.
+    health: Vec<LayerHealth>,
+}
+
 /// Get the live layers for one station, from the cache or from the
-/// API.
-fn live_layers(
-    app: &App,
-    station: mrt_gtfs::StationId,
-) -> (
-    Option<TrainServiceAlerts>,
-    Option<RailRtFeed>,
-    Vec<mrt_gtfs_rt::Alert>,
-    Vec<PlatformCrowd>,
-) {
+/// API, recording success and failure per layer.
+fn live_layers(app: &App, station: mrt_gtfs::StationId) -> LiveLayers {
     let Some(client) = &app.client else {
-        return (None, None, Vec::new(), Vec::new());
+        return LiveLayers::default();
     };
     let mut cache = app.cache.lock().expect("cache lock");
     let now = Instant::now();
-    let fresh = |at: Instant| now.duration_since(at) < LIVE_TTL;
 
-    if !cache.alerts.as_ref().is_some_and(|(at, _)| fresh(*at)) {
-        if let Ok(alerts) = client.train_service_alerts() {
-            cache.alerts = Some((now, alerts));
-        }
+    if !cache.alerts.fresh(now) {
+        cache.alerts.record(now, client.train_service_alerts().ok());
     }
-    if !cache.realtime.as_ref().is_some_and(|(at, _)| fresh(*at)) {
-        if let Some(feed) = client
-            .fetch_trip_updates()
-            .ok()
-            .and_then(|bytes| RailRtFeed::decode(&bytes).ok())
-        {
-            cache.realtime = Some((now, feed));
-        }
+    if !cache.realtime.fresh(now) {
+        cache.realtime.record(
+            now,
+            client
+                .fetch_trip_updates()
+                .ok()
+                .and_then(|bytes| RailRtFeed::decode(&bytes).ok()),
+        );
     }
-    if !cache.rt_alerts.as_ref().is_some_and(|(at, _)| fresh(*at)) {
-        if let Some(feed) = client
-            .fetch_service_alerts()
-            .ok()
-            .and_then(|bytes| RailRtFeed::decode(&bytes).ok())
-        {
-            cache.rt_alerts = Some((now, feed.alerts));
-        }
+    if !cache.rt_alerts.fresh(now) {
+        cache.rt_alerts.record(
+            now,
+            client
+                .fetch_service_alerts()
+                .ok()
+                .and_then(|bytes| RailRtFeed::decode(&bytes).ok())
+                .map(|feed| feed.alerts),
+        );
     }
+    let mut health = vec![
+        cache.alerts.health(now),
+        cache.realtime.health(now),
+        cache.rt_alerts.health(now),
+    ];
 
     // Crowd data comes per line. Fetch it for the lines of the
     // station.
@@ -269,28 +423,28 @@ fn live_layers(
         let Some(line) = match_train_line(app.network.line(line_id)) else {
             continue;
         };
-        let code = line.code();
-        let stale = !cache.crowd.get(code).is_some_and(|(at, _)| fresh(*at));
-        if stale {
-            if let Ok(records) = client.platform_crowd(line) {
-                cache.crowd.insert(code, (now, records));
-            }
+        let layer = cache.crowd.entry(line.code()).or_default();
+        if !layer.fresh(now) {
+            layer.record(now, client.platform_crowd(line).ok());
         }
-        if let Some((_, records)) = cache.crowd.get(code) {
+        if let Some((_, records)) = &layer.data {
             crowd.extend(records.iter().cloned());
         }
+        health.push(layer.health(now));
     }
 
-    (
-        cache.alerts.as_ref().map(|(_, a)| a.clone()),
-        cache.realtime.as_ref().map(|(_, r)| r.clone()),
-        cache
+    LiveLayers {
+        alerts: cache.alerts.data.as_ref().map(|(_, a)| a.clone()),
+        realtime: cache.realtime.data.as_ref().map(|(_, r)| r.clone()),
+        rt_alerts: cache
             .rt_alerts
+            .data
             .as_ref()
             .map(|(_, a)| a.clone())
             .unwrap_or_default(),
         crowd,
-    )
+        health,
+    }
 }
 
 /// Get one request header value.
@@ -451,6 +605,81 @@ mod tests {
         let (_, query) = split_query("/x?a=100%&b=%zz");
         assert_eq!(query["a"], "100%");
         assert_eq!(query["b"], "%zz");
+    }
+
+    fn ok(age_secs: u64) -> LayerHealth {
+        LayerHealth {
+            age_secs: Some(age_secs),
+            failing: false,
+        }
+    }
+
+    fn failing(age_secs: Option<u64>) -> LayerHealth {
+        LayerHealth {
+            age_secs,
+            failing: true,
+        }
+    }
+
+    #[test]
+    fn fresh_successful_layers_are_live() {
+        assert_eq!(
+            upstream_state(&[ok(0), ok(15), ok(59)]),
+            UpstreamState::Live
+        );
+    }
+
+    #[test]
+    fn a_failing_upstream_is_not_live() {
+        // The cache is seconds old, but the latest attempt failed:
+        // the board serves cache and must say so.
+        assert_eq!(
+            upstream_state(&[ok(5), failing(Some(25)), ok(5)]),
+            UpstreamState::Stale { age_secs: 25 }
+        );
+    }
+
+    #[test]
+    fn aged_cache_is_stale_even_without_a_failure() {
+        // Data beyond STALE_TTL_MULTIPLE * LIVE_TTL (60 s) is no
+        // longer live, and the state carries the oldest age.
+        assert_eq!(
+            upstream_state(&[ok(10), ok(120)]),
+            UpstreamState::Stale { age_secs: 120 }
+        );
+    }
+
+    #[test]
+    fn a_layer_that_never_fetched_is_not_live() {
+        assert_eq!(
+            upstream_state(&[ok(5), failing(None)]),
+            UpstreamState::Stale { age_secs: 5 }
+        );
+    }
+
+    #[test]
+    fn nothing_ever_fetched_is_down() {
+        assert_eq!(
+            upstream_state(&[failing(None), failing(None)]),
+            UpstreamState::Down
+        );
+        assert_eq!(upstream_state(&[]), UpstreamState::Down);
+    }
+
+    #[test]
+    fn a_long_outage_turns_the_lamp_down() {
+        // Beyond DOWN_TTL_MULTIPLE * LIVE_TTL (300 s) the cache
+        // carries no live signal at all any more.
+        assert_eq!(
+            upstream_state(&[failing(Some(301)), failing(Some(400))]),
+            UpstreamState::Down
+        );
+        // One layer still inside the horizon keeps the board stale
+        // rather than down.
+        assert_eq!(
+            upstream_state(&[failing(Some(301)), failing(Some(200))]),
+            UpstreamState::Stale { age_secs: 200 }
+        );
     }
 
     #[test]

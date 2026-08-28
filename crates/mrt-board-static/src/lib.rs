@@ -1,7 +1,7 @@
 //! Shared logic for the static board generator and the live
 //! snapshot tool.
 
-use mrt_datamall::{DataMallClient, TrainLine, UreqTransport};
+use mrt_datamall::{DataMallClient, TrainLine, Transport};
 use mrt_gtfs_rt::{Alert, RailRtFeed};
 
 /// Build the live snapshot: alerts, crowd levels, and trip updates.
@@ -26,6 +26,11 @@ use mrt_gtfs_rt::{Alert, RailRtFeed};
 /// for a canceled trip, and `s` maps stops to per-stop delays. Only
 /// trips with real-time data appear.
 ///
+/// `live` reports whether at least one upstream fetch succeeded. A
+/// snapshot built while DataMall answers nothing says `false`, and
+/// the page then reads schedule-only rather than freshly live — the
+/// `generated` stamp alone must not pass an outage off as live data.
+///
 /// `alerts` carries the GTFS-Realtime service alerts. `m` is the
 /// display text, `e` the effect (`no` no service, `rs` reduced
 /// service, `sd` significant delays, `dt` detour, `ms` modified
@@ -36,14 +41,16 @@ use mrt_gtfs_rt::{Alert, RailRtFeed};
 /// takes effect and expires between snapshot refreshes. A no-service
 /// alert that names a trip is also folded into `trips` as a
 /// cancellation, which older cached pages understand.
-pub fn live_snapshot(client: &DataMallClient<UreqTransport>, now_unix: i64) -> serde_json::Value {
+pub fn live_snapshot<T: Transport>(client: &DataMallClient<T>, now_unix: i64) -> serde_json::Value {
     let alerts = client.train_service_alerts().ok();
 
+    let mut crowd_ok = false;
     let mut crowd = serde_json::Map::new();
     for line in TrainLine::ALL {
         let Ok(records) = client.platform_crowd(line) else {
             continue;
         };
+        crowd_ok = true;
         for record in records {
             let level = match record.crowd_level {
                 mrt_datamall::CrowdLevel::Low => "l",
@@ -55,13 +62,17 @@ pub fn live_snapshot(client: &DataMallClient<UreqTransport>, now_unix: i64) -> s
         }
     }
 
-    let mut trips = trip_updates_json(client);
-    let rt_alerts = client
+    let trip_feed = client
+        .fetch_trip_updates()
+        .ok()
+        .and_then(|bytes| RailRtFeed::decode(&bytes).ok());
+    let mut trips = trip_updates_json(trip_feed.as_ref());
+    let alert_feed = client
         .fetch_service_alerts()
         .ok()
-        .and_then(|bytes| RailRtFeed::decode(&bytes).ok())
-        .map(|feed| feed.alerts)
-        .unwrap_or_default();
+        .and_then(|bytes| RailRtFeed::decode(&bytes).ok());
+    let live = alerts.is_some() || crowd_ok || trip_feed.is_some() || alert_feed.is_some();
+    let rt_alerts = alert_feed.map(|feed| feed.alerts).unwrap_or_default();
     if let serde_json::Value::Object(map) = &mut trips {
         fold_alert_cancellations(map, &rt_alerts, now_unix);
     }
@@ -90,7 +101,7 @@ pub fn live_snapshot(client: &DataMallClient<UreqTransport>, now_unix: i64) -> s
 
     serde_json::json!({
         "generated": now_unix,
-        "live": true,
+        "live": live,
         "disrupted": disrupted,
         "segments": segments,
         "messages": messages,
@@ -198,14 +209,10 @@ pub fn fold_alert_cancellations(
     }
 }
 
-/// Fetch the GTFS-Realtime trip updates and compress them into a
-/// per-trip map. Trips without a delay, a cancellation, or per-stop
-/// data stay out of the map.
-fn trip_updates_json(client: &DataMallClient<UreqTransport>) -> serde_json::Value {
-    let feed = client
-        .fetch_trip_updates()
-        .ok()
-        .and_then(|bytes| RailRtFeed::decode(&bytes).ok());
+/// Compress the GTFS-Realtime trip updates into a per-trip map.
+/// Trips without a delay, a cancellation, or per-stop data stay out
+/// of the map.
+fn trip_updates_json(feed: Option<&RailRtFeed>) -> serde_json::Value {
     let mut trips = serde_json::Map::new();
     let Some(feed) = feed else {
         return serde_json::Value::Object(trips);
@@ -250,7 +257,54 @@ fn trip_updates_json(client: &DataMallClient<UreqTransport>) -> serde_json::Valu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mrt_datamall::{AccountKey, Response, TransportError};
     use mrt_gtfs_rt::{ActivePeriod, AlertCause, AlertEffect, InformedEntity};
+
+    /// A transport for a full DataMall outage: no request completes.
+    struct DownTransport;
+
+    impl Transport for DownTransport {
+        fn get(&self, _url: &str, _headers: &[(&str, &str)]) -> Result<Response, TransportError> {
+            Err(TransportError("offline".to_string()))
+        }
+    }
+
+    /// A transport where only the legacy alerts endpoint answers.
+    struct AlertsOnlyTransport;
+
+    impl Transport for AlertsOnlyTransport {
+        fn get(&self, url: &str, _headers: &[(&str, &str)]) -> Result<Response, TransportError> {
+            if url.contains("TrainServiceAlerts") {
+                Ok(Response {
+                    status: 200,
+                    body: br#"{"value":{"Status":1,"AffectedSegments":[],"Message":[]}}"#.to_vec(),
+                })
+            } else {
+                Err(TransportError("offline".to_string()))
+            }
+        }
+    }
+
+    fn client<T: Transport>(transport: T) -> DataMallClient<T> {
+        DataMallClient::new(AccountKey::new("test-key-123").unwrap(), transport)
+    }
+
+    #[test]
+    fn a_full_outage_is_not_live() {
+        // Every upstream fetch fails: the snapshot must not pass its
+        // fresh `generated` stamp off as live data.
+        let snapshot = live_snapshot(&client(DownTransport), 1_000);
+        assert_eq!(snapshot["live"], serde_json::json!(false));
+        assert_eq!(snapshot["generated"], serde_json::json!(1_000));
+        assert!(snapshot["trips"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn one_answering_source_is_live() {
+        let snapshot = live_snapshot(&client(AlertsOnlyTransport), 1_000);
+        assert_eq!(snapshot["live"], serde_json::json!(true));
+        assert_eq!(snapshot["disrupted"], serde_json::json!(false));
+    }
 
     fn alert(effect: AlertEffect) -> Alert {
         Alert {
