@@ -377,10 +377,12 @@ pub fn build_diagram(
             );
             continue;
         };
+        // The last scheduled start of the block, not `end - headway`:
+        // the two differ when the block length is not a whole multiple
+        // of the headway.
         let shift = band
-            .end
+            .last_start()
             .seconds()
-            .saturating_sub(band.headway_secs)
             .saturating_sub(band.start.seconds());
         let first_path = path_from_times(
             &band.template,

@@ -44,6 +44,30 @@ pub enum DataMallError {
         message: String,
     },
 
+    /// A download link does not use HTTPS.
+    ///
+    /// A pre-signed link carries a signature but no confidentiality,
+    /// so the client refuses to fetch it over any other scheme.
+    #[error("the download link {url} uses the scheme \"{scheme}\"; a dataset link must use HTTPS")]
+    InsecureScheme {
+        /// The requested URL, with its query redacted.
+        url: String,
+        /// The scheme that the link uses, without the `://`.
+        scheme: String,
+    },
+
+    /// The response body is larger than the accepted limit.
+    ///
+    /// The client refuses the response instead of returning the first
+    /// `limit` bytes of it.
+    #[error("the response from {url} is larger than the limit of {limit} bytes")]
+    TooLarge {
+        /// The requested URL, with its query redacted.
+        url: String,
+        /// The limit that the response exceeded, in bytes.
+        limit: usize,
+    },
+
     /// The response contains no download link.
     #[error("the response from {url} contains no download link")]
     NoLink {

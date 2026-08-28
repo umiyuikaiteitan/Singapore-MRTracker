@@ -81,6 +81,12 @@ The crate has four internal layers. Data flows down:
      policy left unexpanded, plus the diagnostics that explain
      everything it could not represent. Renderers use this API and
      never touch the private `TripSchedule`.
+   - A run enters the answer when its own span overlaps the
+     half-open window. A `FrequencyBand` follows the same rule with
+     its span, which runs from its first start to the moment its
+     last run reaches the end of the pattern — past the GTFS
+     `end_time` whenever a run takes longer than one headway,
+     because `end_time` bounds only the starts.
 
 Two more modules support it:
 
@@ -148,6 +154,12 @@ The crate talks to the LTA DataMall OData API.
 - The `Transport` trait isolates the HTTP stack. The default
   implementation uses `ureq` and sits behind the `http-ureq`
   feature. Tests use a mock transport with recorded responses.
+- One size limit, `MAX_DATASET_BYTES` (256 MiB), bounds every
+  response body, and it refuses rather than truncates: the built-in
+  transport reads one byte past the limit and fails, and the client
+  measures the delivered body against the same constant, so a custom
+  transport cannot hand over more. No caller ever receives a
+  shortened body presented as a whole file.
 - `AccountKey` wraps the secret API key. Its debug output is
   redacted. The key travels only in the `AccountKey` request header.
 - Dataset endpoints return pre-signed download links that expire
@@ -155,6 +167,10 @@ The crate talks to the LTA DataMall OData API.
   `fetch_*` methods that get the link and download the file in one
   step. Downloads do not carry the account key, because the link
   carries its own signature.
+- Every download, from a `fetch_*` method or from a snapshot, goes
+  through `download_limited`, which refuses a link that does not use
+  HTTPS before it opens a connection and names the offending scheme
+  in the error. The signed query never appears in an error message.
 - `get_raw` gives access to endpoints that the crate does not model
   yet.
 

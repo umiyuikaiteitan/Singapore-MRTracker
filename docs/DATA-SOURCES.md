@@ -51,6 +51,16 @@ Client methods: `gtfs_schedule_link`, `gtfs_trip_updates_link`,
 `gtfs_service_alerts_link`, and the combined `fetch_gtfs_schedule`,
 `fetch_trip_updates`, `fetch_service_alerts`.
 
+Every one of them downloads through `download_limited`, under two
+rules that hold for the whole crate:
+
+- The link must use HTTPS. A pre-signed link carries a signature but
+  no confidentiality, so a link with any other scheme is an error
+  that names the scheme, and no request goes out.
+- The body must stay within `MAX_DATASET_BYTES` (256 MiB). A larger
+  response is an error, never the first 256 MiB of a file returned as
+  if it were complete.
+
 ## Train service alerts (legacy JSON)
 
 - Endpoint: `TrainServiceAlerts`
