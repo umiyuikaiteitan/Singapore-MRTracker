@@ -47,6 +47,7 @@
 
 #![warn(missing_docs)]
 
+pub mod clock;
 mod layout;
 mod map;
 

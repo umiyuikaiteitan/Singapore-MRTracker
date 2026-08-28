@@ -33,8 +33,6 @@
 //! copied rather than shared, because the live stack does not depend
 //! on the publication stack.
 
-pub mod clock;
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use mrt_gtfs::{alias, Diagnostic, LineId, RailNetwork, StationId};
@@ -219,6 +217,16 @@ const VIEW_HEIGHT: f64 = 700.0;
 /// beside their discs, so the drawing needs room outside the ribbons.
 const VIEW_MARGIN: f64 = 56.0;
 
+/// The share of the fitted width beyond which a station writes its
+/// name to the left of its disc, so that a name near the right edge
+/// stays on the drawing.
+///
+/// The threshold is a fraction of the width the drawing was actually
+/// fitted to, not of [`VIEW_WIDTH`]. A tall layout fits into a box
+/// narrower than the full view, and a threshold measured in the wide
+/// box would sit outside it and flip every label on the drawing.
+const LABEL_LEFT_FRACTION: f64 = 0.72;
+
 /// A position in the viewBox.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ViewPoint {
@@ -370,6 +378,9 @@ struct Placed {
     /// The arc position along that layout line, from 0 to 1.
     t: Option<f64>,
     point: ViewPoint,
+    /// The station code the layout bound with. It is the last resort
+    /// of the palette when no source names a colour.
+    code: String,
     color: String,
 }
 
@@ -412,17 +423,31 @@ pub fn map_geometry(snapshot: &NetworkSnapshot, bound: &BoundLayout) -> MapGeome
         let Some(layout) = layout_station(bound, &station.layout_station) else {
             continue;
         };
-        let color = line_color(snapshot, bound, &layout.line, &station.code);
         placed.entry(station.station.0).or_default().push(Placed {
             layout_line: layout.line.clone(),
             t: layout.t,
             point: fit.apply(layout.point),
-            color,
+            code: station.code.clone(),
+            color: String::new(),
         });
     }
 
-    // Step 3: the ribbons, and the network line each one carries.
+    // Step 3: which network line every layout line carries, and the
+    // colour that follows from it. The vote reads the placements
+    // alone, so it runs before any colour is picked and every colour
+    // on the drawing comes from the same answer.
     let carried = carried_lines(snapshot, &placed);
+    for group in placed.values_mut() {
+        for placement in group.iter_mut() {
+            placement.color = line_color(
+                snapshot,
+                bound,
+                &placement.layout_line,
+                carried.get(&placement.layout_line).copied(),
+                &placement.code,
+            );
+        }
+    }
     let mut lines = Vec::new();
     for line in &drawable {
         let sample = bound
@@ -434,17 +459,23 @@ pub fn map_geometry(snapshot: &NetworkSnapshot, bound: &BoundLayout) -> MapGeome
             })
             .map(|station| station.code.clone())
             .unwrap_or_default();
+        let network_line = carried.get(&line.id).copied();
         lines.push(GeoLine {
             layout_id: line.id.clone(),
             name: line.name.clone(),
-            color: line_color(snapshot, bound, &line.id, &sample),
+            color: line_color(snapshot, bound, &line.id, network_line, &sample),
             points: line.points.iter().map(|&p| fit.apply(p)).collect(),
-            line: carried.get(&line.id).copied(),
+            line: network_line,
         });
     }
 
-    // Step 4: one disc per network station.
-    let right_edge = fit.width - VIEW_WIDTH * 0.28;
+    // Step 4: one disc per network station, anchored at the mean of
+    // its placements, so an interchange drawn on two ribbons carries
+    // one disc between them. Everything else that has to meet that
+    // disc — a chord, and the trains that ride it — reads the same
+    // anchor from here.
+    let right_edge = fit.width * LABEL_LEFT_FRACTION;
+    let mut anchors: BTreeMap<usize, ViewPoint> = BTreeMap::new();
     let mut stations = Vec::new();
     for (index, group) in &placed {
         let count = group.len() as f64;
@@ -452,6 +483,7 @@ pub fn map_geometry(snapshot: &NetworkSnapshot, bound: &BoundLayout) -> MapGeome
             x: group.iter().map(|p| p.point.x).sum::<f64>() / count,
             y: group.iter().map(|p| p.point.y).sum::<f64>() / count,
         };
+        anchors.insert(*index, point);
         let Some(record) = snapshot.stations.iter().find(|s| s.station.0 == *index) else {
             continue;
         };
@@ -480,10 +512,12 @@ pub fn map_geometry(snapshot: &NetworkSnapshot, bound: &BoundLayout) -> MapGeome
                 sections.insert(key, points);
             }
             None => {
-                let (Some(from), Some(to)) = (
-                    placed.get(&edge.from.0).map(|g| g[0].point),
-                    placed.get(&edge.to.0).map(|g| g[0].point),
-                ) else {
+                // The chord joins the two discs, so it starts and ends
+                // at the anchors the discs are drawn at. Reading one
+                // raw placement instead would leave the chord, and the
+                // trains that ride it, off the disc at an interchange.
+                let (Some(&from), Some(&to)) = (anchors.get(&edge.from.0), anchors.get(&edge.to.0))
+                else {
                     continue;
                 };
                 chords += 1;
@@ -672,32 +706,25 @@ fn carried_lines(
 
 /// Pick the colour of one layout line.
 ///
-/// The feed colour comes first, because the operator publishes it; the
-/// layout colour second, because a person drew it; the official
-/// palette last. Every one of them passes [`feed_color`] first, so a
-/// hostile `route_color` becomes a palette colour rather than a CSS
-/// declaration.
+/// The feed colour of the network line the ribbon carries comes first,
+/// because the operator publishes it; the layout colour second,
+/// because a person drew it; the official palette last. Every one of
+/// them passes [`feed_color`] first, so a hostile `route_color`
+/// becomes a palette colour rather than a CSS declaration.
+///
+/// `network_line` is [`carried_lines`]'s answer, the majority vote over
+/// the edges the layout draws on the ribbon. The first station of a
+/// ribbon is not that answer: at an interchange it belongs to two
+/// lines, and reading its first touching edge would paint a whole line
+/// in a neighbour's colour.
 fn line_color(
     snapshot: &NetworkSnapshot,
     bound: &BoundLayout,
     layout_line: &str,
+    network_line: Option<LineId>,
     sample_code: &str,
 ) -> String {
-    let network = bound
-        .stations
-        .iter()
-        .filter(|station| {
-            layout_station(bound, &station.layout_station)
-                .is_some_and(|layout| layout.line == layout_line)
-        })
-        .find_map(|station| {
-            snapshot
-                .edges
-                .iter()
-                .find(|edge| edge.from == station.station || edge.to == station.station)
-                .map(|edge| edge.line)
-        });
-    let feed = network
+    let feed = network_line
         .and_then(|id| snapshot.lines.iter().find(|line| line.line == id))
         .and_then(|line| line.color.as_deref())
         .and_then(feed_color);

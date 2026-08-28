@@ -237,8 +237,9 @@ fn a_run_between_two_stations_sits_on_an_edge() {
 #[test]
 fn a_run_standing_at_a_station_sits_on_the_station() {
     let network = network();
-    // EW_T1 arrives at Jurong East at 06:05:00 and leaves at 06:05:30.
-    let realtime = feed(NOW_UNIX, vec![update("EW_T1", None, vec![])]);
+    // EW_T1 arrives at Jurong East at 06:05:00 and leaves at 06:05:30,
+    // and the operator reports it running to time.
+    let realtime = feed(NOW_UNIX, vec![update("EW_T1", Some(0), vec![])]);
     let snapshot = NetworkSnapshotBuilder::new(&network)
         .with_realtime(&realtime, NOW_UNIX)
         .build(date(), GtfsTime::from_hms(6, 5, 0));
@@ -330,6 +331,104 @@ fn a_predicted_time_without_a_delay_leaves_a_note() {
     let run = train(&snapshot, "NS_T1");
     assert!((run.progress - 270.0 / 570.0).abs() < 1e-9);
     assert_eq!(run.delay_secs, None);
+}
+
+#[test]
+fn an_empty_trip_update_leaves_the_run_schedule_only() {
+    let network = network();
+    // An update that names the run and says nothing else: no delay, no
+    // stop event. It shifts no time, so it supports no claim beyond the
+    // schedule, and the provenance says exactly that.
+    let realtime = feed(NOW_UNIX, vec![update("EW_T1", None, vec![])]);
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+
+    let run = train(&snapshot, "EW_T1");
+    assert!(matches!(run.location, TrainLocation::AtStation { .. }));
+    assert_eq!(run.quality, PositionQuality::ScheduleOnly);
+    assert_eq!(run.delay_secs, None);
+
+    // An update that names another stop of the same run says nothing
+    // about the call the position stands on either.
+    let realtime = feed(
+        NOW_UNIX,
+        vec![update("EW_T1", None, vec![stop_delay("RFP_EW", 60)])],
+    );
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+    assert_eq!(
+        train(&snapshot, "EW_T1").quality,
+        PositionQuality::ScheduleOnly
+    );
+}
+
+#[test]
+fn a_skipped_call_is_passed_and_never_stood_at() {
+    let network = network();
+    // The operator says NS_T1 does not serve Choa Chu Kang, where it
+    // was scheduled to stand from 06:10:00 to 06:10:30. A run that
+    // skips a station never dwells there: through the whole scheduled
+    // dwell it is already on the edge beyond it.
+    let realtime = feed(
+        NOW_UNIX,
+        vec![update(
+            "NS_T1",
+            None,
+            vec![StopTimeUpdate {
+                stop_id: Some("CCK_NS".to_string()),
+                skipped: true,
+                ..Default::default()
+            }],
+        )],
+    );
+    let build = |clock: GtfsTime| {
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build(date(), clock)
+    };
+
+    for clock in [GtfsTime::from_hms(6, 10, 0), GtfsTime::from_hms(6, 10, 15)] {
+        let snapshot = build(clock);
+        let run = train(&snapshot, "NS_T1");
+        match run.location {
+            TrainLocation::OnEdge {
+                index, from, to, ..
+            } => {
+                assert_eq!(index, 1);
+                assert_eq!(station_name(&snapshot, from), "Choa Chu Kang");
+                assert_eq!(station_name(&snapshot, to), "Marina Bay");
+            }
+            TrainLocation::AtStation { .. } => {
+                panic!("the run skips Choa Chu Kang, so it never stands there")
+            }
+        }
+        // The edge beyond the skipped call starts at the arrival, not
+        // at the departure the run no longer makes.
+        assert_eq!(run.edge_secs, Some(1200));
+    }
+    // 06:10:15 is 15 s into that edge.
+    let progress = train(&build(GtfsTime::from_hms(6, 10, 15)), "NS_T1").progress;
+    assert!((progress - 15.0 / 1200.0).abs() < 1e-9, "{progress}");
+
+    // The skip is reported, not swallowed.
+    assert!(has_diagnostic_about(
+        &build(GtfsTime::from_hms(6, 10, 15)),
+        "train-call-skipped",
+        "20250505:NS_T1"
+    ));
+
+    // Before the skipped call the run still rides the edge that leads
+    // to it: the station is out of the trajectory, not out of the line.
+    let snapshot = build(GtfsTime::from_hms(6, 5, 0));
+    match train(&snapshot, "NS_T1").location {
+        TrainLocation::OnEdge { index, to, .. } => {
+            assert_eq!(index, 0);
+            assert_eq!(station_name(&snapshot, to), "Choa Chu Kang");
+        }
+        TrainLocation::AtStation { .. } => panic!("NS_T1 is between two stations at 06:05"),
+    }
 }
 
 #[test]
@@ -596,6 +695,42 @@ fn a_run_past_midnight_stays_on_its_service_day() {
         "{}",
         run.progress
     );
+}
+
+#[test]
+fn a_run_past_midnight_reaches_the_map_after_midnight() {
+    let network = network();
+    // Ten past midnight on the Tuesday. Nothing runs on the service
+    // day that has just begun, and yet trains are out: NS_T5 left
+    // Jurong East at 23:50:30 on the Monday and is still running, as
+    // 24:xx on the Monday's own service day. The builder scans that day
+    // too, exactly as `RailNetwork::departure_board` does.
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .build("20250506".parse().unwrap(), GtfsTime::from_hms(0, 10, 0));
+
+    assert_eq!(snapshot.freshness.service_date.to_string(), "20250506");
+    let run = train(&snapshot, "NS_T5");
+    assert_eq!(run.instance_id, "20250505:NS_T5");
+    match run.location {
+        TrainLocation::OnEdge {
+            index, from, to, ..
+        } => {
+            assert_eq!(index, 1);
+            assert_eq!(station_name(&snapshot, from), "Choa Chu Kang");
+            assert_eq!(station_name(&snapshot, to), "Marina Bay");
+        }
+        TrainLocation::AtStation { .. } => panic!("NS_T5 is between two stations"),
+    }
+    // 24:05:30 to 24:25:00 on the Monday, and the clock stands at
+    // 24:10:00 there.
+    assert!(
+        (run.progress - 270.0 / 1170.0).abs() < 1e-9,
+        "{}",
+        run.progress
+    );
+
+    // It is the only run out at that hour, and it appears once.
+    assert_eq!(snapshot.trains.len(), 1);
 }
 
 #[test]

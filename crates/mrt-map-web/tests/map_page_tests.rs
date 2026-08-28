@@ -41,6 +41,37 @@ fn date() -> ServiceDate {
     "20250505".parse().unwrap()
 }
 
+/// Bind a layout written for one test to the fixture network.
+///
+/// The committed layout answers most questions; a few — a drawing far
+/// taller than it is wide, an interchange the layout draws twice — need
+/// a shape the fixture layout does not have.
+fn layout_of(network: &RailNetwork, value: serde_json::Value) -> mrt_live::BoundLayout {
+    Layout::from_geojson(&value).bind(network)
+}
+
+/// One line feature of a test layout.
+fn layout_line(id: &str, color: &str, points: &[(f64, f64)]) -> serde_json::Value {
+    let coordinates: Vec<serde_json::Value> = points
+        .iter()
+        .map(|&(x, y)| serde_json::json!([x, y]))
+        .collect();
+    serde_json::json!({
+        "type": "Feature",
+        "properties": {"ofm": "line", "id": id, "name": id, "color": color, "visible": true},
+        "geometry": {"type": "LineString", "coordinates": coordinates},
+    })
+}
+
+/// One station feature of a test layout.
+fn layout_stop(id: &str, line: &str, code: &str, t: f64, at: (f64, f64)) -> serde_json::Value {
+    serde_json::json!({
+        "type": "Feature",
+        "properties": {"ofm": "station", "id": id, "lineId": line, "code": code, "t": t},
+        "geometry": {"type": "Point", "coordinates": [at.0, at.1]},
+    })
+}
+
 /// The schedule-only snapshot that pins the static layer: no realtime,
 /// a fixed date, a fixed clock.
 fn schedule_snapshot(network: &RailNetwork) -> NetworkSnapshot {
@@ -218,6 +249,139 @@ fn the_svg_snapshot_files_are_committed() {
 }
 
 // ----------------------------------------------------------------------
+// The drawing
+// ----------------------------------------------------------------------
+
+#[test]
+fn a_ribbon_that_starts_at_an_interchange_keeps_its_own_colour() {
+    let network = network();
+    let snapshot = schedule_snapshot(&network);
+    let layout = bound_layout(&network);
+    let geometry = map_geometry(&snapshot, &layout);
+
+    // The first station of the East West Line ribbon is Jurong East,
+    // which is also the first station of the North South Line. The
+    // colour of a ribbon follows the line it carries — the majority
+    // vote over the edges the layout draws on it — and never whichever
+    // line the first station happens to touch first.
+    let color = |id: &str| {
+        geometry
+            .lines
+            .iter()
+            .find(|line| line.layout_id == id)
+            .map(|line| line.color.clone())
+            .unwrap_or_else(|| panic!("the layout draws {id}"))
+    };
+    assert_eq!(color("line-nsl"), "#D42E12");
+    assert_eq!(color("line-ewl"), "#009645");
+    // The LRT ribbon starts at Choa Chu Kang, an interchange too.
+    assert_eq!(color("line-bpl"), "#748477");
+
+    // A station the layout draws on one ribbon takes that ribbon's
+    // colour, for the same reason.
+    let disc = |name: &str| {
+        geometry
+            .stations
+            .iter()
+            .find(|station| station.name == name)
+            .map(|station| station.color.clone())
+            .unwrap_or_else(|| panic!("the drawing carries {name}"))
+    };
+    assert_eq!(disc("Raffles Place"), "#009645");
+    assert_eq!(disc("South View"), "#748477");
+    assert_eq!(disc("Marina Bay"), "#D42E12");
+}
+
+#[test]
+fn a_tall_layout_keeps_its_names_beside_the_discs() {
+    let network = network();
+    let snapshot = schedule_snapshot(&network);
+    // One straight line, drawn far taller than it is wide. The fit
+    // scales it to a box much narrower than the full view.
+    let layout = layout_of(
+        &network,
+        serde_json::json!({
+            "type": "FeatureCollection",
+            "features": [
+                layout_line("line-nsl", "#d42e12", &[(103.74, 1.28), (103.74, 1.46)]),
+                layout_stop("s1", "line-nsl", "NS1", 0.0, (103.74, 1.28)),
+                layout_stop("s2", "line-nsl", "NS4", 0.5, (103.74, 1.37)),
+                layout_stop("s3", "line-nsl", "NS27", 1.0, (103.74, 1.46)),
+            ],
+        }),
+    );
+    let geometry = map_geometry(&snapshot, &layout);
+
+    // The drawing is nowhere near the 1000 units of the full view.
+    assert!(geometry.width < 200.0, "{}", geometry.width);
+    // Every station sits at the left of that box, so every name goes
+    // to the right of its disc and stays on the drawing.
+    assert!(geometry.stations.iter().all(|station| !station.label_left));
+    let svg = render_network_svg(&snapshot, &geometry);
+    assert!(!svg.contains("text-anchor=\"end\""));
+    assert!(svg.contains("text-anchor=\"start\""));
+}
+
+#[test]
+fn a_chord_starts_at_the_disc_of_an_interchange() {
+    let network = network();
+    let snapshot = schedule_snapshot(&network);
+    // Jurong East is drawn twice, on two ribbons a long way apart, so
+    // its disc sits at the mean of the two placements. Choa Chu Kang is
+    // drawn on a third ribbon of its own, so the edge that joins the
+    // two stations shares no ribbon and the map falls back to a chord.
+    let layout = layout_of(
+        &network,
+        serde_json::json!({
+            "type": "FeatureCollection",
+            "features": [
+                layout_line("line-a", "#d42e12", &[(0.0, 0.0), (0.0, 10.0)]),
+                layout_line("line-b", "#009645", &[(4.0, 0.0), (4.0, 10.0)]),
+                layout_line("line-c", "#748477", &[(8.0, 0.0), (8.0, 10.0)]),
+                layout_stop("a1", "line-a", "NS1", 0.0, (0.0, 0.0)),
+                layout_stop("a2", "line-a", "EW21", 1.0, (0.0, 10.0)),
+                layout_stop("b1", "line-b", "EW24", 0.0, (4.0, 0.0)),
+                layout_stop("c1", "line-c", "NS4", 1.0, (8.0, 10.0)),
+            ],
+        }),
+    );
+    let geometry = map_geometry(&snapshot, &layout);
+
+    let jurong = geometry
+        .stations
+        .iter()
+        .find(|station| station.name == "Jurong East")
+        .expect("the drawing carries Jurong East");
+    assert!(jurong.interchange);
+    let choa = geometry
+        .stations
+        .iter()
+        .find(|station| station.name == "Choa Chu Kang")
+        .expect("the drawing carries Choa Chu Kang");
+
+    // The map says so rather than hiding the gap.
+    assert!(geometry
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == "map-edge-without-geometry"));
+
+    // The chord runs between the two discs. Anything else leaves the
+    // chord — and every train riding it — floating off the disc.
+    let edge = snapshot
+        .edges
+        .iter()
+        .find(|edge| edge.from == jurong.station && edge.to == choa.station)
+        .expect("the network joins Jurong East to Choa Chu Kang");
+    let key = format!("{}-{}-{}", edge.line.0, edge.from.0, edge.to.0);
+    let chord = geometry.sections.get(&key).expect("the edge is drawn");
+    assert_eq!(chord.len(), 2);
+    assert!((chord[0].x - jurong.point.x).abs() < 1e-9);
+    assert!((chord[0].y - jurong.point.y).abs() < 1e-9);
+    assert!((chord[1].x - choa.point.x).abs() < 1e-9);
+    assert!((chord[1].y - choa.point.y).abs() < 1e-9);
+}
+
+// ----------------------------------------------------------------------
 // The snapshot document
 // ----------------------------------------------------------------------
 
@@ -315,6 +479,35 @@ fn the_only_network_target_is_the_snapshot_url() {
     let page = schedule_page("https://raw.example.com/live/map.json");
     assert!(page.contains("connect-src 'self' https://raw.example.com;"));
     assert!(page.contains("data-snapshot-url=\"https://raw.example.com/live/map.json\""));
+}
+
+#[test]
+fn the_script_re_ages_the_freshness_it_was_given() {
+    // A static deployment polls a bundled data/map.json that keeps
+    // answering long after it was written. The freshness inside it was
+    // judged when it was built, so the script may not read that state
+    // verbatim: it adds the time that has really passed since the
+    // document's own `generated` stamp and reads both thresholds the
+    // freshness carries. The script is inline, so the assertions are
+    // on its text, as the rest of the page's script tests are.
+    let page = schedule_page("data/map.json");
+
+    assert!(page.contains("generated = body.generated;"));
+    assert!(page.contains("function sinceGenerated()"));
+    assert!(page.contains("freshness.age_secs + sinceGenerated()"));
+    assert!(page.contains("age > freshness.staleness_secs"));
+    assert!(page.contains("age > freshness.ageing_secs"));
+    // The lamp and the words follow the recomputed state.
+    assert!(page.contains("var freshness = agedFreshness();"));
+    // A document without a usable stamp keeps the state it was built
+    // with rather than guessing a clock offset.
+    assert!(page.contains("typeof generated !== \"number\""));
+
+    // The stamp the script ages against is in the document the page
+    // polls, whichever deployment writes it.
+    let network = network();
+    let body = map_snapshot_json(&schedule_snapshot(&network), false, NOW_UNIX as i64);
+    assert_eq!(body["generated"], NOW_UNIX);
 }
 
 // ----------------------------------------------------------------------

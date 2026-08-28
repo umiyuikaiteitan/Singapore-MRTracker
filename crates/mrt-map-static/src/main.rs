@@ -47,8 +47,8 @@ use std::path::Path;
 use mrt_datamall::DataMallClient;
 use mrt_gtfs::{GtfsFeed, RailNetwork};
 use mrt_gtfs_rt::RailRtFeed;
-use mrt_live::NetworkSnapshotBuilder;
-use mrt_map_web::{clock, load_layout, map_snapshot_json, render_map_page, MapPageInput};
+use mrt_live::{clock, NetworkSnapshotBuilder};
+use mrt_map_web::{load_layout, map_snapshot_json, render_map_page, MapPageInput};
 
 fn main() {
     let mut args = std::env::args().skip(1);

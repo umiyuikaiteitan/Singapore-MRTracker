@@ -8,11 +8,11 @@
 </g>
 <g class="ribbon-group" data-layout-line="line-ewl">
 <path class="casing" d="M154 480.67 L250.71 577.38 L251.14 577.76 L251.62 578.08 L252.14 578.33 L252.69 578.52 L253.25 578.63 L253.83 578.67 L446.17 578.67 L446.75 578.7 L447.31 578.82 L447.86 579 L448.38 579.26 L448.86 579.58 L449.29 579.96 L513.33 644"/>
-<path class="ribbon" stroke="#D42E12" d="M154 480.67 L250.71 577.38 L251.14 577.76 L251.62 578.08 L252.14 578.33 L252.69 578.52 L253.25 578.63 L253.83 578.67 L446.17 578.67 L446.75 578.7 L447.31 578.82 L447.86 579 L448.38 579.26 L448.86 579.58 L449.29 579.96 L513.33 644"/>
+<path class="ribbon" stroke="#009645" d="M154 480.67 L250.71 577.38 L251.14 577.76 L251.62 578.08 L252.14 578.33 L252.69 578.52 L253.25 578.63 L253.83 578.67 L446.17 578.67 L446.75 578.7 L447.31 578.82 L447.86 579 L448.38 579.26 L448.86 579.58 L449.29 579.96 L513.33 644"/>
 </g>
 <g class="ribbon-group" data-layout-line="line-bpl">
 <path class="casing" d="M154 284.67 L56.86 187.53 L56.61 187.24 L56.39 186.92 L56.22 186.57 L56.1 186.21 L56.03 185.83 L56 185.45 L56 121.33"/>
-<path class="ribbon" stroke="#D42E12" d="M154 284.67 L56.86 187.53 L56.61 187.24 L56.39 186.92 L56.22 186.57 L56.1 186.21 L56.03 185.83 L56 185.45 L56 121.33"/>
+<path class="ribbon" stroke="#748477" d="M154 284.67 L56.86 187.53 L56.61 187.24 L56.39 186.92 L56.22 186.57 L56.1 186.21 L56.03 185.83 L56 185.45 L56 121.33"/>
 </g>
 <g class="ribbon-group" data-layout-line="line-tel">
 <path class="casing" d="M284.67 56 L284.67 182.26 L284.7 182.84 L284.82 183.4 L285 183.95 L285.26 184.46 L285.58 184.94 L285.96 185.38 L286.39 185.76 L286.87 186.08 L287.39 186.33 L287.93 186.52 L288.5 186.63 L289.07 186.67 L413.51 186.67 L414.08 186.7 L414.65 186.82 L415.19 187 L415.71 187.26 L416.19 187.58 L416.62 187.96 L513.33 284.67"/>
@@ -28,7 +28,7 @@
 </g>
 </g>
 <g class="bands" id="map-bands">
-<text class="band-label" x="81.95" y="203.61" fill="#D42E12">every 10 min approximately</text>
+<text class="band-label" x="81.95" y="203.61" fill="#748477">every 10 min approximately</text>
 </g>
 <g class="stations">
 <g class="station interchange">
@@ -48,12 +48,12 @@
 </g>
 <g class="station">
 <title>Buona Vista (EW21)</title>
-<circle class="disc" cx="350" cy="578.67" r="4.4" stroke="#D42E12"/>
+<circle class="disc" cx="350" cy="578.67" r="4.4" stroke="#009645"/>
 <text class="station-name" x="358.5" y="582.07" text-anchor="start">Buona Vista</text>
 </g>
 <g class="station">
 <title>Raffles Place (EW14)</title>
-<circle class="disc" cx="513.33" cy="644" r="4.4" stroke="#D42E12"/>
+<circle class="disc" cx="513.33" cy="644" r="4.4" stroke="#009645"/>
 <text class="station-name" x="521.83" y="647.4" text-anchor="start">Raffles Place</text>
 </g>
 <g class="station">
@@ -103,7 +103,7 @@
 </g>
 <g class="station">
 <title>South View (BP2)</title>
-<circle class="disc" cx="56" cy="121.33" r="4.4" stroke="#D42E12"/>
+<circle class="disc" cx="56" cy="121.33" r="4.4" stroke="#748477"/>
 <text class="station-name" x="64.5" y="124.73" text-anchor="start">South View</text>
 </g>
 </g>

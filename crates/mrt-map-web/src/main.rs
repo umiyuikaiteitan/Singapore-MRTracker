@@ -32,16 +32,14 @@
 //! its diagnostics.
 
 use std::io::Cursor;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use mrt_datamall::{DataMallClient, TrainServiceAlerts, UreqTransport};
 use mrt_gtfs::{GtfsFeed, RailNetwork, ZipSource};
 use mrt_gtfs_rt::RailRtFeed;
-use mrt_live::{BoundLayout, NetworkSnapshotBuilder};
-use mrt_map_web::{
-    clock, load_layout, map_snapshot_json, render_map_page, MapPageInput, POLL_SECS,
-};
+use mrt_live::{clock, BoundLayout, NetworkSnapshot, NetworkSnapshotBuilder};
+use mrt_map_web::{load_layout, map_snapshot_json, render_map_page, MapPageInput, POLL_SECS};
 
 /// How long the server reuses fetched live data, the map snapshot,
 /// and the page built from it.
@@ -68,16 +66,35 @@ struct LiveCache {
     realtime: Option<(Instant, RailRtFeed)>,
 }
 
+/// One built snapshot, with the two stamps that identify it.
+///
+/// The page and the endpoint are two views of one snapshot, so they
+/// share it: a reader who loads the page and then watches it poll sees
+/// the same trains in both, and DataMall sees one build per interval
+/// rather than two.
+struct CachedSnapshot {
+    /// When the snapshot was built, for the TTL.
+    at: Instant,
+    /// The POSIX second it was built at, which the transported document
+    /// carries as `generated` and the page ages against.
+    generated: i64,
+    /// The snapshot itself.
+    snapshot: Arc<NetworkSnapshot>,
+}
+
 struct App {
     network: RailNetwork,
     client: Option<DataMallClient<UreqTransport>>,
     cache: Mutex<LiveCache>,
     /// The schematic layout, bound to the network.
     layout: BoundLayout,
-    /// The cached map snapshot body and its build time.
-    snapshot: Mutex<Option<(Instant, String)>>,
-    /// The cached map page and its build time.
-    page: Mutex<Option<(Instant, String)>>,
+    /// The one snapshot both handlers read.
+    snapshot: Mutex<Option<CachedSnapshot>>,
+    /// The rendered snapshot body, keyed by the `generated` stamp of
+    /// the snapshot it was rendered from.
+    body: Mutex<Option<(i64, String)>>,
+    /// The rendered map page, keyed the same way.
+    page: Mutex<Option<(i64, String)>>,
 }
 
 fn main() {
@@ -101,6 +118,7 @@ fn main() {
         cache: Mutex::new(LiveCache::default()),
         layout,
         snapshot: Mutex::new(None),
+        body: Mutex::new(None),
         page: Mutex::new(None),
     };
 
@@ -150,60 +168,78 @@ fn load_network() -> RailNetwork {
 /// Singapore date and clock and the POSIX time in, exactly as the
 /// board does. Without an account key there is no realtime layer, the
 /// freshness state is `unavailable`, and every train is schedule-only.
-fn build_snapshot(app: &App) -> mrt_live::NetworkSnapshot {
+fn build_snapshot(app: &App, generated: i64) -> NetworkSnapshot {
     let (alerts, realtime) = live_layers(app);
     let mut builder = NetworkSnapshotBuilder::new(&app.network);
     if let Some(alerts) = &alerts {
         builder = builder.with_alerts(alerts);
     }
     if let Some(realtime) = &realtime {
-        builder = builder.with_realtime(realtime, clock::unix_now().max(0) as u64);
+        builder = builder.with_realtime(realtime, generated.max(0) as u64);
     }
-    let (date, now) = clock::sgt_now();
+    let (date, now) = clock::sgt_from_unix(generated);
     builder.build(date, now)
 }
 
-/// Get the body of `/api/map-snapshot`, from the cache or fresh.
+/// Get the current snapshot, from the cache or fresh, with the POSIX
+/// second it was built at.
 ///
-/// The same lazy fetch and TTL as every live layer of the board:
+/// The same lazy build and TTL as every live layer of the board:
 /// DataMall sees one refresh per interval whatever the request rate.
-fn snapshot_body(app: &App) -> String {
+/// Both handlers come through here, so the page and the endpoint never
+/// describe two different instants.
+fn current_snapshot(app: &App) -> (Arc<NetworkSnapshot>, i64) {
     let mut cache = app.snapshot.lock().expect("snapshot lock");
-    if let Some((at, body)) = cache.as_ref() {
-        if at.elapsed() < MAP_TTL {
+    if let Some(cached) = cache.as_ref() {
+        if cached.at.elapsed() < MAP_TTL {
+            return (Arc::clone(&cached.snapshot), cached.generated);
+        }
+    }
+    let generated = clock::unix_now();
+    let snapshot = Arc::new(build_snapshot(app, generated));
+    *cache = Some(CachedSnapshot {
+        at: Instant::now(),
+        generated,
+        snapshot: Arc::clone(&snapshot),
+    });
+    (snapshot, generated)
+}
+
+/// Get the body of `/api/map-snapshot`, rendered from the shared
+/// snapshot and kept until that snapshot is replaced.
+fn snapshot_body(app: &App) -> String {
+    let (snapshot, generated) = current_snapshot(app);
+    let mut cache = app.body.lock().expect("body lock");
+    if let Some((stamp, body)) = cache.as_ref() {
+        if *stamp == generated {
             return body.clone();
         }
     }
-    let body = map_snapshot_json(
-        &build_snapshot(app),
-        app.client.is_some(),
-        clock::unix_now(),
-    )
-    .to_string();
-    *cache = Some((Instant::now(), body.clone()));
+    let body = map_snapshot_json(&snapshot, app.client.is_some(), generated).to_string();
+    *cache = Some((generated, body.clone()));
     body
 }
 
-/// Get the map page, from the cache or fresh.
+/// Get the map page, rendered from the same shared snapshot.
 ///
 /// The page embeds the whole network as SVG, so it changes with the
-/// service day rather than with the minute; it shares the snapshot TTL
-/// because it is built from the same snapshot.
+/// service day rather than with the minute; it is kept until the
+/// snapshot it draws is replaced.
 fn map_page(app: &App) -> String {
+    let (snapshot, generated) = current_snapshot(app);
     let mut cache = app.page.lock().expect("page lock");
-    if let Some((at, body)) = cache.as_ref() {
-        if at.elapsed() < MAP_TTL {
+    if let Some((stamp, body)) = cache.as_ref() {
+        if *stamp == generated {
             return body.clone();
         }
     }
-    let snapshot = build_snapshot(app);
     let body = render_map_page(&MapPageInput {
         snapshot: &snapshot,
         layout: &app.layout,
         snapshot_url: "/api/map-snapshot",
         deployment: &format!("served live \u{00B7} the page re-polls every {POLL_SECS} s"),
     });
-    *cache = Some((Instant::now(), body.clone()));
+    *cache = Some((generated, body.clone()));
     body
 }
 

@@ -388,6 +388,7 @@ var statusEl = document.getElementById("statusText");
 var motionEl = document.getElementById("motion");
 
 var snapshot = null;      /* the snapshot that is showing */
+var generated = null;     /* POSIX second the document was built at */
 var receivedAt = 0;       /* visitor clock when it arrived */
 var fetchedAt = 0;        /* visitor clock, last fetch that worked */
 var failedAt = 0;         /* visitor clock, last fetch that failed */
@@ -629,14 +630,49 @@ function ago(seconds) {
   return Math.round(minutes / 60) + " h ago";
 }
 
+/* Seconds since the document was built, by the visitor's own clock.
+ *
+ * A missing, non-numeric, or future `generated` yields 0, and so does
+ * a visitor clock that runs behind the one that built the document:
+ * the arithmetic below may only ever make a snapshot older, never
+ * younger, and where it cannot tell it says nothing. */
+function sinceGenerated() {
+  if (typeof generated !== "number" || !isFinite(generated) || generated <= 0) return 0;
+  return Math.max(0, Date.now() / 1000 - generated);
+}
+
+/* Re-age the freshness the snapshot was built with.
+ *
+ * The state in the document is a judgement made at the instant the
+ * document was written. A static deployment serves a bundled
+ * data/map.json that keeps fetching successfully for as long as it is
+ * on the host, so trusting that judgement would leave a green lamp
+ * over hours-old predictions. The document carries `generated` and
+ * both thresholds, so the page adds the time that has really passed
+ * and lets the state degrade from live through ageing to stale on its
+ * own.
+ *
+ * A layer with no age at all — an absent one, or a feed that carried
+ * no timestamp — has nothing to add to and keeps what it was given. */
+function agedFreshness() {
+  var freshness = snapshot.freshness;
+  if (freshness.age_secs == null) return { state: freshness.state, age: null };
+  var age = freshness.age_secs + sinceGenerated();
+  var state = freshness.state;
+  if (age > freshness.staleness_secs) state = "stale";
+  else if (age > freshness.ageing_secs) state = "ageing";
+  return { state: state, age: age };
+}
+
 function updateStatus() {
   var parts = [];
   var state = "";
   if (snapshot) {
-    /* The same three-state mapping the page was rendered with: green
-     * while the layer is current, amber while it is ageing, red once
-     * it is stale or absent. The words always carry the age. */
-    var freshness = snapshot.freshness;
+    /* The same three-state mapping the page was rendered with, over
+     * the state as it stands now: green while the layer is current,
+     * amber while it is ageing, red once it is stale or absent. The
+     * words always carry the age. */
+    var freshness = agedFreshness();
     if (freshness.state === "live") {
       parts.push("live");
       state = "live";
@@ -650,8 +686,8 @@ function updateStatus() {
       parts.push("schedule only · no realtime layer");
       state = "stale";
     }
-    if (freshness.age_secs != null) {
-      parts.push("realtime feed " + ago(freshness.age_secs));
+    if (freshness.age != null) {
+      parts.push("realtime feed " + ago(freshness.age));
     }
     parts.push(snapshot.trains.length + " trains");
   }
@@ -687,6 +723,7 @@ function refresh() {
     })
     .then(function (body) {
       snapshot = body.snapshot;
+      generated = body.generated;
       receivedAt = Date.now();
       fetchedAt = receivedAt;
       failedAt = 0;

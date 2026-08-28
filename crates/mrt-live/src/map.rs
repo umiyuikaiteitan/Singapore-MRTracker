@@ -35,6 +35,8 @@
 //! realtime `now_unix` in, exactly as [`crate::LiveBoardBuilder`] does.
 //! The same inputs always produce the same snapshot, byte for byte.
 
+use std::collections::HashMap;
+
 use serde::Serialize;
 
 use mrt_datamall::TrainServiceAlerts;
@@ -80,6 +82,13 @@ const DEFAULT_STALENESS_SECS: u32 = 120;
 /// [`NetworkSnapshotBuilder::ageing_secs`].
 const DEFAULT_AGEING_SECS: u32 = 60;
 
+/// The number of seconds in one day.
+///
+/// A run that continues past midnight keeps `24:xx` times on the
+/// service day it started on, so reading that day means reading the
+/// clock 24 hours later on it.
+const SECS_PER_DAY: u32 = 24 * 3600;
+
 // ----------------------------------------------------------------------
 // Provenance
 // ----------------------------------------------------------------------
@@ -92,12 +101,13 @@ const DEFAULT_AGEING_SECS: u32 = 60;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PositionQuality {
-    /// The run stands at a station, and a realtime trip update
-    /// confirms the timing. This is the strongest claim the data
-    /// supports.
+    /// The run stands at a station, and the realtime layer carried a
+    /// time or a delay for that call. This is the strongest claim the
+    /// data supports.
     AtStation,
-    /// The run lies between two stations, and both bracketing times
-    /// come from the feed and carry a realtime shift.
+    /// The run lies between two stations, both bracketing times are
+    /// published ones, and the realtime layer carried a time or a
+    /// delay for at least one of them.
     InterpolatedRealtime,
     /// The run lies between two stations, and at least one bracketing
     /// time was computed by `mrt-gtfs` or is marked approximate by the
@@ -465,11 +475,60 @@ impl<'a> NetworkSnapshotBuilder<'a> {
     }
 
     /// Build the snapshot for one service date and one clock reading.
+    ///
+    /// The builder reads two service days, exactly as
+    /// [`RailNetwork::departure_board`] does and for the same reason: a
+    /// run that continues past midnight keeps `24:xx` times on the day
+    /// it started, so shortly after midnight the trains on the network
+    /// belong to the day before, where the same clock reading stands
+    /// 24 hours later. A run reaches the map from one of the two days
+    /// and never from both — its adjusted times cannot bracket a clock
+    /// reading and that same reading a day later — and an
+    /// `instance_id` carries the service date it came from, so the two
+    /// days stay distinct and the order stays stable.
     pub fn build(&self, date: ServiceDate, clock: GtfsTime) -> NetworkSnapshot {
         let mut diagnostics = Vec::new();
         let freshness = self.freshness(date, clock, &mut diagnostics);
         let live = freshness.state.is_current();
+        let updates = self.trip_updates();
 
+        let mut trains: Vec<MapTrain> = Vec::new();
+        let mut bands: Vec<MapBand> = Vec::new();
+        for (day, reading) in [
+            (date, clock),
+            (date.previous_day(), clock.plus_seconds(SECS_PER_DAY)),
+        ] {
+            let (day_trains, day_bands) =
+                self.service_day(day, reading, live, &updates, &mut diagnostics);
+            trains.extend(day_trains);
+            bands.extend(day_bands);
+        }
+        trains.sort_by(|a, b| a.instance_id.cmp(&b.instance_id));
+        bands.sort_by(|a, b| a.band_id.cmp(&b.band_id));
+
+        normalize_diagnostics(&mut diagnostics);
+        NetworkSnapshot {
+            lines: self.lines(),
+            stations: self.stations(),
+            edges: self.edges(),
+            trains,
+            bands,
+            freshness,
+            notices: self.notices(),
+            diagnostics,
+        }
+    }
+
+    /// Query one service day and place the runs it carries at the
+    /// clock reading of that day.
+    fn service_day(
+        &self,
+        date: ServiceDate,
+        clock: GtfsTime,
+        live: bool,
+        updates: &HashMap<&str, &TripUpdate>,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> (Vec<MapTrain>, Vec<MapBand>) {
         let query = TripInstanceQuery::new(date)
             .window(
                 GtfsTime::from_seconds(clock.seconds().saturating_sub(self.window_secs)),
@@ -486,14 +545,12 @@ impl<'a> NetworkSnapshotBuilder<'a> {
         };
         diagnostics.extend(result.diagnostics.iter().cloned());
 
-        let mut trains: Vec<MapTrain> = result
+        let trains = result
             .trips
             .iter()
-            .filter_map(|trip| self.place(trip, clock, live, &mut diagnostics))
+            .filter_map(|trip| self.place(trip, clock, live, updates, diagnostics))
             .collect();
-        trains.sort_by(|a, b| a.instance_id.cmp(&b.instance_id));
-
-        let mut bands: Vec<MapBand> = result
+        let bands = result
             .frequency_bands
             .iter()
             .map(|band| MapBand {
@@ -508,19 +565,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
                 headway_minutes: band.headway_minutes(),
             })
             .collect();
-        bands.sort_by(|a, b| a.band_id.cmp(&b.band_id));
-
-        normalize_diagnostics(&mut diagnostics);
-        NetworkSnapshot {
-            lines: self.lines(),
-            stations: self.stations(),
-            edges: self.edges(),
-            trains,
-            bands,
-            freshness,
-            notices: self.notices(),
-            diagnostics,
-        }
+        (trains, bands)
     }
 
     /// Collect the public alert messages of the legacy feed.
@@ -689,12 +734,24 @@ impl<'a> NetworkSnapshotBuilder<'a> {
     // Positions
     // ------------------------------------------------------------------
 
-    /// Get the trip update for one run, if the feed carries one.
-    fn trip_update(&self, trip_id: &str) -> Option<&TripUpdate> {
-        self.realtime?
-            .trip_updates
-            .iter()
-            .find(|update| update.trip_id.as_deref() == Some(trip_id))
+    /// Index the trip updates of the realtime feed by `trip_id`.
+    ///
+    /// The index is built once per snapshot rather than searched once
+    /// per run: the feed carries an update for every running trip and
+    /// the query returns a run for every running trip, so the search
+    /// was quadratic in the size of the network. Where a feed repeats a
+    /// `trip_id` the first update wins, exactly as the search did.
+    fn trip_updates(&self) -> HashMap<&'a str, &'a TripUpdate> {
+        let mut index = HashMap::new();
+        let Some(feed) = self.realtime else {
+            return index;
+        };
+        for update in &feed.trip_updates {
+            if let Some(trip_id) = update.trip_id.as_deref() {
+                index.entry(trip_id).or_insert(update);
+            }
+        }
+        index
     }
 
     /// Place one run on the network, or say why it cannot be placed.
@@ -707,9 +764,10 @@ impl<'a> NetworkSnapshotBuilder<'a> {
         trip: &TripInstance,
         clock: GtfsTime,
         live: bool,
+        updates: &HashMap<&str, &TripUpdate>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Option<MapTrain> {
-        let update = self.trip_update(&trip.source_trip_id);
+        let update = updates.get(trip.source_trip_id.as_str()).copied();
 
         // A cancellation is the operator's own statement, so it holds
         // even when the feed has aged past the staleness threshold.
@@ -757,20 +815,45 @@ impl<'a> NetworkSnapshotBuilder<'a> {
                 .about(trip.source_trip_id.clone()),
             );
         }
+        if notes.skipped > 0 {
+            diagnostics.push(
+                Diagnostic::info(
+                    "train-call-skipped",
+                    format!(
+                        "the trip update marks {} call(s) of this run skipped, so the map \
+                         draws the run passing those stations rather than standing at them",
+                        notes.skipped
+                    ),
+                )
+                .about(trip.instance_id.clone()),
+            );
+        }
 
+        // Every call the snapshot has a time for. A skipped call keeps
+        // its place here, because the run still runs over the edges
+        // that reach it.
         let known: Vec<usize> = adjusted
             .iter()
             .enumerate()
             .filter_map(|(index, call)| call.map(|_| index))
             .collect();
-        let (&first, &last) = (known.first()?, known.last()?);
+        // The calls the run actually serves. The operator's skip takes
+        // a station out of the trajectory: the run passes it without
+        // dwelling, so nothing on the map may say that it stands there,
+        // and a run whose first or last call is skipped begins and ends
+        // at the calls it does serve.
+        let stops: Vec<usize> = known
+            .iter()
+            .copied()
+            .filter(|&index| !adjusted[index].is_some_and(|call| call.skipped))
+            .collect();
+        let (&first, &last) = (stops.first()?, stops.last()?);
         let now = i64::from(clock.seconds());
         if now < adjusted[first]?.arrival || now > adjusted[last]?.departure {
             // The run is not on the network at this clock reading.
             return None;
         }
 
-        let has_update = update.is_some();
         let destination = trip
             .headsign
             .clone()
@@ -781,7 +864,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
             .unwrap_or_default();
 
         // Standing at a station.
-        for &index in &known {
+        for &index in &stops {
             let call = adjusted[index]?;
             if call.arrival <= now && now <= call.departure {
                 return Some(MapTrain {
@@ -796,7 +879,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
                     progress: 0.0,
                     edge_secs: None,
                     destination,
-                    quality: quality(true, has_update, computed(call.quality)),
+                    quality: quality(true, call.realtime, computed(call.quality)),
                     delay_secs: call.delay_secs,
                     schedule_interpolated: computed(call.quality),
                 });
@@ -841,7 +924,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
                 progress,
                 edge_secs: Some(span.max(0) as u32),
                 destination,
-                quality: quality(false, has_update, interpolated),
+                quality: quality(false, back.realtime || front.realtime, interpolated),
                 delay_secs: back.delay_secs,
                 schedule_interpolated: interpolated,
             });
@@ -880,6 +963,16 @@ struct AdjustedCall {
     delay_secs: Option<i32>,
     /// Where the scheduled time of the call came from.
     quality: TimeQuality,
+    /// `true` when the realtime layer carried a time or a delay that
+    /// applies to this call. An update that said nothing about it —
+    /// an update with no delay and no stop events at all, or one that
+    /// names other stops only — leaves this `false`, and a position
+    /// this call brackets stays schedule-only.
+    realtime: bool,
+    /// `true` when the trip update marks this call skipped. The run
+    /// passes the station without dwelling: its arrival and its
+    /// departure are the same instant, and it never stands there.
+    skipped: bool,
 }
 
 /// What the shift noticed about the trip update.
@@ -887,6 +980,8 @@ struct AdjustedCall {
 struct ShiftNotes {
     /// A stop time update carried a predicted time but no delay.
     time_without_delay: bool,
+    /// How many calls the trip update marks skipped.
+    skipped: usize,
 }
 
 /// Apply the realtime shift to one scheduled call.
@@ -898,6 +993,12 @@ struct ShiftNotes {
 /// this crate does not carry. Such an update leaves a note instead of a
 /// guess.
 ///
+/// A stop time update that marks the call skipped is the operator
+/// saying the run does not serve the station. It carries no prediction
+/// to apply, and the call keeps its scheduled arrival as an instant the
+/// run passes through: the caller draws the run running past rather
+/// than dwelling.
+///
 /// The function returns `None` for a call with no time at all.
 fn adjust(
     call: &ScheduledCall,
@@ -907,12 +1008,16 @@ fn adjust(
     let arrival = call.arrival_or_departure()?;
     let departure = call.departure_or_arrival()?;
 
-    let stop_update = update.and_then(|u| {
+    let announced = update.and_then(|u| {
         u.stop_updates
             .iter()
             .find(|su| su.stop_id.as_deref() == Some(call.platform_stop_id.as_str()))
-            .filter(|su| !su.skipped)
     });
+    let skipped = announced.is_some_and(|su| su.skipped);
+    if skipped {
+        notes.skipped += 1;
+    }
+    let stop_update = announced.filter(|su| !su.skipped);
     if let Some(su) = stop_update {
         let events = [su.arrival, su.departure];
         if events.iter().flatten().all(|e| e.delay_secs.is_none())
@@ -937,11 +1042,33 @@ fn adjust(
         })
         .or(trip_delay);
 
+    // What the realtime layer actually said about this call. An update
+    // that carried neither a time nor a delay here shifted nothing, and
+    // a position it brackets keeps the schedule-only treatment rather
+    // than claiming a provenance the operator did not publish.
+    let realtime = trip_delay.is_some()
+        || stop_update.is_some_and(|su| {
+            [su.arrival, su.departure]
+                .iter()
+                .flatten()
+                .any(|event| event.time.is_some() || event.delay_secs.is_some())
+        });
+
+    let arrival_secs = i64::from(arrival.seconds()) + i64::from(arrival_delay.unwrap_or(0));
+    let departure_secs = i64::from(departure.seconds()) + i64::from(departure_delay.unwrap_or(0));
     Some(AdjustedCall {
-        arrival: i64::from(arrival.seconds()) + i64::from(arrival_delay.unwrap_or(0)),
-        departure: i64::from(departure.seconds()) + i64::from(departure_delay.unwrap_or(0)),
+        arrival: arrival_secs,
+        // A skipped call has no dwell: the run reaches the station and
+        // carries straight on to the next one.
+        departure: if skipped {
+            arrival_secs
+        } else {
+            departure_secs
+        },
         delay_secs: departure_delay.or(arrival_delay),
         quality: call.time_quality,
+        realtime,
+        skipped,
     })
 }
 
@@ -956,11 +1083,12 @@ fn computed(quality: TimeQuality) -> bool {
 
 /// Pick the provenance marker of one position.
 ///
-/// Without a realtime update the position is schedule-only, whatever
-/// else is true of it: that is the treatment a stale feed and an
-/// unmatched run both fall back to.
-fn quality(at_station: bool, has_update: bool, interpolated: bool) -> PositionQuality {
-    if !has_update {
+/// Without a realtime shift on a bracketing call the position is
+/// schedule-only, whatever else is true of it: that is the treatment a
+/// stale feed, an unmatched run, and a trip update that said nothing
+/// about these calls all fall back to.
+fn quality(at_station: bool, realtime: bool, interpolated: bool) -> PositionQuality {
+    if !realtime {
         PositionQuality::ScheduleOnly
     } else if at_station {
         PositionQuality::AtStation
