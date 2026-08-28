@@ -45,6 +45,32 @@ fn update(trip_id: &str, delay_secs: Option<i32>, stops: Vec<StopTimeUpdate>) ->
     }
 }
 
+/// A trip update that names the run it is about: the service date in
+/// the GTFS `YYYYMMDD` form, and the start time of the run for a trip
+/// that a headway block expands.
+fn run_update(
+    trip_id: &str,
+    start_date: Option<&str>,
+    start_time: Option<&str>,
+    delay_secs: Option<i32>,
+) -> TripUpdate {
+    TripUpdate {
+        trip_id: Some(trip_id.to_string()),
+        start_date: start_date.map(str::to_string),
+        start_time: start_time.map(str::to_string),
+        delay_secs,
+        ..Default::default()
+    }
+}
+
+/// A cancellation that names the run it is about.
+fn cancellation(trip_id: &str, start_date: Option<&str>, start_time: Option<&str>) -> TripUpdate {
+    TripUpdate {
+        canceled: true,
+        ..run_update(trip_id, start_date, start_time, None)
+    }
+}
+
 /// A per-stop event that reports the same delay for both events.
 fn stop_delay(stop_id: &str, delay_secs: i32) -> StopTimeUpdate {
     StopTimeUpdate {
@@ -299,6 +325,189 @@ fn a_per_stop_event_wins_over_the_trip_delay() {
     assert_eq!(run.delay_secs, Some(120));
 }
 
+// ----------------------------------------------------------------------
+// Which update belongs to which run
+// ----------------------------------------------------------------------
+
+#[test]
+fn an_update_applies_only_to_the_service_date_it_names() {
+    let network = network();
+    let build = |update: TripUpdate| {
+        let realtime = feed(NOW_UNIX, vec![update]);
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build(date(), GtfsTime::from_hms(6, 5, 0))
+    };
+
+    // The run is the Monday's NS_T1. An update that names the Monday
+    // shifts it; an update that names the Sunday before is about
+    // another day's run of the same trip and shifts nothing.
+    let today = build(run_update("NS_T1", Some("20250505"), None, Some(120)));
+    assert_eq!(train(&today, "NS_T1").delay_secs, Some(120));
+    assert!((train(&today, "NS_T1").progress - 150.0 / 570.0).abs() < 1e-9);
+
+    let yesterday = build(run_update("NS_T1", Some("20250504"), None, Some(120)));
+    let run = train(&yesterday, "NS_T1");
+    assert_eq!(run.delay_secs, None);
+    assert_eq!(run.quality, PositionQuality::ScheduleOnly);
+    assert!((run.progress - 270.0 / 570.0).abs() < 1e-9);
+
+    // The documented fallback: an update that names no date applies to
+    // whichever scanned day carries the trip.
+    let undated = build(run_update("NS_T1", None, None, Some(120)));
+    assert_eq!(train(&undated, "NS_T1").delay_secs, Some(120));
+}
+
+#[test]
+fn an_update_names_its_day_across_midnight() {
+    let network = network();
+    // Ten past midnight on the Tuesday. The only run out is NS_T5,
+    // which belongs to the Monday's service day and reads 24:10 there.
+    // Both days are scanned, so the date of the update decides which
+    // of the two the operator meant.
+    let build = |update: TripUpdate| {
+        let realtime = feed(NOW_UNIX, vec![update]);
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build("20250506".parse().unwrap(), GtfsTime::from_hms(0, 10, 0))
+    };
+
+    // The Monday: the day the run started on, and the one it belongs
+    // to.
+    let monday = build(run_update("NS_T5", Some("20250505"), None, Some(120)));
+    let run = train(&monday, "NS_T5");
+    assert_eq!(run.instance_id, "20250505:NS_T5");
+    assert_eq!(run.delay_secs, Some(120));
+    assert!(
+        (run.progress - 150.0 / 1170.0).abs() < 1e-9,
+        "{}",
+        run.progress
+    );
+
+    // The Tuesday: the calendar day the clock reads, and not the
+    // service day of this run. Nothing shifts.
+    let tuesday = build(run_update("NS_T5", Some("20250506"), None, Some(120)));
+    let run = train(&tuesday, "NS_T5");
+    assert_eq!(run.instance_id, "20250505:NS_T5");
+    assert_eq!(run.delay_secs, None);
+    assert_eq!(run.quality, PositionQuality::ScheduleOnly);
+    assert!(
+        (run.progress - 270.0 / 1170.0).abs() < 1e-9,
+        "{}",
+        run.progress
+    );
+}
+
+#[test]
+fn frequency_siblings_match_by_their_start_time() {
+    let network = network();
+    // TE_F1 is an exact headway block from 05:00 to 05:30 every ten
+    // minutes, so three runs share the one trip_id. At 05:15 the run
+    // that left Woodlands North at 05:10 is the one on the network.
+    let build = |update: TripUpdate| {
+        let realtime = feed(NOW_UNIX, vec![update]);
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build(date(), GtfsTime::from_hms(5, 15, 0))
+    };
+
+    // A minute of delay on that run puts it in Woodlands at 05:15.
+    let mine = build(run_update("TE_F1", None, Some("05:10:00"), Some(60)));
+    let run = train(&mine, "TE_F1");
+    assert_eq!(run.instance_id, "20250505:TE_F1@05:10:00");
+    assert_eq!(run.delay_secs, Some(60));
+    match run.location {
+        TrainLocation::AtStation { station, .. } => {
+            assert_eq!(station_name(&mine, station), "Woodlands");
+        }
+        TrainLocation::OnEdge { .. } => panic!("the delayed run stands at Woodlands at 05:15"),
+    }
+
+    // The same delay on the sibling that leaves at 05:20 says nothing
+    // about the run on the network, which stays on the schedule.
+    let sibling = build(run_update("TE_F1", None, Some("05:20:00"), Some(60)));
+    let run = train(&sibling, "TE_F1");
+    assert_eq!(run.instance_id, "20250505:TE_F1@05:10:00");
+    assert_eq!(run.delay_secs, None);
+    assert_eq!(run.quality, PositionQuality::ScheduleOnly);
+    match run.location {
+        TrainLocation::OnEdge { from, to, .. } => {
+            assert_eq!(station_name(&sibling, from), "Woodlands");
+            assert_eq!(station_name(&sibling, to), "Woodlands South");
+        }
+        TrainLocation::AtStation { .. } => panic!("the untouched run is between two stations"),
+    }
+    // Naming one sibling is not ambiguous: the feed said which run.
+    assert!(!has_diagnostic(&sibling, "realtime-update-ambiguous"));
+}
+
+#[test]
+fn a_frequency_update_without_a_start_time_moves_no_sibling() {
+    let network = network();
+    // The operator reports a minute of delay on TE_F1 and does not say
+    // which of the three runs of the block it means. Applying it to
+    // every sibling would state three delays where one was published,
+    // so the map applies it to none and names the run it left alone.
+    let realtime = feed(NOW_UNIX, vec![run_update("TE_F1", None, None, Some(60))]);
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(5, 15, 0));
+
+    let run = train(&snapshot, "TE_F1");
+    assert_eq!(run.instance_id, "20250505:TE_F1@05:10:00");
+    assert_eq!(run.delay_secs, None);
+    assert_eq!(run.quality, PositionQuality::ScheduleOnly);
+    assert!(has_diagnostic_about(
+        &snapshot,
+        "realtime-update-ambiguous",
+        "20250505:TE_F1@05:10:00"
+    ));
+}
+
+#[test]
+fn a_start_time_never_filters_a_fixed_trip() {
+    let network = network();
+    // NS_T1 runs once on the service date, so the trip_id and the date
+    // already name the run. A start_time that disagrees with the
+    // schedule does not detach the operator's prediction from it.
+    let realtime = feed(
+        NOW_UNIX,
+        vec![run_update(
+            "NS_T1",
+            Some("20250505"),
+            Some("23:59:00"),
+            Some(120),
+        )],
+    );
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+
+    assert_eq!(train(&snapshot, "NS_T1").delay_secs, Some(120));
+    assert!(!has_diagnostic(&snapshot, "realtime-update-ambiguous"));
+}
+
+#[test]
+fn an_unreadable_start_date_is_reported_and_read_as_none() {
+    let network = network();
+    let realtime = feed(
+        NOW_UNIX,
+        vec![run_update("NS_T1", Some("05/05/2025"), None, Some(120))],
+    );
+    let snapshot = NetworkSnapshotBuilder::new(&network)
+        .with_realtime(&realtime, NOW_UNIX)
+        .build(date(), GtfsTime::from_hms(6, 5, 0));
+
+    assert!(has_diagnostic_about(
+        &snapshot,
+        "realtime-unreadable-start-date",
+        "NS_T1"
+    ));
+    // It falls back to the behaviour of an update that names no date,
+    // rather than detaching itself from every run in silence.
+    assert_eq!(train(&snapshot, "NS_T1").delay_secs, Some(120));
+}
+
 #[test]
 fn a_predicted_time_without_a_delay_leaves_a_note() {
     let network = network();
@@ -457,20 +666,106 @@ fn a_canceled_run_is_not_drawn() {
 #[test]
 fn a_cancellation_survives_a_stale_feed() {
     let network = network();
+    // A cancellation that names the service date of the run is about
+    // that run and no other, so it outlives the staleness threshold:
+    // the operator's statement that a train does not run does not
+    // expire the way a prediction does.
+    let build = |update: TripUpdate| {
+        let realtime = feed(NOW_UNIX - 3600, vec![update]);
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build(date(), GtfsTime::from_hms(6, 5, 0))
+    };
+
+    let dated = build(cancellation("NS_T1", Some("20250505"), None));
+    assert_eq!(dated.freshness.state, FreshnessState::Stale);
+    assert!(!has_train(&dated, "NS_T1"));
+    assert!(has_diagnostic_about(
+        &dated,
+        "train-canceled",
+        "20250505:NS_T1"
+    ));
+
+    // A cancellation that names no date is a statement about a
+    // trip_id, and a stale feed cannot say which day it was made on.
+    // Suppressing the run would let an old cancellation delete a train
+    // that is running, so the map draws the scheduled run and says why.
+    let undated = build(cancellation("NS_T1", None, None));
+    assert_eq!(undated.freshness.state, FreshnessState::Stale);
+    assert!(has_train(&undated, "NS_T1"));
+    assert_eq!(
+        train(&undated, "NS_T1").quality,
+        PositionQuality::ScheduleOnly
+    );
+    assert!(has_diagnostic_about(
+        &undated,
+        "train-cancellation-not-attributed",
+        "20250505:NS_T1"
+    ));
+}
+
+#[test]
+fn yesterdays_cancellation_does_not_suppress_todays_run() {
+    let network = network();
+    // The Sunday's cancellation of NS_T1, still in a fresh feed on the
+    // Monday. The trip_id recurs; the run does not.
     let realtime = feed(
-        NOW_UNIX - 3600,
-        vec![TripUpdate {
-            trip_id: Some("NS_T1".to_string()),
-            canceled: true,
-            ..Default::default()
-        }],
+        NOW_UNIX,
+        vec![cancellation("NS_T1", Some("20250504"), None)],
     );
     let snapshot = NetworkSnapshotBuilder::new(&network)
         .with_realtime(&realtime, NOW_UNIX)
         .build(date(), GtfsTime::from_hms(6, 5, 0));
 
-    assert_eq!(snapshot.freshness.state, FreshnessState::Stale);
-    assert!(!has_train(&snapshot, "NS_T1"));
+    assert_eq!(snapshot.freshness.state, FreshnessState::Live);
+    assert!(has_train(&snapshot, "NS_T1"));
+    assert!(!has_diagnostic(&snapshot, "train-canceled"));
+
+    // Across midnight the same rule keeps the two days apart in the
+    // other direction: the run out at 00:10 on the Tuesday belongs to
+    // the Monday, and only the Monday's cancellation reaches it.
+    let build = |start_date: &str| {
+        let realtime = feed(
+            NOW_UNIX,
+            vec![cancellation("NS_T5", Some(start_date), None)],
+        );
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build("20250506".parse().unwrap(), GtfsTime::from_hms(0, 10, 0))
+    };
+    assert!(!has_train(&build("20250505"), "NS_T5"));
+    assert!(has_train(&build("20250506"), "NS_T5"));
+}
+
+#[test]
+fn a_frequency_cancellation_names_the_run_it_cancels() {
+    let network = network();
+    let build = |update: TripUpdate| {
+        let realtime = feed(NOW_UNIX, vec![update]);
+        NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build(date(), GtfsTime::from_hms(5, 15, 0))
+    };
+
+    // The run on the network is the one that left at 05:10.
+    assert!(!has_train(
+        &build(cancellation("TE_F1", Some("20250505"), Some("05:10:00"))),
+        "TE_F1"
+    ));
+    // Cancelling a sibling leaves it running.
+    assert!(has_train(
+        &build(cancellation("TE_F1", Some("20250505"), Some("05:20:00"))),
+        "TE_F1"
+    ));
+    // A cancellation of the block that names no run cancels none of
+    // them: it cannot be shown to be about this train.
+    let ambiguous = build(cancellation("TE_F1", Some("20250505"), None));
+    assert!(has_train(&ambiguous, "TE_F1"));
+    assert!(has_diagnostic_about(
+        &ambiguous,
+        "realtime-update-ambiguous",
+        "20250505:TE_F1@05:10:00"
+    ));
 }
 
 #[test]
