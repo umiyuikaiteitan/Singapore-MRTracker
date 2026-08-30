@@ -50,6 +50,7 @@
 pub mod clock;
 mod layout;
 mod map;
+mod matching;
 
 pub use layout::{
     BoundLayout, BoundStation, Layout, LayoutBranch, LayoutError, LayoutLine, LayoutPoint,
@@ -63,8 +64,10 @@ pub use map::{
 use serde::Serialize;
 
 use mrt_datamall::{CrowdLevel, PlatformCrowd, ServiceStatus, TrainLine, TrainServiceAlerts};
-use mrt_gtfs::{GtfsTime, Line, RailNetwork, ServiceDate, StationId};
+use mrt_gtfs::{BoardEntry, GtfsTime, Line, RailNetwork, ServiceDate, StationId};
 use mrt_gtfs_rt::{Alert, RailRtFeed};
+
+use crate::matching::{RunKey, TripUpdateIndex};
 
 // ----------------------------------------------------------------------
 // Line matching
@@ -367,6 +370,24 @@ impl<'a> LiveBoardBuilder<'a> {
     /// appears: the operator says that train will not call here. A
     /// canceled row stays, so the board can read `CANC`, and keeps its
     /// scheduled time for the order and the window.
+    ///
+    /// # Which trip update reaches which row
+    ///
+    /// A row is one run of one trip, not the trip: the board scans two
+    /// service days, and a headway block expands one trip into a row
+    /// every few minutes. So a `trip_id` alone does not decide which
+    /// update reaches which row. An update reaches a row only where it
+    /// can be shown to belong to that run: it must name the service
+    /// date of the row or name no date at all, and — where a headway
+    /// block expanded the row — it must name that run's own start
+    /// time. A delay, a cancellation, or a skipped call therefore
+    /// moves one row and leaves its siblings alone, and today's update
+    /// cannot reach yesterday's run.
+    ///
+    /// These are the rules that place a train on the live map, in one
+    /// shared implementation, so the board and the map cannot disagree
+    /// about which train the operator meant. The `matching` module of
+    /// this crate carries the decision table.
     pub fn build(
         &self,
         station: StationId,
@@ -387,9 +408,14 @@ impl<'a> LiveBoardBuilder<'a> {
         let from = GtfsTime::from_seconds(clock.seconds() - back);
         let span = lookahead_secs.saturating_add(back).saturating_add(forward);
 
+        // The board publishes no diagnostics, so the notes the index
+        // makes about unreadable descriptor fields are dropped here.
+        // The live map raises the same notes from the same feed.
+        let updates = TripUpdateIndex::from_feed(self.realtime, &mut Vec::new());
+
         let mut rows: Vec<(i64, LiveBoardRow)> = Vec::new();
         for entry in self.network.departure_board(station, date, from, span) {
-            let status = self.trip_status(&entry.departure.trip_id, station);
+            let status = self.trip_status(&updates, &entry, station);
             // The operator says this run does not call here at all, so
             // the row leaves the board rather than merely losing its
             // delay.
@@ -497,21 +523,39 @@ impl<'a> LiveBoardBuilder<'a> {
         worst
     }
 
-    /// Get what the realtime layer says about one trip at one station.
+    /// Get what the realtime layer says about one departure at one
+    /// station.
     ///
-    /// The per-stop event of the call wins where the feed supplies
-    /// one for a platform of the station: its departure delay first,
-    /// then its arrival delay. The trip-level delay fills in for a
-    /// call the feed says nothing about. This is the rule the map view
-    /// model applies to the same feed.
-    fn trip_status(&self, trip_id: &str, station: StationId) -> TripStatus {
-        let Some(feed) = self.realtime else {
-            return TripStatus::default();
-        };
-        let Some(update) = feed
-            .trip_updates
-            .iter()
-            .find(|u| u.trip_id.as_deref() == Some(trip_id))
+    /// The update has to belong to the run this row came from, not
+    /// merely to name its `trip_id`: the row carries a service date and,
+    /// where a headway block expanded it, the start of its own run, and
+    /// [`crate::matching`] reads both. An update that cannot be shown to
+    /// belong to this run says nothing about it, so the row keeps its
+    /// scheduled time — the treatment the map gives such a run.
+    ///
+    /// Where an update does belong here, the per-stop event of the call
+    /// wins if the feed supplies one for a platform of the station: its
+    /// departure delay first, then its arrival delay. The trip-level
+    /// delay fills in for a call the feed says nothing about. This is
+    /// the rule the map view model applies to the same feed.
+    ///
+    /// [`crate::matching::UpdateMatch::targeted`] is not read here. It
+    /// exists so that a cancellation can outlive a stale realtime
+    /// layer, and the board judges no freshness: its caller decides
+    /// which layers reach it.
+    fn trip_status(
+        &self,
+        updates: &TripUpdateIndex<'_>,
+        entry: &BoardEntry,
+        station: StationId,
+    ) -> TripStatus {
+        let Some(update) = updates
+            .lookup(RunKey::new(
+                entry.departure.trip_id.as_str(),
+                entry.service_date,
+                entry.departure.run_start,
+            ))
+            .update
         else {
             return TripStatus::default();
         };

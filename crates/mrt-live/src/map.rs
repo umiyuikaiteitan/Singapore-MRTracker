@@ -38,18 +38,11 @@
 //! `start_time`, and the snapshot reads both: an update reaches a run
 //! only where it can be shown to belong to it.
 //!
-//! | The update names | The run | The update |
-//! | --- | --- | --- |
-//! | a `start_date` equal to the run's service date | any | may apply |
-//! | a `start_date` on another day | any | never applies |
-//! | no readable `start_date` | any | applies on whichever of the two scanned days carries the trip — the documented fallback |
-//! | a `start_time` equal to the run's start | comes from a headway block | may apply |
-//! | a `start_time` at another minute | comes from a headway block | never applies |
-//! | no readable `start_time` | comes from a headway block | applies to none of the sibling runs, and says so |
-//! | any `start_time` | is a fixed trip | ignored: the `trip_id` and the service date already name one run |
-//!
-//! The start of a run is the `@<HH:MM:SS>` suffix of its
-//! [`TripInstance::instance_id`], which
+//! [`crate::matching`] carries the decision table and the one
+//! implementation of it, which the live destination board reads too.
+//! The snapshot names a run to it with
+//! [`crate::matching::RunKey::for_instance`]: the start of a run is the
+//! `@<HH:MM:SS>` suffix of its [`TripInstance::instance_id`], which
 //! [`RailNetwork::query_trip_instances`] writes from the first call of
 //! that run.
 //!
@@ -59,9 +52,7 @@
 //! four minutes late when the operator said that one of them is; the
 //! snapshot applies it to none of them instead and leaves a
 //! `realtime-update-ambiguous` diagnostic naming the run it left on the
-//! schedule. It refuses to pick "the only sibling in the window"
-//! either: which siblings are in the window is a property of the query
-//! the caller asked for, not of the operator's statement.
+//! schedule.
 //!
 //! A cancellation is the exception that proves the rule. It outlives a
 //! stale feed, because the operator's own statement that a train does
@@ -79,8 +70,6 @@
 //! realtime `now_unix` in, exactly as [`crate::LiveBoardBuilder`] does.
 //! The same inputs always produce the same snapshot, byte for byte.
 
-use std::collections::HashMap;
-
 use serde::Serialize;
 
 use mrt_datamall::TrainServiceAlerts;
@@ -91,6 +80,7 @@ use mrt_gtfs::{
 };
 use mrt_gtfs_rt::{RailRtFeed, TripUpdate};
 
+use crate::matching::{RunKey, TripUpdateIndex};
 use crate::{match_train_line, LineState};
 
 /// The default half-width of the query window, in seconds.
@@ -534,7 +524,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
         let mut diagnostics = Vec::new();
         let freshness = self.freshness(date, clock, &mut diagnostics);
         let live = freshness.state.is_current();
-        let updates = self.trip_updates(&mut diagnostics);
+        let updates = TripUpdateIndex::from_feed(self.realtime, &mut diagnostics);
 
         let mut trains: Vec<MapTrain> = Vec::new();
         let mut bands: Vec<MapBand> = Vec::new();
@@ -778,74 +768,6 @@ impl<'a> NetworkSnapshotBuilder<'a> {
     // Positions
     // ------------------------------------------------------------------
 
-    /// Index the trip updates of the realtime feed by `trip_id`.
-    ///
-    /// The index is built once per snapshot rather than searched once
-    /// per run: the feed carries an update for every running trip and
-    /// the query returns a run for every running trip, so the search
-    /// was quadratic in the size of the network.
-    ///
-    /// A `trip_id` is not a key on its own — one `trip_id` covers
-    /// yesterday's run and today's, and every run a headway block
-    /// expands — so an entry holds the updates that name that trip and
-    /// the identifying fields of each, read once here rather than once
-    /// per run. A feed carries one update per running trip, so the
-    /// entry is one element long and the per-run lookup stays a hash
-    /// lookup and a filter over it. Where several updates fit one run,
-    /// the first of them wins, exactly as the search did.
-    ///
-    /// A `start_date` or a `start_time` that does not parse is reported
-    /// and then treated as absent, so an unreadable field falls back to
-    /// the behaviour of a field the feed never sent rather than
-    /// silently detaching the update from every run.
-    fn trip_updates(&self, diagnostics: &mut Vec<Diagnostic>) -> TripUpdateIndex<'a> {
-        let mut index = TripUpdateIndex::default();
-        let Some(feed) = self.realtime else {
-            return index;
-        };
-        for update in &feed.trip_updates {
-            let Some(trip_id) = update.trip_id.as_deref() else {
-                continue;
-            };
-            let start_date = update.start_date.as_deref().and_then(|raw| {
-                raw.parse::<ServiceDate>().ok().or_else(|| {
-                    diagnostics.push(
-                        Diagnostic::warning(
-                            "realtime-unreadable-start-date",
-                            format!(
-                                "the trip update names the start date \"{raw}\", which is not a \
-                                 GTFS date, so the update is read as naming no date at all"
-                            ),
-                        )
-                        .about(trip_id.to_string()),
-                    );
-                    None
-                })
-            });
-            let start_time = update.start_time.as_deref().and_then(|raw| {
-                raw.parse::<GtfsTime>().ok().or_else(|| {
-                    diagnostics.push(
-                        Diagnostic::warning(
-                            "realtime-unreadable-start-time",
-                            format!(
-                                "the trip update names the start time \"{raw}\", which is not a \
-                                 GTFS time, so the update is read as naming no start time at all"
-                            ),
-                        )
-                        .about(trip_id.to_string()),
-                    );
-                    None
-                })
-            });
-            index.by_trip.entry(trip_id).or_default().push(TripMatch {
-                update,
-                start_date,
-                start_time,
-            });
-        }
-        index
-    }
-
     /// Place one run on the network, or say why it cannot be placed.
     ///
     /// The function returns `None` for a run that is simply not
@@ -859,7 +781,7 @@ impl<'a> NetworkSnapshotBuilder<'a> {
         updates: &TripUpdateIndex<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Option<MapTrain> {
-        let matched = updates.lookup(trip);
+        let matched = updates.lookup(RunKey::for_instance(trip));
         if matched.ambiguous {
             diagnostics.push(
                 Diagnostic::info(
@@ -1065,114 +987,6 @@ impl<'a> NetworkSnapshotBuilder<'a> {
         );
         None
     }
-}
-
-// ----------------------------------------------------------------------
-// Matching an update to a run
-// ----------------------------------------------------------------------
-
-/// One trip update of the feed with its identifying fields read once.
-#[derive(Copy, Clone)]
-struct TripMatch<'a> {
-    /// The update itself.
-    update: &'a TripUpdate,
-    /// The service date the update names, where it names a readable
-    /// one.
-    start_date: Option<ServiceDate>,
-    /// The start time the update names, where it names a readable one.
-    start_time: Option<GtfsTime>,
-}
-
-/// The trip updates of one feed, indexed for matching.
-///
-/// The key is the `trip_id`, which names a trip and not a run of it;
-/// [`TripUpdateIndex::lookup`] does the rest.
-#[derive(Default)]
-struct TripUpdateIndex<'a> {
-    by_trip: HashMap<&'a str, Vec<TripMatch<'a>>>,
-}
-
-/// What the realtime feed says about one run.
-#[derive(Copy, Clone, Default)]
-struct UpdateMatch<'a> {
-    /// The update that belongs to the run, where one does.
-    update: Option<&'a TripUpdate>,
-    /// `true` when the update names the service date of the run, and
-    /// the start time of the run where it comes from a headway block.
-    /// Such an update is about this run and no sibling of it, which is
-    /// the bar a cancellation must clear to outlive a stale feed.
-    targeted: bool,
-    /// `true` when an update names the trip of the run and cannot be
-    /// attached to one of the runs the headway block expands.
-    ambiguous: bool,
-}
-
-impl<'a> TripUpdateIndex<'a> {
-    /// Find the update that belongs to one run.
-    ///
-    /// The module documentation carries the rules as a table. The cost
-    /// is one hash lookup and a scan of the updates that name that
-    /// `trip_id`, which a feed carries one of.
-    fn lookup(&self, trip: &TripInstance) -> UpdateMatch<'a> {
-        let Some(candidates) = self.by_trip.get(trip.source_trip_id.as_str()) else {
-            return UpdateMatch::default();
-        };
-        let expanded = expanded_start(trip);
-        let mut ambiguous = false;
-        for candidate in candidates {
-            // A dated update belongs to that service day alone. The
-            // builder scans two of them, so this is what keeps an
-            // update for yesterday's run off today's.
-            if candidate
-                .start_date
-                .is_some_and(|date| date != trip.service_date)
-            {
-                continue;
-            }
-            if let Some(start) = expanded {
-                match candidate.start_time {
-                    Some(time) if time == start => {}
-                    // Another run of the same headway block.
-                    Some(_) => continue,
-                    // Some run of the headway block, and the feed does
-                    // not say which.
-                    None => {
-                        ambiguous = true;
-                        continue;
-                    }
-                }
-            }
-            return UpdateMatch {
-                update: Some(candidate.update),
-                targeted: candidate.start_date.is_some(),
-                ambiguous: false,
-            };
-        }
-        UpdateMatch {
-            update: None,
-            targeted: false,
-            ambiguous,
-        }
-    }
-}
-
-/// Get the start time that identifies one run of a headway block.
-///
-/// The result is `None` for a fixed trip, which its `trip_id` and its
-/// service date already identify.
-///
-/// [`RailNetwork::query_trip_instances`] writes the `instance_id` of a
-/// run as `<date>:<trip_id>` for a fixed trip and as
-/// `<date>:<trip_id>@<HH:MM:SS>` for a run that a headway block
-/// expanded, where the time is the first call of that run. The suffix
-/// therefore decides, and the `trip_id` test keeps a `trip_id` that
-/// contains an `@` of its own from reading as a suffix.
-fn expanded_start(trip: &TripInstance) -> Option<GtfsTime> {
-    let (head, suffix) = trip.instance_id.rsplit_once('@')?;
-    if !head.ends_with(trip.source_trip_id.as_str()) {
-        return None;
-    }
-    suffix.parse().ok().or_else(|| trip.first_time())
 }
 
 // ----------------------------------------------------------------------

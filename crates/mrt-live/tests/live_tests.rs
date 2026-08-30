@@ -4,7 +4,7 @@
 //! live layers into it. No test touches the network.
 
 use mrt_datamall::{CrowdLevel, PlatformCrowd, ServiceStatus, TrainLine, TrainServiceAlerts};
-use mrt_gtfs::{Calendar, GtfsFeed, RailNetwork, Route, Stop, StopTime, Trip};
+use mrt_gtfs::{Calendar, Frequency, GtfsFeed, RailNetwork, Route, Stop, StopTime, Trip};
 use mrt_gtfs_rt::{RailRtFeed, StopTimeEvent, StopTimeUpdate, TripUpdate};
 use mrt_live::{match_train_line, LineState, LiveBoardBuilder, NetworkStatus};
 
@@ -711,6 +711,253 @@ fn an_irrelevant_realtime_layer_changes_nothing() {
     assert_eq!(plain.rows.len(), 2);
     assert_eq!(plain.rows[0].departs_in_secs, 600);
     assert_eq!(plain.rows[0].clock_time, "08:10:00");
+}
+
+// ----------------------------------------------------------------------
+// Which trip update reaches which row
+// ----------------------------------------------------------------------
+
+/// The tiny network with one headway block instead of the fixed trip.
+///
+/// `TF` starts a run at 08:00 and another at 08:10, and each of them
+/// calls NS4 ten minutes after it started: 08:10 and 08:20. Both rows
+/// carry the same `trip_id`, so only the start of the run tells them
+/// apart.
+fn frequency_network() -> RailNetwork {
+    let mut feed = tiny_feed();
+    feed.trips = vec![Trip {
+        route_id: "NS".to_string(),
+        service_id: "DAILY".to_string(),
+        trip_id: "TF".to_string(),
+        trip_headsign: Some("Marina Bay".to_string()),
+        direction_id: Some(0),
+        ..Default::default()
+    }];
+    feed.stop_times = vec![
+        stop_time("TF", "08:00:00", "S_NS1", 1),
+        stop_time("TF", "08:10:00", "S_NS4", 2),
+        stop_time("TF", "08:30:00", "S_NS27", 3),
+    ];
+    feed.frequencies = vec![Frequency {
+        trip_id: "TF".to_string(),
+        start_time: "08:00:00".parse().unwrap(),
+        end_time: "08:20:00".parse().unwrap(),
+        headway_secs: 600,
+        exact_times: Some(1),
+    }];
+    RailNetwork::from_feed(&feed).unwrap()
+}
+
+/// A trip update that names one run of a headway block.
+fn run_update(trip_id: &str, start_time: Option<&str>, delay_secs: i32) -> RailRtFeed {
+    RailRtFeed {
+        trip_updates: vec![TripUpdate {
+            trip_id: Some(trip_id.to_string()),
+            start_time: start_time.map(str::to_string),
+            delay_secs: Some(delay_secs),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+#[test]
+fn an_update_naming_one_start_time_moves_only_that_sibling() {
+    let network = frequency_network();
+    // The 08:10 run is five minutes late. Its sibling, which started
+    // at 08:00 and calls here at 08:10, is not.
+    let realtime = run_update("TF", Some("08:10:00"), 300);
+    let board = board_at(&network, &realtime, "NS4", "08:00:00", 3600);
+
+    assert_eq!(board.rows.len(), 2);
+    assert_eq!(board.rows[0].clock_time, "08:10:00");
+    assert_eq!(board.rows[0].delay_secs, None);
+    assert_eq!(board.rows[0].departs_in_secs, 600);
+    assert_eq!(board.rows[1].clock_time, "08:25:00");
+    assert_eq!(board.rows[1].delay_secs, Some(300));
+    assert_eq!(board.rows[1].departs_in_secs, 1500);
+}
+
+#[test]
+fn a_cancellation_naming_one_start_time_cancels_only_that_sibling() {
+    let network = frequency_network();
+    let realtime = RailRtFeed {
+        trip_updates: vec![TripUpdate {
+            trip_id: Some("TF".to_string()),
+            start_time: Some("08:00:00".to_string()),
+            canceled: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let board = board_at(&network, &realtime, "NS4", "08:00:00", 3600);
+
+    assert_eq!(board.rows.len(), 2);
+    assert!(board.rows[0].canceled);
+    assert_eq!(board.rows[0].clock_time, "08:10:00");
+    assert!(!board.rows[1].canceled);
+    assert_eq!(board.rows[1].clock_time, "08:20:00");
+}
+
+#[test]
+fn a_skipped_stop_naming_one_start_time_removes_only_that_sibling() {
+    let network = frequency_network();
+    let realtime = RailRtFeed {
+        trip_updates: vec![TripUpdate {
+            trip_id: Some("TF".to_string()),
+            start_time: Some("08:10:00".to_string()),
+            stop_updates: vec![StopTimeUpdate {
+                stop_id: Some("S_NS4".to_string()),
+                skipped: true,
+                ..Default::default()
+            }],
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let board = board_at(&network, &realtime, "NS4", "08:00:00", 3600);
+
+    // The 08:20 row is gone; the sibling that started at 08:00 keeps
+    // its call.
+    assert_eq!(board.rows.len(), 1);
+    assert_eq!(board.rows[0].clock_time, "08:10:00");
+}
+
+#[test]
+fn an_update_naming_no_start_time_reaches_no_sibling() {
+    let network = frequency_network();
+    // The operator says one of these trains is five minutes late and
+    // does not say which. Marking both would state something the feed
+    // never said, so the board marks neither — the rule the map view
+    // model records as `realtime-update-ambiguous`.
+    let realtime = run_update("TF", None, 300);
+    let board = board_at(&network, &realtime, "NS4", "08:00:00", 3600);
+
+    assert_eq!(board.rows.len(), 2);
+    assert!(board.rows.iter().all(|row| row.delay_secs.is_none()));
+    assert_eq!(board.rows[0].clock_time, "08:10:00");
+    assert_eq!(board.rows[1].clock_time, "08:20:00");
+}
+
+/// A network with one run that calls at NS4 after midnight: the trip
+/// starts on its own service day and reaches NS4 at 24:10:00, which is
+/// 00:10 on the next calendar day.
+fn past_midnight_network() -> RailNetwork {
+    let mut feed = tiny_feed();
+    feed.stop_times = vec![
+        stop_time("T1", "24:00:00", "S_NS1", 1),
+        stop_time("T1", "24:10:00", "S_NS4", 2),
+        stop_time("T1", "24:30:00", "S_NS27", 3),
+    ];
+    RailNetwork::from_feed(&feed).unwrap()
+}
+
+/// A dated trip update: a delay the operator attributes to one
+/// service day.
+fn dated_update(trip_id: &str, start_date: &str, delay_secs: i32) -> RailRtFeed {
+    RailRtFeed {
+        trip_updates: vec![TripUpdate {
+            trip_id: Some(trip_id.to_string()),
+            start_date: Some(start_date.to_string()),
+            delay_secs: Some(delay_secs),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+#[test]
+fn a_todays_update_cannot_change_yesterdays_run() {
+    let network = past_midnight_network();
+    // At 00:05 on the 11th the only train on the board is the run that
+    // started on the 10th and reaches NS4 at 00:10. An update about the
+    // 11th names the run that starts tonight, not this one.
+    let station = network.station_by_code("NS4").unwrap();
+    let build = |realtime: &RailRtFeed| {
+        LiveBoardBuilder::new(&network)
+            .with_realtime(realtime)
+            .build(
+                station,
+                "20260811".parse().unwrap(),
+                "00:05:00".parse().unwrap(),
+                3600,
+            )
+    };
+
+    let today = build(&dated_update("T1", "20260811", 300));
+    assert_eq!(today.rows.len(), 1);
+    assert_eq!(today.rows[0].delay_secs, None);
+    assert_eq!(today.rows[0].clock_time, "00:10:00");
+    assert_eq!(today.rows[0].departs_in_secs, 300);
+
+    // The same update dated to the day the run belongs to does reach
+    // it, so the test measures the date and not some other refusal.
+    let yesterday = build(&dated_update("T1", "20260810", 300));
+    assert_eq!(yesterday.rows.len(), 1);
+    assert_eq!(yesterday.rows[0].delay_secs, Some(300));
+    assert_eq!(yesterday.rows[0].clock_time, "00:15:00");
+    assert_eq!(yesterday.rows[0].departs_in_secs, 600);
+}
+
+#[test]
+fn a_todays_cancellation_cannot_cancel_yesterdays_run() {
+    let network = past_midnight_network();
+    let station = network.station_by_code("NS4").unwrap();
+    let realtime = RailRtFeed {
+        trip_updates: vec![TripUpdate {
+            trip_id: Some("T1".to_string()),
+            start_date: Some("20260811".to_string()),
+            canceled: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let board = LiveBoardBuilder::new(&network)
+        .with_realtime(&realtime)
+        .build(
+            station,
+            "20260811".parse().unwrap(),
+            "00:05:00".parse().unwrap(),
+            3600,
+        );
+
+    assert_eq!(board.rows.len(), 1);
+    assert!(!board.rows[0].canceled);
+}
+
+#[test]
+fn an_undated_update_still_reaches_a_fixed_trip() {
+    // The documented fallback: a feed that names no start date applies
+    // on whichever of the two scanned days carries the trip. The board
+    // must keep serving the LTA feed, which sends no descriptor dates.
+    let network = past_midnight_network();
+    let station = network.station_by_code("NS4").unwrap();
+    let realtime = trip_delay("T1", 300);
+    let board = LiveBoardBuilder::new(&network)
+        .with_realtime(&realtime)
+        .build(
+            station,
+            "20260811".parse().unwrap(),
+            "00:05:00".parse().unwrap(),
+            3600,
+        );
+
+    assert_eq!(board.rows.len(), 1);
+    assert_eq!(board.rows[0].delay_secs, Some(300));
+}
+
+#[test]
+fn a_start_time_never_narrows_a_fixed_trip() {
+    // A fixed trip is named by its `trip_id` and its service date, so
+    // a descriptor start time is not a second key to match on: an
+    // update that carries one still reaches the run.
+    let network = two_train_network();
+    let realtime = run_update("T1", Some("09:99:99"), 360);
+    let board = board_at(&network, &realtime, "NS4", "08:00:00", 3600);
+
+    assert_eq!(board.rows.len(), 2);
+    assert_eq!(board.rows[1].clock_time, "08:16:00");
+    assert_eq!(board.rows[1].delay_secs, Some(360));
 }
 
 #[test]

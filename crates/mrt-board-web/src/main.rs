@@ -36,8 +36,8 @@ use std::io::Cursor;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use mrt_datamall::{DataMallClient, PlatformCrowd, TrainServiceAlerts, UreqTransport};
-use mrt_gtfs::{GtfsFeed, RailNetwork, ZipSource};
+use mrt_datamall::{DataMallClient, PlatformCrowd, TrainLine, TrainServiceAlerts, UreqTransport};
+use mrt_gtfs::{GtfsFeed, GtfsTime, RailNetwork, ServiceDate, ZipSource};
 use mrt_gtfs_rt::RailRtFeed;
 use mrt_live::{match_train_line, LiveBoardBuilder};
 
@@ -52,6 +52,38 @@ const STALE_TTL_MULTIPLE: u32 = 3;
 /// signal at all any more. A layer whose upstream keeps failing for
 /// this long counts as down.
 const DOWN_TTL_MULTIPLE: u32 = 15;
+
+/// The age at which one layer's cache stops counting as live. See
+/// [`STALE_TTL_MULTIPLE`].
+const STALE_AFTER: Duration = Duration::from_secs(LIVE_TTL.as_secs() * STALE_TTL_MULTIPLE as u64);
+
+/// The age at which one layer's cache dies. See [`DOWN_TTL_MULTIPLE`].
+///
+/// # Stale applies, dead does not
+///
+/// The two thresholds split what a cached layer may still do, and
+/// [`upstream_state`] and [`collect_layers`] read that split the same
+/// way — the lamp has to describe the data actually on the board:
+///
+/// - Under [`STALE_AFTER`], with the last fetch successful: the layer
+///   is live. It applies, and the lamp says `live`.
+/// - Between [`STALE_AFTER`] and [`DOWN_AFTER`], or with a failing
+///   upstream at any age under [`DOWN_AFTER`]: the layer is *stale*.
+///   It still applies — the operator's most recent statement about a
+///   delay or a cancellation is the best the board has, and a minute
+///   of aged data beats no data — and the lamp says `stale` with the
+///   age, so a reader knows what they are looking at.
+/// - Over [`DOWN_AFTER`], or never fetched at all: the layer is
+///   *dead*. It contributes nothing to the board: no alert, no trip
+///   update, no crowd value. A board that reported `down` while still
+///   applying a five-minute-old cancellation would say one thing and
+///   show another, and the cancellation is the reading that matters
+///   most — it deletes a train the schedule says is coming.
+///
+/// Each layer expires on its own, because each has its own upstream:
+/// one dead layer does not blank the layers still arriving, and one
+/// live layer does not revive a dead one.
+const DOWN_AFTER: Duration = Duration::from_secs(LIVE_TTL.as_secs() * DOWN_TTL_MULTIPLE as u64);
 
 /// How long the live forwarder reuses one snapshot. DataMall sees at
 /// most one snapshot refresh per minute, whatever the request rate.
@@ -97,6 +129,21 @@ impl<T> Layer<T> {
             }
             None => self.failing = true,
         }
+    }
+
+    /// The data this layer contributes to the board, or nothing once
+    /// the layer is dead.
+    ///
+    /// A live layer and a stale one both apply; a layer whose cache has
+    /// outlived [`DOWN_AFTER`] applies nothing, so the board never
+    /// shows data that [`upstream_state`] has already declared down.
+    /// The two read the same threshold, and the boundary belongs to the
+    /// living side in both.
+    fn applied(&self, now: Instant) -> Option<&T> {
+        self.data
+            .as_ref()
+            .filter(|(at, _)| now.duration_since(*at) <= DOWN_AFTER)
+            .map(|(_, value)| value)
     }
 
     /// The freshness facts of this layer, for the lamp.
@@ -263,19 +310,16 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
 
     // Refresh the live layers, then build the board.
     let layers = live_layers(app, station);
-    let mut builder = LiveBoardBuilder::new(&app.network).max_rows(rows);
-    if let Some(alerts) = &layers.alerts {
-        builder = builder.with_alerts(alerts);
-    }
-    if let Some(realtime) = &layers.realtime {
-        builder = builder.with_realtime(realtime);
-    }
-    builder = builder
-        .with_crowd(&layers.crowd)
-        .with_rt_alerts(&layers.rt_alerts, clock::unix_now() as u64);
-
     let (date, now) = clock::sgt_now();
-    let board = builder.build(station, date, now, 3600);
+    let board = build_board(
+        &app.network,
+        station,
+        rows,
+        &layers,
+        date,
+        now,
+        clock::unix_now() as u64,
+    );
     Ok(serde_json::json!({
         "board": board,
         "date": date,
@@ -283,6 +327,33 @@ fn board_json(app: &App, query: &HashMap<String, String>) -> Result<String, Stri
         "live": live_json(app, &layers.health),
     })
     .to_string())
+}
+
+/// Merge the live layers this response applies into the board for one
+/// station.
+///
+/// A layer that [`collect_layers`] left out never reaches the builder,
+/// so a dead layer decorates nothing.
+fn build_board(
+    network: &RailNetwork,
+    station: mrt_gtfs::StationId,
+    rows: usize,
+    layers: &LiveLayers,
+    date: ServiceDate,
+    clock: GtfsTime,
+    now_unix: u64,
+) -> mrt_live::LiveBoard {
+    let mut builder = LiveBoardBuilder::new(network).max_rows(rows);
+    if let Some(alerts) = &layers.alerts {
+        builder = builder.with_alerts(alerts);
+    }
+    if let Some(realtime) = &layers.realtime {
+        builder = builder.with_realtime(realtime);
+    }
+    builder
+        .with_crowd(&layers.crowd)
+        .with_rt_alerts(&layers.rt_alerts, now_unix)
+        .build(station, date, clock, 3600)
 }
 
 /// The `live` member of a board response: the actual freshness of the
@@ -341,8 +412,8 @@ enum UpstreamState {
 /// live; all layers dead is down; anything between is stale, aged by
 /// the oldest cache still served.
 fn upstream_state(layers: &[LayerHealth]) -> UpstreamState {
-    let stale_after = LIVE_TTL.as_secs() * u64::from(STALE_TTL_MULTIPLE);
-    let down_after = LIVE_TTL.as_secs() * u64::from(DOWN_TTL_MULTIPLE);
+    let stale_after = STALE_AFTER.as_secs();
+    let down_after = DOWN_AFTER.as_secs();
     let mut all_live = true;
     let mut any_alive = false;
     let mut oldest: u64 = 0;
@@ -387,7 +458,28 @@ fn live_layers(app: &App, station: mrt_gtfs::StationId) -> LiveLayers {
     };
     let mut cache = app.cache.lock().expect("cache lock");
     let now = Instant::now();
+    // Crowd data comes per line, so this response consults one crowd
+    // layer per line of the station.
+    let lines: Vec<TrainLine> = app
+        .network
+        .station(station)
+        .lines
+        .iter()
+        .filter_map(|&id| match_train_line(app.network.line(id)))
+        .collect();
 
+    refresh_layers(client, &mut cache, &lines, now);
+    collect_layers(&cache, &lines, now)
+}
+
+/// Refresh every layer this response consults whose cache has passed
+/// [`LIVE_TTL`], recording success and failure per layer.
+fn refresh_layers(
+    client: &DataMallClient<UreqTransport>,
+    cache: &mut LiveCache,
+    lines: &[TrainLine],
+    now: Instant,
+) {
     if !cache.alerts.fresh(now) {
         cache.alerts.record(now, client.train_service_alerts().ok());
     }
@@ -410,38 +502,45 @@ fn live_layers(app: &App, station: mrt_gtfs::StationId) -> LiveLayers {
                 .map(|feed| feed.alerts),
         );
     }
+    for &line in lines {
+        let layer = cache.crowd.entry(line.code()).or_default();
+        if !layer.fresh(now) {
+            layer.record(now, client.platform_crowd(line).ok());
+        }
+    }
+}
+
+/// Assemble the layers this response applies, out of the cache.
+///
+/// Every layer expires on its own, at [`DOWN_AFTER`]: a dead layer
+/// contributes nothing, whatever the others hold. That is the same
+/// threshold [`upstream_state`] reads, so the board never applies a
+/// delay or a cancellation from data the lamp has already called down.
+///
+/// [`LiveLayers::health`] still carries one entry per layer consulted,
+/// dead ones included: an outage is exactly what the lamp has to
+/// report.
+fn collect_layers(cache: &LiveCache, lines: &[TrainLine], now: Instant) -> LiveLayers {
     let mut health = vec![
         cache.alerts.health(now),
         cache.realtime.health(now),
         cache.rt_alerts.health(now),
     ];
 
-    // Crowd data comes per line. Fetch it for the lines of the
-    // station.
+    let missing: Layer<Vec<PlatformCrowd>> = Layer::default();
     let mut crowd = Vec::new();
-    for &line_id in &app.network.station(station).lines {
-        let Some(line) = match_train_line(app.network.line(line_id)) else {
-            continue;
-        };
-        let layer = cache.crowd.entry(line.code()).or_default();
-        if !layer.fresh(now) {
-            layer.record(now, client.platform_crowd(line).ok());
-        }
-        if let Some((_, records)) = &layer.data {
+    for &line in lines {
+        let layer = cache.crowd.get(line.code()).unwrap_or(&missing);
+        if let Some(records) = layer.applied(now) {
             crowd.extend(records.iter().cloned());
         }
         health.push(layer.health(now));
     }
 
     LiveLayers {
-        alerts: cache.alerts.data.as_ref().map(|(_, a)| a.clone()),
-        realtime: cache.realtime.data.as_ref().map(|(_, r)| r.clone()),
-        rt_alerts: cache
-            .rt_alerts
-            .data
-            .as_ref()
-            .map(|(_, a)| a.clone())
-            .unwrap_or_default(),
+        alerts: cache.alerts.applied(now).cloned(),
+        realtime: cache.realtime.applied(now).cloned(),
+        rt_alerts: cache.rt_alerts.applied(now).cloned().unwrap_or_default(),
         crowd,
         health,
     }
@@ -680,6 +779,200 @@ mod tests {
             upstream_state(&[failing(Some(301)), failing(Some(200))]),
             UpstreamState::Stale { age_secs: 200 }
         );
+    }
+
+    // ------------------------------------------------------------------
+    // A dead layer reaches no board
+    // ------------------------------------------------------------------
+
+    /// A one-line network: three North South Line stations, daily
+    /// service, one trip calling NS4 at 08:10.
+    fn tiny_network() -> RailNetwork {
+        use mrt_gtfs::{Calendar, Route, Stop, StopTime, Trip};
+
+        let stop = |id: &str, code: &str, name: &str| Stop {
+            stop_id: id.to_string(),
+            stop_code: Some(code.to_string()),
+            stop_name: Some(name.to_string()),
+            location_type: Some(0),
+            ..Default::default()
+        };
+        let stop_time = |time: &str, at: &str, seq: u32| StopTime {
+            trip_id: "T1".to_string(),
+            arrival_time: Some(time.parse().unwrap()),
+            departure_time: Some(time.parse().unwrap()),
+            stop_id: at.to_string(),
+            stop_sequence: seq,
+            ..Default::default()
+        };
+        let feed = GtfsFeed {
+            stops: vec![
+                stop("S_NS1", "NS1", "Jurong East"),
+                stop("S_NS4", "NS4", "Choa Chu Kang"),
+                stop("S_NS27", "NS27", "Marina Bay"),
+            ],
+            routes: vec![Route {
+                route_id: "NS".to_string(),
+                agency_id: None,
+                route_short_name: Some("NSL".to_string()),
+                route_long_name: Some("North South Line".to_string()),
+                route_type: 1,
+                route_color: None,
+                route_text_color: None,
+            }],
+            trips: vec![Trip {
+                route_id: "NS".to_string(),
+                service_id: "DAILY".to_string(),
+                trip_id: "T1".to_string(),
+                trip_headsign: Some("Marina Bay".to_string()),
+                direction_id: Some(0),
+                ..Default::default()
+            }],
+            stop_times: vec![
+                stop_time("08:00:00", "S_NS1", 1),
+                stop_time("08:10:00", "S_NS4", 2),
+                stop_time("08:30:00", "S_NS27", 3),
+            ],
+            calendar: vec![Calendar {
+                service_id: "DAILY".to_string(),
+                monday: 1,
+                tuesday: 1,
+                wednesday: 1,
+                thursday: 1,
+                friday: 1,
+                saturday: 1,
+                sunday: 1,
+                start_date: "20250101".parse().unwrap(),
+                end_date: "20271231".parse().unwrap(),
+            }],
+            ..Default::default()
+        };
+        RailNetwork::from_feed(&feed).expect("the test feed builds")
+    }
+
+    /// A cache whose realtime layer landed at `at`, carrying the
+    /// operator's cancellation of T1, with the upstream failing since.
+    ///
+    /// The crowd layer of the NSL landed at the same instant.
+    fn cache_fetched_at(at: Instant) -> LiveCache {
+        let mut cache = LiveCache::default();
+        cache.realtime.data = Some((
+            at,
+            RailRtFeed {
+                trip_updates: vec![mrt_gtfs_rt::TripUpdate {
+                    trip_id: Some("T1".to_string()),
+                    canceled: true,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        ));
+        cache.realtime.failing = true;
+        let crowd = cache.crowd.entry(TrainLine::NSL.code()).or_default();
+        crowd.data = Some((
+            at,
+            vec![PlatformCrowd {
+                station: "NS4".to_string(),
+                start_time: String::new(),
+                end_time: String::new(),
+                crowd_level: mrt_datamall::CrowdLevel::High,
+            }],
+        ));
+        crowd.failing = true;
+        cache
+    }
+
+    /// The first board row for Choa Chu Kang, built from the given
+    /// layers exactly as a board response builds it.
+    fn first_row(network: &RailNetwork, layers: &LiveLayers) -> mrt_live::LiveBoardRow {
+        let station = network.station_by_code("NS4").expect("NS4 exists");
+        let board = build_board(
+            network,
+            station,
+            4,
+            layers,
+            "20260810".parse().unwrap(),
+            "08:00:00".parse().unwrap(),
+            1_000,
+        );
+        board.rows.into_iter().next().expect("one scheduled row")
+    }
+
+    #[test]
+    fn a_stale_layer_still_applies_to_the_board() {
+        let network = tiny_network();
+        let at = Instant::now();
+        // One second inside the horizon: the lamp says stale, and the
+        // operator's cancellation is still the best the board has.
+        let layers = collect_layers(
+            &cache_fetched_at(at),
+            &[TrainLine::NSL],
+            at + DOWN_AFTER - Duration::from_secs(1),
+        );
+        assert!(matches!(
+            upstream_state(&layers.health),
+            UpstreamState::Stale { .. }
+        ));
+        assert!(first_row(&network, &layers).canceled);
+    }
+
+    #[test]
+    fn an_old_cancellation_leaves_the_board_once_its_layer_is_down() {
+        let network = tiny_network();
+        let at = Instant::now();
+        // One second past the horizon: the lamp says down, so the
+        // cancellation must be off the board too. A response that
+        // reported `down` and still deleted this train would be
+        // showing data it had just declared unusable.
+        let layers = collect_layers(
+            &cache_fetched_at(at),
+            &[TrainLine::NSL],
+            at + DOWN_AFTER + Duration::from_secs(1),
+        );
+        assert_eq!(upstream_state(&layers.health), UpstreamState::Down);
+        assert!(layers.realtime.is_none());
+        assert!(!first_row(&network, &layers).canceled);
+    }
+
+    #[test]
+    fn every_layer_expires_at_the_down_threshold() {
+        let at = Instant::now();
+        let cache = cache_fetched_at(at);
+        let lines = [TrainLine::NSL];
+
+        // The boundary belongs to the living side, exactly as
+        // upstream_state reads it.
+        let alive = collect_layers(&cache, &lines, at + DOWN_AFTER);
+        assert!(alive.realtime.is_some());
+        assert_eq!(alive.crowd.len(), 1);
+
+        let dead = collect_layers(&cache, &lines, at + DOWN_AFTER + Duration::from_secs(1));
+        assert!(dead.realtime.is_none());
+        assert!(dead.crowd.is_empty());
+        // The lamp still reports every layer this response consulted,
+        // so an outage is visible rather than silent.
+        assert_eq!(dead.health.len(), 4);
+    }
+
+    #[test]
+    fn layers_expire_one_by_one() {
+        // Each layer has its own upstream, so a dead trip-update layer
+        // must not blank a crowd layer that is still arriving.
+        let at = Instant::now();
+        let mut cache = cache_fetched_at(at);
+        let now = at + DOWN_AFTER + Duration::from_secs(1);
+        cache
+            .crowd
+            .entry(TrainLine::NSL.code())
+            .or_default()
+            .record(now, Some(Vec::new()));
+
+        let layers = collect_layers(&cache, &[TrainLine::NSL], now);
+        assert!(layers.realtime.is_none());
+        assert!(matches!(
+            upstream_state(&layers.health),
+            UpstreamState::Stale { .. }
+        ));
     }
 
     #[test]
