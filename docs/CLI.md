@@ -170,9 +170,18 @@ cache/
 Storing the same bytes twice reuses the object, so repeated fetches
 cost one file each time the feed actually changes.
 
+A download is validated before anything durable changes: the archive
+must parse as a GTFS feed first, and only then does the cache store
+the object and advance `current.json`, and only then is `--out`
+written — each by an atomic rename beside its target. A corrupt
+response therefore fails the run (exit 4), leaves the last good cache
+entry in place as the `--allow-stale` fallback, and never overwrites
+an existing `--out` file.
+
 `--allow-stale` is the only way a cached feed stands in for a failed
-download, and every page generated that way carries a visible
-"generated from a cached feed" notice.
+download — a download that does not parse counts as failed — and
+every page generated that way carries a visible "generated from a
+cached feed" notice.
 
 ## The manifest
 

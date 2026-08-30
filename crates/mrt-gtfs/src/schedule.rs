@@ -28,12 +28,30 @@ pub struct Departure {
     /// `true` if the time is exact. `false` if the time comes from a
     /// headway-based frequency entry and is approximate.
     pub exact: bool,
+    /// The start of the run this departure belongs to, for a departure
+    /// that a headway block expanded.
+    ///
+    /// A `trip_id` names a trip, not one run of it: a headway block
+    /// expands one trip into a run every few minutes, and every one of
+    /// those departures carries the same `trip_id`. The start of the
+    /// run tells the siblings apart, and it is the field a
+    /// GTFS-Realtime `TripDescriptor` names with `start_time`.
+    ///
+    /// The value is `None` for a fixed trip, which its `trip_id` and
+    /// its service date already identify.
+    pub run_start: Option<GtfsTime>,
 }
 
 /// One row of a destination board.
 ///
 /// A board row wraps a [`Departure`] together with its service date and
 /// the wait time from the query time.
+///
+/// The row names one run of one trip: the `trip_id` of the departure,
+/// [`BoardEntry::service_date`], and — for a departure a headway block
+/// expanded — [`Departure::run_start`]. A consumer that attaches live
+/// data to a row reads all three, because the board scans two service
+/// days and expands one frequency trip into many rows.
 #[derive(Debug, Clone, Serialize)]
 pub struct BoardEntry {
     /// The departure.
@@ -106,7 +124,7 @@ impl RailNetwork {
                     continue;
                 };
                 if from <= time && time <= until {
-                    out.push(self.make_departure(trip, station, terminus, time, true));
+                    out.push(self.make_departure(trip, station, terminus, time, true, None));
                 }
             } else {
                 self.collect_frequency_departures(trip, station, terminus, idx, from, until, out);
@@ -147,7 +165,16 @@ impl RailNetwork {
             while start < block.end_time.seconds() {
                 let time = GtfsTime::from_seconds(start + offset);
                 if from <= time && time <= until {
-                    out.push(self.make_departure(trip, station, terminus, time, block.is_exact()));
+                    // The start of this run is what tells it from its
+                    // siblings, so the departure carries it.
+                    out.push(self.make_departure(
+                        trip,
+                        station,
+                        terminus,
+                        time,
+                        block.is_exact(),
+                        Some(GtfsTime::from_seconds(start)),
+                    ));
                 }
                 start += block.headway_secs;
             }
@@ -161,6 +188,7 @@ impl RailNetwork {
         terminus: StationId,
         time: GtfsTime,
         exact: bool,
+        run_start: Option<GtfsTime>,
     ) -> Departure {
         Departure {
             line: trip.line,
@@ -171,6 +199,7 @@ impl RailNetwork {
             terminus,
             direction: self.pattern(trip.pattern).direction,
             exact,
+            run_start,
         }
     }
 

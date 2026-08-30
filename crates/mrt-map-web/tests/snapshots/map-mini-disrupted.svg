@@ -1,0 +1,115 @@
+<svg class="map" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830.67 700" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="map-svg-title map-svg-desc">
+<title id="map-svg-title">The rail network as a schematic</title>
+<desc id="map-svg-desc">A schematic of 6 line(s) and 15 station(s), on the service day 20250505 at 06:05:00. The drawing is not geographic. 1 line(s) are marked disrupted; the notices name them.</desc>
+<g class="ribbons" aria-hidden="true">
+<g class="ribbon-group disrupted" data-layout-line="line-nsl">
+<path class="casing" d="M154 480.67 L154 223.74 L154.04 223.16 L154.15 222.6 L154.34 222.05 L154.59 221.54 L154.91 221.06 L155.29 220.62 L155.72 220.24 L156.2 219.92 L156.72 219.67 L157.27 219.48 L157.83 219.37 L158.41 219.33 L348.17 219.33 L348.75 219.37 L349.31 219.48 L349.86 219.67 L350.38 219.92 L350.86 220.24 L351.29 220.62 L544.71 414.04 L545.09 414.48 L545.41 414.96 L545.66 415.47 L545.85 416.02 L545.96 416.58 L546 417.16 L546 644"/>
+<path class="ribbon" stroke="#D42E12" d="M154 480.67 L154 223.74 L154.04 223.16 L154.15 222.6 L154.34 222.05 L154.59 221.54 L154.91 221.06 L155.29 220.62 L155.72 220.24 L156.2 219.92 L156.72 219.67 L157.27 219.48 L157.83 219.37 L158.41 219.33 L348.17 219.33 L348.75 219.37 L349.31 219.48 L349.86 219.67 L350.38 219.92 L350.86 220.24 L351.29 220.62 L544.71 414.04 L545.09 414.48 L545.41 414.96 L545.66 415.47 L545.85 416.02 L545.96 416.58 L546 417.16 L546 644"/>
+</g>
+<g class="ribbon-group" data-layout-line="line-ewl">
+<path class="casing" d="M154 480.67 L250.71 577.38 L251.14 577.76 L251.62 578.08 L252.14 578.33 L252.69 578.52 L253.25 578.63 L253.83 578.67 L446.17 578.67 L446.75 578.7 L447.31 578.82 L447.86 579 L448.38 579.26 L448.86 579.58 L449.29 579.96 L513.33 644"/>
+<path class="ribbon" stroke="#009645" d="M154 480.67 L250.71 577.38 L251.14 577.76 L251.62 578.08 L252.14 578.33 L252.69 578.52 L253.25 578.63 L253.83 578.67 L446.17 578.67 L446.75 578.7 L447.31 578.82 L447.86 579 L448.38 579.26 L448.86 579.58 L449.29 579.96 L513.33 644"/>
+</g>
+<g class="ribbon-group" data-layout-line="line-bpl">
+<path class="casing" d="M154 284.67 L56.86 187.53 L56.61 187.24 L56.39 186.92 L56.22 186.57 L56.1 186.21 L56.03 185.83 L56 185.45 L56 121.33"/>
+<path class="ribbon" stroke="#748477" d="M154 284.67 L56.86 187.53 L56.61 187.24 L56.39 186.92 L56.22 186.57 L56.1 186.21 L56.03 185.83 L56 185.45 L56 121.33"/>
+</g>
+<g class="ribbon-group" data-layout-line="line-tel">
+<path class="casing" d="M284.67 56 L284.67 182.26 L284.7 182.84 L284.82 183.4 L285 183.95 L285.26 184.46 L285.58 184.94 L285.96 185.38 L286.39 185.76 L286.87 186.08 L287.39 186.33 L287.93 186.52 L288.5 186.63 L289.07 186.67 L413.51 186.67 L414.08 186.7 L414.65 186.82 L415.19 187 L415.71 187.26 L416.19 187.58 L416.62 187.96 L513.33 284.67"/>
+<path class="ribbon" stroke="#9D5B25" d="M284.67 56 L284.67 182.26 L284.7 182.84 L284.82 183.4 L285 183.95 L285.26 184.46 L285.58 184.94 L285.96 185.38 L286.39 185.76 L286.87 186.08 L287.39 186.33 L287.93 186.52 L288.5 186.63 L289.07 186.67 L413.51 186.67 L414.08 186.7 L414.65 186.82 L415.19 187 L415.71 187.26 L416.19 187.58 L416.62 187.96 L513.33 284.67"/>
+</g>
+<g class="ribbon-group" data-layout-line="line-tel-branch">
+<path class="casing" d="M284.67 186.67 L381.38 89.96 L381.81 89.58 L382.29 89.26 L382.81 89 L383.35 88.82 L383.92 88.7 L384.49 88.67 L513.33 88.67"/>
+<path class="ribbon" stroke="#9D5B25" d="M284.67 186.67 L381.38 89.96 L381.81 89.58 L382.29 89.26 L382.81 89 L383.35 88.82 L383.92 88.7 L384.49 88.67 L513.33 88.67"/>
+</g>
+<g class="ribbon-group" data-layout-line="line-pwl">
+<path class="casing" d="M676.67 252 L676.67 156.94 L676.69 156.55 L676.77 156.18 L676.89 155.81 L677.06 155.47 L677.27 155.15 L677.53 154.86 L677.82 154.61 L678.14 154.39 L678.48 154.22 L678.84 154.1 L679.22 154.03 L679.61 154 L771.73 154 L772.11 154.03 L772.49 154.1 L772.85 154.22 L773.2 154.39 L773.52 154.61 L773.81 154.86 L774.06 155.15 L774.27 155.47 L774.44 155.81 L774.57 156.18 L774.64 156.55 L774.67 156.94 L774.67 249.06 L774.64 249.45 L774.57 249.82 L774.44 250.19 L774.27 250.53 L774.06 250.85 L773.81 251.14 L773.52 251.39 L773.2 251.61 L772.85 251.78 L772.49 251.9 L772.11 251.97 L771.73 252 L676.67 252"/>
+<path class="ribbon" stroke="#748477" d="M676.67 252 L676.67 156.94 L676.69 156.55 L676.77 156.18 L676.89 155.81 L677.06 155.47 L677.27 155.15 L677.53 154.86 L677.82 154.61 L678.14 154.39 L678.48 154.22 L678.84 154.1 L679.22 154.03 L679.61 154 L771.73 154 L772.11 154.03 L772.49 154.1 L772.85 154.22 L773.2 154.39 L773.52 154.61 L773.81 154.86 L774.06 155.15 L774.27 155.47 L774.44 155.81 L774.57 156.18 L774.64 156.55 L774.67 156.94 L774.67 249.06 L774.64 249.45 L774.57 249.82 L774.44 250.19 L774.27 250.53 L774.06 250.85 L773.81 251.14 L773.52 251.39 L773.2 251.61 L772.85 251.78 L772.49 251.9 L772.11 251.97 L771.73 252 L676.67 252"/>
+</g>
+</g>
+<g class="disruptions" aria-hidden="true">
+<path class="disrupted-section" d="M154 480.67 L154 284.65"/>
+<path class="disrupted-cut" d="M154 480.67 L154 284.65"/>
+</g>
+<g class="bands" id="map-bands">
+<text class="band-label" x="81.95" y="203.61" fill="#748477">every 10 min approximately</text>
+</g>
+<g class="stations">
+<g class="station interchange">
+<title>Jurong East (NS1, EW24) · interchange</title>
+<circle class="disc" cx="154" cy="480.67" r="6.4"/>
+<text class="station-name" x="164.5" y="484.07" text-anchor="start">Jurong East</text>
+</g>
+<g class="station interchange">
+<title>Choa Chu Kang (NS4, BP1) · interchange</title>
+<circle class="disc" cx="154" cy="284.67" r="6.4"/>
+<text class="station-name" x="164.5" y="288.07" text-anchor="start">Choa Chu Kang</text>
+</g>
+<g class="station">
+<title>Marina Bay (NS27)</title>
+<circle class="disc" cx="546" cy="644" r="4.4" stroke="#D42E12"/>
+<text class="station-name" x="554.5" y="647.4" text-anchor="start">Marina Bay</text>
+</g>
+<g class="station">
+<title>Buona Vista (EW21)</title>
+<circle class="disc" cx="350" cy="578.67" r="4.4" stroke="#009645"/>
+<text class="station-name" x="358.5" y="582.07" text-anchor="start">Buona Vista</text>
+</g>
+<g class="station">
+<title>Raffles Place (EW14)</title>
+<circle class="disc" cx="513.33" cy="644" r="4.4" stroke="#009645"/>
+<text class="station-name" x="521.83" y="647.4" text-anchor="start">Raffles Place</text>
+</g>
+<g class="station">
+<title>Woodlands North (TE1)</title>
+<circle class="disc" cx="284.67" cy="56" r="4.4" stroke="#9D5B25"/>
+<text class="station-name" x="293.17" y="59.4" text-anchor="start">Woodlands North</text>
+</g>
+<g class="station">
+<title>Woodlands (TE2)</title>
+<circle class="disc" cx="284.67" cy="154" r="4.4" stroke="#9D5B25"/>
+<text class="station-name" x="293.17" y="157.4" text-anchor="start">Woodlands</text>
+</g>
+<g class="station">
+<title>Woodlands South (TE3)</title>
+<circle class="disc" cx="382.67" cy="186.67" r="4.4" stroke="#9D5B25"/>
+<text class="station-name" x="391.17" y="190.07" text-anchor="start">Woodlands South</text>
+</g>
+<g class="station">
+<title>Springleaf (TE4)</title>
+<circle class="disc" cx="513.33" cy="284.67" r="4.4" stroke="#9D5B25"/>
+<text class="station-name" x="521.83" y="288.07" text-anchor="start">Springleaf</text>
+</g>
+<g class="station">
+<title>Branch Alpha (TB1)</title>
+<circle class="disc" cx="415.33" cy="88.67" r="4.4" stroke="#9D5B25"/>
+<text class="station-name" x="423.83" y="92.07" text-anchor="start">Branch Alpha</text>
+</g>
+<g class="station">
+<title>Branch Beta (TB2)</title>
+<circle class="disc" cx="513.33" cy="88.67" r="4.4" stroke="#9D5B25"/>
+<text class="station-name" x="521.83" y="92.07" text-anchor="start">Branch Beta</text>
+</g>
+<g class="station">
+<title>Punggol (PTC)</title>
+<circle class="disc" cx="676.67" cy="252" r="4.4" stroke="#748477"/>
+<text class="station-name" x="668.17" y="255.4" text-anchor="end">Punggol</text>
+</g>
+<g class="station">
+<title>Sam Kee (PW1)</title>
+<circle class="disc" cx="742" cy="154" r="4.4" stroke="#748477"/>
+<text class="station-name" x="733.5" y="157.4" text-anchor="end">Sam Kee</text>
+</g>
+<g class="station">
+<title>Teck Lee (PW2)</title>
+<circle class="disc" cx="774.67" cy="219.33" r="4.4" stroke="#748477"/>
+<text class="station-name" x="766.17" y="222.73" text-anchor="end">Teck Lee</text>
+</g>
+<g class="station">
+<title>South View (BP2)</title>
+<circle class="disc" cx="56" cy="121.33" r="4.4" stroke="#748477"/>
+<text class="station-name" x="64.5" y="124.73" text-anchor="start">South View</text>
+</g>
+</g>
+<g class="trains" id="map-trains"></g>
+</svg>

@@ -299,7 +299,12 @@ function setBoard(data) {
     codes.appendChild(chip);
     codes.appendChild(document.createTextNode(" "));
   }
-  liveState = data.live ? "live" : "schedule only";
+  // The server reports the actual freshness of its upstream layers:
+  // {state: "off"|"live"|"stale"|"down", age_secs}. An older server
+  // sent a boolean; read that as live/off so the page still works.
+  upstream = typeof data.live === "object" && data.live
+    ? data.live
+    : { state: data.live ? "live" : "off" };
   liveCrowd = board.rows.length && board.rows[0].crowd ? board.rows[0].crowd.toLowerCase() : "";
   updateStatus();
 
@@ -334,7 +339,7 @@ function chipColor(code) {
 let currentStation =
   new URLSearchParams(location.search).get("station") || "NS1";
 
-let liveState = "";      // "live" or "schedule only"
+let upstream = null;     // the upstream freshness of the last board
 let liveCrowd = "";      // the crowd level of the station, if known
 let fetchedAt = 0;       // visitor clock, last board fetch that worked
 let failedAt = 0;        // visitor clock, last board fetch that failed
@@ -353,15 +358,27 @@ function agoText(secs) {
   return Math.round(mins / 60) + " h ago";
 }
 
+/* The status text for the upstream live data. */
+function upstreamText() {
+  if (!upstream || upstream.state === "off") return "schedule only";
+  if (upstream.state === "live") return "live";
+  if (upstream.state === "stale")
+    return "live data cached, " + agoText(upstream.age_secs || 0);
+  return "live data unavailable";
+}
+
 /* Repaint the status line: the data source, the crowd level, and the
-   Singapore time of the last successful fetch. The lamp carries the
-   same state: green when the data is current, amber when the poll is
-   falling behind, red when the last fetch failed. */
+   Singapore time of the last successful fetch. The lamp reports the
+   upstream live data, not the local server: green only when the
+   layers behind the last answer were freshly fetched, amber when the
+   board serves aged cache or the local poll falls behind, red when
+   the upstream is down or the server stops answering. A successful
+   local fetch alone never turns it green. */
 function updateStatus() {
   const now = Date.now();
   const parts = [];
   let state = "";
-  if (liveState) parts.push(liveState);
+  if (upstream) parts.push(upstreamText());
   if (liveCrowd) parts.push("crowd: " + liveCrowd);
   if (failedAt > fetchedAt) {
     parts.push("connection lost " + agoText((now - failedAt) / 1000));
@@ -370,6 +387,13 @@ function updateStatus() {
     const age = (now - fetchedAt) / 1000;
     parts.push("fetched " + sgtTime(fetchedAt, true) + ", " + agoText(age));
     state = age > 60 ? "stale" : "ok";
+    if (!upstream || upstream.state === "off") {
+      state = "";  // a schedule-only board makes no live claim
+    } else if (upstream.state === "down") {
+      state = "down";
+    } else if (upstream.state === "stale" && state === "ok") {
+      state = "stale";
+    }
   } else {
     parts.push("waiting for the server");
   }

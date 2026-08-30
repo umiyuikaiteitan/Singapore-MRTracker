@@ -4,6 +4,37 @@
 //! default implementation, [`UreqTransport`], is behind the
 //! `http-ureq` feature. Supply your own implementation to use a
 //! different HTTP stack, to add retries, or to test without a network.
+//!
+//! # The size contract
+//!
+//! One constant, [`MAX_DATASET_BYTES`], bounds every response body
+//! that this crate accepts, and it is a refusal, not a truncation. The
+//! built-in transport reads one byte past the limit and reports an
+//! oversized body as a [`TransportError`]; the client checks the
+//! delivered body against the same constant, so a custom transport
+//! cannot smuggle a larger body past it either. No caller ever
+//! receives a body that was cut short and presented as complete.
+
+/// The largest response body that this crate accepts, in bytes.
+///
+/// The train GTFS Schedule archive is a few megabytes, and the
+/// realtime messages are far smaller, so 256 MiB leaves several orders
+/// of magnitude of headroom for a growing feed while still bounding
+/// the memory that a misbehaving or hostile host can make this process
+/// allocate.
+///
+/// Every download in the crate measures against this one value:
+///
+/// - [`UreqTransport`] stops reading one byte beyond it and fails.
+/// - `DataMallClient::download` and `DataMallClient::download_limited`
+///   reject a body beyond it, or beyond the stricter limit that the
+///   caller passed.
+///
+/// A body past the limit is always an error. The crate never returns a
+/// truncated body as if it were the whole file, because a shortened
+/// GTFS archive or Protocol Buffer message would decode into a
+/// plausible but wrong timetable.
+pub const MAX_DATASET_BYTES: usize = 256 * 1024 * 1024;
 
 /// An HTTP response.
 #[derive(Debug, Clone)]
@@ -32,7 +63,13 @@ pub struct TransportError(pub String);
 ///
 /// An implementation must return `Ok` with the real status code for
 /// every completed HTTP exchange, also for status codes such as 401 or
-/// 500. It must return `Err` only when no HTTP exchange completed.
+/// 500. It must return `Err` only when no HTTP exchange completed, or
+/// when the response body breaks the size contract below.
+///
+/// An implementation must never truncate a body. A response larger
+/// than [`MAX_DATASET_BYTES`] is an error, not a short `Response`. The
+/// client checks the delivered body against the same limit, so a
+/// truncating implementation is caught rather than believed.
 pub trait Transport {
     /// Send a GET request and return the response.
     fn get(&self, url: &str, headers: &[(&str, &str)]) -> Result<Response, TransportError>;
@@ -71,17 +108,31 @@ impl UreqTransport {
     }
 
     fn read_body(response: ureq::Response) -> Result<Vec<u8>, TransportError> {
-        use std::io::Read;
-        // Cap the body size at 512 MiB to protect the process.
-        const LIMIT: u64 = 512 * 1024 * 1024;
-        let mut body = Vec::new();
-        response
-            .into_reader()
-            .take(LIMIT)
-            .read_to_end(&mut body)
-            .map_err(|e| TransportError(e.to_string()))?;
-        Ok(body)
+        read_capped(response.into_reader(), MAX_DATASET_BYTES)
     }
+}
+
+/// Read a body of at most `limit` bytes, and refuse a larger one.
+///
+/// The function reads one byte beyond the limit. That extra byte is
+/// the whole point: it distinguishes a body that fits from a body that
+/// does not, without buffering the rest of an unbounded stream. A
+/// plain `take(limit)` would return the first `limit` bytes of a huge
+/// response and call it a success.
+#[cfg(feature = "http-ureq")]
+fn read_capped(reader: impl std::io::Read, limit: usize) -> Result<Vec<u8>, TransportError> {
+    use std::io::Read;
+    let mut body = Vec::new();
+    reader
+        .take(limit as u64 + 1)
+        .read_to_end(&mut body)
+        .map_err(|e| TransportError(e.to_string()))?;
+    if body.len() > limit {
+        return Err(TransportError(format!(
+            "the response body is larger than the limit of {limit} bytes"
+        )));
+    }
+    Ok(body)
 }
 
 #[cfg(feature = "http-ureq")]
@@ -155,5 +206,24 @@ mod tests {
         );
         // Empty values do not count.
         assert_eq!(pick(&[("HTTPS_PROXY", " ")]), None);
+    }
+
+    #[test]
+    fn a_body_within_the_limit_arrives_whole() {
+        let body = read_capped(&b"0123456789"[..], 10).unwrap();
+        assert_eq!(body, b"0123456789");
+        assert!(read_capped(&b""[..], 0).unwrap().is_empty());
+    }
+
+    #[test]
+    fn an_oversized_body_is_an_error_and_not_a_truncation() {
+        let error = read_capped(&b"0123456789"[..], 4).unwrap_err();
+        let message = error.to_string();
+        assert!(
+            message.contains("larger than the limit of 4 bytes"),
+            "{message}"
+        );
+        // One byte over the limit is already over the limit.
+        assert!(read_capped(&b"12345"[..], 4).is_err());
     }
 }

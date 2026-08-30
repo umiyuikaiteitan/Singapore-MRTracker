@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use mrt_gtfs::{GtfsFeed, RailNetwork, ServiceDate};
 use mrt_publication::{DocumentSeed, PublicationConfig};
-use mrt_schedule_site::{default_windows, SiteBuild, SiteInfo, SitePlan};
+use mrt_schedule_site::{default_windows, SiteBuild, SiteInfo, SitePlan, Verdict};
 
 fn network() -> RailNetwork {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../mrt-gtfs/tests/fixtures/mini");
@@ -52,12 +52,21 @@ impl Built {
 }
 
 fn build(days: u32) -> Built {
+    build_prepared(days, |_, _| {})
+}
+
+/// Build the site after `prepare` has had its way with the output
+/// directory, so a test can sabotage individual target paths. The plan
+/// is handed over too, so a test can sabotage all of them.
+fn build_prepared(days: u32, prepare: impl FnOnce(&Path, &SitePlan)) -> Built {
     let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("timetables");
     let network = network();
     let config = PublicationConfig::default();
     let seed = seed();
     let info = SiteInfo::default();
     let plan = SitePlan::build(&network, today(), days, default_windows());
+    prepare(&root, &plan);
     let report = SiteBuild {
         network: &network,
         config: &config,
@@ -65,22 +74,96 @@ fn build(days: u32) -> Built {
         info: &info,
         plan: &plan,
     }
-    .write(&dir.path().join("timetables"))
+    .write(&root)
     .unwrap();
     Built { dir, plan, report }
 }
 
 /// Collect every `href` of a page.
 fn hrefs(html: &str) -> Vec<String> {
+    attributes(html, "href=\"")
+}
+
+/// Collect every value of one quoted attribute.
+///
+/// The generator writes its own markup with double-quoted attributes
+/// and escapes every value, so scanning for the literal opener finds
+/// exactly the links it emitted. This is not an HTML parser and does
+/// not need to be.
+fn attributes(html: &str, opener: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut rest = html;
-    while let Some(start) = rest.find("href=\"") {
-        let after = &rest[start + 6..];
+    while let Some(start) = rest.find(opener) {
+        let after = &rest[start + opener.len()..];
         let Some(end) = after.find('"') else { break };
         out.push(after[..end].to_string());
         rest = &after[end..];
     }
     out
+}
+
+/// Every file the section holds, in a stable order.
+fn files_under(root: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let mut walk = vec![root.to_path_buf()];
+    while let Some(directory) = walk.pop() {
+        let Ok(entries) = std::fs::read_dir(&directory) else {
+            continue;
+        };
+        for entry in entries {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                walk.push(path);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Walk every generated HTML file and check every internal link.
+///
+/// Returns how many links were resolved, so a caller can assert that
+/// the walk actually saw a site rather than an empty directory.
+fn check_every_link(root: &Path) -> usize {
+    let mut checked = 0usize;
+    for path in files_under(root) {
+        if path.extension().and_then(|e| e.to_str()) != Some("html") {
+            continue;
+        }
+        let page = path.strip_prefix(root).unwrap().display().to_string();
+        let html = std::fs::read_to_string(&path).unwrap();
+        let base = path.parent().unwrap().to_path_buf();
+        let mut links = hrefs(&html);
+        links.extend(attributes(&html, "src=\""));
+        for link in links {
+            if link.starts_with('#') || link.starts_with("data:") {
+                continue;
+            }
+            assert!(
+                !link.starts_with('/') && !link.contains("://"),
+                "{page} carries the absolute link {link}"
+            );
+            let target = normalize(&base.join(&link));
+            if !target.starts_with(root) {
+                // The only link out of the section is the board that
+                // sits beside it, which this build does not own.
+                assert_eq!(
+                    link, "../index.html",
+                    "{page} links out of the section, to {link}"
+                );
+                continue;
+            }
+            assert!(
+                target.is_file(),
+                "{page} links to {link}, which is not a file in the site"
+            );
+            checked += 1;
+        }
+    }
+    checked
 }
 
 // ----------------------------------------------------------------------
@@ -255,6 +338,15 @@ fn a_station_page_carries_navigation_and_the_timetable() {
     // And the timetable itself is still there.
     assert!(page.contains("Woodlands North departure timetable"));
     assert!(page.contains("class=\"hour-cell\""));
+
+    // The second pass splices the block into the page the first pass
+    // wrote, so it must land exactly where a one-pass render put it:
+    // inside the page frame, above the masthead, once.
+    assert_eq!(page.matches("class=\"site-nav no-print\"").count(), 1);
+    let frame = page.find("<div class=\"page\">").unwrap();
+    let nav = page.find("<nav class=\"site-nav no-print\"").unwrap();
+    let masthead = page.find("<header class=\"masthead\">").unwrap();
+    assert!(frame < nav && nav < masthead);
 }
 
 #[test]
@@ -295,6 +387,231 @@ fn the_navigation_never_appears_on_paper() {
 }
 
 // ----------------------------------------------------------------------
+// Partial builds
+// ----------------------------------------------------------------------
+
+#[test]
+fn a_failed_page_is_dropped_from_the_hub_and_reported() {
+    // Occupying a target path with a directory makes the atomic write
+    // of that one page fail, which stands in for any per-page failure.
+    let site = build_prepared(2, |root, _| {
+        std::fs::create_dir_all(root.join("t/te1-20250505.html")).unwrap();
+    });
+
+    assert_eq!(site.report.failures.len(), 1, "{:?}", site.report.failures);
+    assert_eq!(site.report.missing, vec!["t/te1-20250505.html".to_string()]);
+
+    // The hub of the failed date drops the station...
+    let index = site.read("index.html");
+    assert!(!index.contains("href=\"t/te1-20250505.html\""));
+    assert!(!index.contains(">Woodlands North<"));
+    // ...but still lists every other one.
+    let other = site.plan.stations.iter().find(|s| s.key != "te1").unwrap();
+    assert!(index.contains(&format!(
+        "href=\"{}\"",
+        site.plan.timetable_path(other, site.plan.first_date())
+    )));
+
+    // The other service date is unaffected and still lists it.
+    let tomorrow = site.read("day-20250506.html");
+    assert!(tomorrow.contains("href=\"t/te1-20250506.html\""));
+    assert!(tomorrow.contains(">Woodlands North<"));
+
+    // And the machine-readable index names the gap.
+    let data: serde_json::Value = serde_json::from_str(&site.read("data/index.json")).unwrap();
+    assert_eq!(data["missing"][0], "t/te1-20250505.html");
+}
+
+#[test]
+fn a_failed_diagram_drops_only_its_window() {
+    let site = build_prepared(1, |root, _| {
+        std::fs::create_dir_all(root.join("d/te-20250505-morning.html")).unwrap();
+    });
+    assert!(site
+        .report
+        .missing
+        .contains(&"d/te-20250505-morning.html".to_string()));
+
+    let index = site.read("index.html");
+    assert!(!index.contains("href=\"d/te-20250505-morning.html\""));
+    // The other windows of the line survive...
+    assert!(index.contains("href=\"d/te-20250505-midday.html\""));
+    // ...and another line is untouched.
+    assert!(index.contains("href=\"d/ns-20250505-morning.html\""));
+}
+
+#[test]
+fn a_line_with_no_surviving_window_loses_its_card() {
+    let site = build_prepared(1, |root, _| {
+        for window in ["morning", "midday", "evening", "night"] {
+            std::fs::create_dir_all(root.join(format!("d/te-20250505-{window}.html"))).unwrap();
+        }
+    });
+    let te = site.plan.lines.iter().find(|l| l.key == "te").unwrap();
+    let index = site.read("index.html");
+    assert!(!index.contains(&format!(">{}</h3>", te.name)));
+    // The others keep their cards.
+    let ns = site.plan.lines.iter().find(|l| l.key == "ns").unwrap();
+    assert!(index.contains(&format!(">{}</h3>", ns.name)));
+}
+
+/// The paths a partial build is made to fail on.
+///
+/// One of each kind that something links to: a timetable another
+/// timetable's date row names, a diagram a timetable's diagram row
+/// names, a diagram window a sibling diagram names, and a drawing a
+/// diagram's own drawing row names.
+const SABOTAGED: [&str; 5] = [
+    "t/te1-20250505.html",
+    "t/ns1-20250506.html",
+    "d/te-20250506-morning.html",
+    "d/ns-20250505-midday.html",
+    "d/te-20250505-morning.svg",
+];
+
+fn partial_site() -> Built {
+    build_prepared(2, |root, _| {
+        for occupied in SABOTAGED {
+            std::fs::create_dir_all(root.join(occupied)).unwrap();
+        }
+    })
+}
+
+#[test]
+fn every_link_of_a_partial_site_still_resolves() {
+    let site = partial_site();
+    assert_eq!(
+        site.report.failures.len(),
+        SABOTAGED.len(),
+        "{:?}",
+        site.report.failures
+    );
+    for path in SABOTAGED {
+        assert!(
+            site.report.missing.contains(&path.to_string()),
+            "{path} is not reported missing"
+        );
+    }
+
+    // Not a sample of pages: every generated file in the section, so a
+    // surviving document cannot quietly link to a failed one.
+    let checked = check_every_link(&site.root());
+    assert!(checked > 500, "only {checked} links checked");
+}
+
+#[test]
+fn a_surviving_page_drops_the_navigation_link_to_a_failed_sibling() {
+    let site = partial_site();
+
+    // Tomorrow's timetable survived; today's did not. The date row of
+    // the survivor would have named it, and now has nothing left to
+    // offer, so the whole row goes.
+    let timetable = site.read("t/te1-20250506.html");
+    assert!(timetable.contains("class=\"site-nav no-print\""));
+    assert!(!timetable.contains("href=\"../t/te1-20250505.html\""));
+    assert!(!timetable.contains(">Date</span>"));
+    // Tomorrow's diagram for the same line failed too, so the diagram
+    // row of that page goes as well...
+    assert!(!timetable.contains("href=\"../d/te-20250506-morning.html\""));
+    assert!(!timetable.contains(">Diagram</span>"));
+    // ...while another station's surviving page keeps the diagram row
+    // that still has a target.
+    let other = site.read("t/ns1-20250505.html");
+    assert!(other.contains(">Diagram</span>"));
+    assert!(other.contains("href=\"../d/ns-20250505-morning.html\""));
+
+    // The diagram page keeps the windows that exist and drops the one
+    // that does not, on the line where a window failed.
+    let diagram = site.read("d/ns-20250505-morning.html");
+    assert!(!diagram.contains("href=\"../d/ns-20250505-midday.html\""));
+    assert!(diagram.contains("href=\"../d/ns-20250505-evening.html\""));
+
+    // The drawing row goes when the drawing itself failed.
+    let drawing_page = site.read("d/te-20250505-morning.html");
+    assert!(!drawing_page.contains("href=\"../d/te-20250505-morning.svg\""));
+    assert!(!drawing_page.contains(">Drawing</span>"));
+    // Its sibling window kept its own drawing.
+    let sibling = site.read("d/te-20250505-midday.html");
+    assert!(sibling.contains("href=\"../d/te-20250505-midday.svg\""));
+    assert!(sibling.contains(">Drawing</span>"));
+    // And the date row of that page drops tomorrow, which failed.
+    assert!(!drawing_page.contains("href=\"../d/te-20250506-morning.html\""));
+
+    // The hub still reaches every page that exists.
+    assert!(site
+        .read("index.html")
+        .contains("href=\"t/ns1-20250505.html\""));
+}
+
+#[test]
+fn a_build_with_no_content_page_writes_no_hub() {
+    // Every planned target is occupied by a directory, so every write
+    // fails: the build produced nothing to read.
+    let site = build_prepared(1, |root, plan| {
+        for date in &plan.dates {
+            for station in &plan.stations {
+                std::fs::create_dir_all(root.join(plan.timetable_path(station, date))).unwrap();
+            }
+            for line in &plan.lines {
+                for window in &plan.windows {
+                    std::fs::create_dir_all(root.join(plan.diagram_path(line, date, window)))
+                        .unwrap();
+                    std::fs::create_dir_all(root.join(plan.drawing_path(line, date, window)))
+                        .unwrap();
+                }
+            }
+        }
+    });
+
+    assert_eq!(site.report.content_files, 0);
+    assert_eq!(site.report.files, 0);
+    // No hub, no index, no HTML at all: an entry point over nothing
+    // would read as a working site with no trains in it.
+    assert!(!site.root().join("index.html").exists());
+    assert!(!site.root().join("data/index.json").exists());
+    let written: Vec<PathBuf> = files_under(&site.root());
+    assert!(written.is_empty(), "{written:?}");
+
+    // Every planned page is accounted for as missing.
+    let planned = site.plan.stations.len() + site.plan.lines.len() * site.plan.windows.len() * 2;
+    assert_eq!(site.report.missing.len(), planned);
+    assert_eq!(site.report.failures.len(), planned);
+
+    // And no opt-in publishes it.
+    assert_eq!(Verdict::of(&site.report, true), Verdict::Empty);
+    assert!(!Verdict::of(&site.report, true).is_publishable());
+    assert!(!Verdict::of(&site.report, false).is_publishable());
+}
+
+#[test]
+fn the_report_counts_content_apart_from_infrastructure() {
+    let site = build(2);
+    let content = site.plan.stations.len() * 2 + site.plan.lines.len() * 4 * 2 * 2;
+    assert_eq!(site.report.content_files, content);
+    // The rest is a hub per date plus the machine-readable index.
+    assert_eq!(site.report.files - site.report.content_files, 3);
+    assert_eq!(Verdict::of(&site.report, false), Verdict::Complete);
+
+    // A partial build still has content, so the opt-in decides.
+    let partial = partial_site();
+    assert!(partial.report.content_files > 0);
+    assert_eq!(Verdict::of(&partial.report, false), Verdict::Incomplete);
+    assert_eq!(Verdict::of(&partial.report, true), Verdict::AcceptedPartial);
+}
+
+#[test]
+fn the_reported_bytes_match_what_is_on_disk() {
+    // The navigation pass rewrites each page, so the byte count must
+    // follow the file rather than the first draft of it.
+    let site = build(1);
+    let on_disk: u64 = files_under(&site.root())
+        .iter()
+        .map(|path| std::fs::metadata(path).unwrap().len())
+        .sum();
+    assert_eq!(site.report.bytes, on_disk);
+}
+
+// ----------------------------------------------------------------------
 // The machine-readable index
 // ----------------------------------------------------------------------
 
@@ -305,6 +622,8 @@ fn the_index_json_describes_the_whole_site() {
 
     assert_eq!(index["schema_version"], "1.0");
     assert_eq!(index["timezone"], "Asia/Singapore");
+    // A clean build promises that nothing is missing.
+    assert_eq!(index["missing"].as_array().unwrap().len(), 0);
     assert_eq!(index["dates"].as_array().unwrap().len(), 2);
     assert_eq!(
         index["stations"].as_array().unwrap().len(),

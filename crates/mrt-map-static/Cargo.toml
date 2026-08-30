@@ -1,6 +1,6 @@
 [package]
-name = "mrt-live"
-description = "Merge the static rail network with live DataMall data into render-ready view models."
+name = "mrt-map-static"
+description = "Generate the live schematic train map as a static site for GitHub Pages."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,9 +12,9 @@ publish.workspace = true
 mrt-gtfs.workspace = true
 mrt-gtfs-rt.workspace = true
 mrt-datamall.workspace = true
+mrt-live = { path = "../mrt-live" }
+# The page markup and the snapshot document are shared with the map
+# server, so both deployments write the same page.
+mrt-map-web = { path = "../mrt-map-web" }
 serde.workspace = true
-# The schematic layout is an OpenFantasyMap GeoJSON export, and the
-# layout reader walks it as a value so that one bad feature is a
-# diagnostic instead of a failed parse.
 serde_json.workspace = true
-thiserror.workspace = true

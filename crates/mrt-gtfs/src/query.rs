@@ -254,6 +254,17 @@ impl TripInstance {
 /// `start` and `end`". It carries the template calls so that a
 /// renderer can draw an envelope, but the template times are offsets
 /// of one representative run, not a schedule.
+///
+/// # The span of a band
+///
+/// `start` and `end` bound the *starts* of the runs: the block starts
+/// runs at `start`, `start + headway_secs`, and so on, and no run
+/// starts at or after `end`. The last of those runs is still on the
+/// corridor for the length of its own journey, so the span that the
+/// band occupies is `[start, span_end()]`, which reaches past `end`
+/// whenever a run takes longer than one headway. A query window
+/// selects a band by that span, exactly as it selects a single run by
+/// its own first and last time.
 #[derive(Clone, Debug, Serialize)]
 pub struct FrequencyBand {
     /// A stable identifier: `<date>:<trip_id>~<start>`.
@@ -286,6 +297,44 @@ impl FrequencyBand {
     pub fn headway_minutes(&self) -> u32 {
         (self.headway_secs + 30) / 60
     }
+
+    /// Get the scheduled start of the last run of the block.
+    ///
+    /// The runs start at `start`, `start + headway_secs`, and so on,
+    /// while the start stays below `end`. The value is therefore at or
+    /// before `end`, and usually one headway before it.
+    pub fn last_start(&self) -> GtfsTime {
+        GtfsTime::from_seconds(last_start_secs(
+            self.start.seconds(),
+            self.end.seconds(),
+            self.headway_secs,
+        ))
+    }
+
+    /// Get the scheduled travel time of one run of the block, in
+    /// seconds.
+    ///
+    /// The value is the span of the template calls: the last time of
+    /// the representative run minus its first time.
+    pub fn run_duration_secs(&self) -> u32 {
+        run_span_secs(&self.template)
+    }
+
+    /// Get the end of the span that the band occupies.
+    ///
+    /// This is the moment the last run of the block reaches the end of
+    /// its pattern: [`FrequencyBand::last_start`] plus
+    /// [`FrequencyBand::run_duration_secs`]. It lies after `end`
+    /// whenever a run takes longer than one headway, and it is the
+    /// value that a time window has to overlap for the band to appear
+    /// in a [`TripQueryResult`].
+    pub fn span_end(&self) -> GtfsTime {
+        GtfsTime::from_seconds(
+            self.last_start()
+                .seconds()
+                .saturating_add(self.run_duration_secs()),
+        )
+    }
 }
 
 /// A request for the trips that run on one service date.
@@ -296,6 +345,12 @@ impl FrequencyBand {
 /// A run enters the result when its own time span overlaps the
 /// window, so a diagram window shows a train that entered the corridor
 /// before the window began.
+///
+/// A [`FrequencyBand`] follows the same rule with the span of the
+/// band, [`FrequencyBand::start`] to [`FrequencyBand::span_end`]. The
+/// span ends when the last run of the block reaches the end of its
+/// pattern, not at the last scheduled start, so a window that opens
+/// while that final train is still on the corridor keeps the band.
 #[derive(Clone, Debug)]
 pub struct TripInstanceQuery {
     /// The service date to query.
@@ -558,7 +613,25 @@ impl RailNetwork {
                 }
             } else {
                 // Bands: report the block, do not invent runs.
-                if block.start_time < query.until && block.end_time > query.from {
+                //
+                // The band occupies the corridor from its first start
+                // until its last run reaches the end of the pattern.
+                // GTFS `end_time` bounds only the *starts*, so a block
+                // whose runs are longer than one headway is still
+                // running after it; comparing the window against
+                // `end_time` would drop a band whose final train is
+                // still on the corridor. The test below is the one
+                // that `overlaps` applies to a single run, with the
+                // span of the band in place of the span of the run.
+                let span_end = GtfsTime::from_seconds(
+                    last_start_secs(
+                        block.start_time.seconds(),
+                        block.end_time.seconds(),
+                        block.headway_secs,
+                    )
+                    .saturating_add(run_span_secs(&calls)),
+                );
+                if block.start_time < query.until && span_end >= query.from {
                     out.frequency_bands.push(FrequencyBand {
                         band_id: format!(
                             "{}:{}~{}",
@@ -911,6 +984,35 @@ fn overlaps(instance: &TripInstance, query: &TripInstanceQuery) -> bool {
         return false;
     };
     first < query.until && last >= query.from
+}
+
+/// Get the time that one run takes from its first call to its last, in
+/// seconds.
+///
+/// The calls of a frequency template hold the offsets of one
+/// representative run, so this is the scheduled travel time of every
+/// run of the block. A run without usable times spans zero seconds.
+fn run_span_secs(calls: &[ScheduledCall]) -> u32 {
+    let first = calls.iter().find_map(|c| c.arrival_or_departure());
+    let last = calls.iter().rev().find_map(|c| c.departure_or_arrival());
+    match (first, last) {
+        (Some(first), Some(last)) => last.seconds().saturating_sub(first.seconds()),
+        _ => 0,
+    }
+}
+
+/// Get the start time of the last run of a headway block, in seconds.
+///
+/// GTFS starts a run at `start`, `start + headway`, and so on, while
+/// the start stays below `end`. The last start is therefore the
+/// largest such value below `end`. A degenerate block, which
+/// [`invalid_block`] rejects before a query uses it, reduces to its
+/// own start.
+fn last_start_secs(start: u32, end: u32, headway_secs: u32) -> u32 {
+    if headway_secs == 0 || end <= start {
+        return start;
+    }
+    start + ((end - start - 1) / headway_secs) * headway_secs
 }
 
 /// Reject a frequency block that cannot produce runs.

@@ -36,6 +36,8 @@ own.
 | `crates/mrt-live` | Merge the static network with the live data into view models for maps, boards, and panels. |
 | `crates/mrt-board-web` | Serve a dot-matrix destination board in the browser (draft). |
 | `crates/mrt-board-static` | Generate the board as a static site for GitHub Pages. |
+| `crates/mrt-map-web` | Serve the live schematic train map in the browser (proof of concept). |
+| `crates/mrt-map-static` | Generate the map as a static site for GitHub Pages, separate from the board. |
 | `crates/mrt-publication` | Project the schedule into timetable and train-diagram view models. Pure: no input, no output. |
 | `crates/mrt-publication-html` | Render those view models as self-contained HTML and standalone SVG. |
 | `crates/mrt-schedule-cli` | The generator: fetch, cache, build, and write timetables and diagrams. |
@@ -52,6 +54,7 @@ Other important paths:
 | `docs/CLI.md` | The `mrt-schedule-cli` reference. |
 | `docs/CONFIGURATION.md` | Every configuration option. |
 | `docs/KNOWN-LIMITATIONS.md` | What the generator does not do, and why. |
+| `docs/LIVE-MAP-POC.md` | The plan for the interactive live train map. |
 | `config/singapore.yaml` | A complete, commented configuration. |
 | `examples/` | Generated example pages, refreshed by the tests. |
 | `scripts/regenerate-gtfs-rt.sh` | The generator for the vendored Protocol Buffer code. |
@@ -147,12 +150,39 @@ interchange opens the same board.
 
 The board reads Singapore time (UTC+8) wherever it is opened, and the
 status line reports when the page last reached the live status feed.
+Its lamp reports the freshness of the DataMall layers behind the last
+answer, not the local server: green only when they were freshly
+fetched, amber when the board serves aged cache, red when the
+upstream is failing or the server stops answering.
 
 To host the board without a server, generate it as a static site.
 See `docs/DEPLOY-PAGES.md` for the GitHub Pages workflow:
 
 ```sh
 cargo run --release -p mrt-board-static -- site data/gtfs_schedule.zip
+```
+
+### Run the map UI
+
+The live map is its own site, separate from the board, so it deploys
+on its own subdomain:
+
+```sh
+cargo run -p mrt-map-web
+```
+
+Then open <http://127.0.0.1:8601>. The server takes the same feed
+argument as the board (`cargo run -p mrt-map-web --
+data/gtfs_schedule.zip`), listens where `MRT_MAP_ADDR` says, and draws
+the OpenFantasyMap layout named by `MRT_MAP_LAYOUT` (the default is
+the miniature fixture layout, `config/layout-mini.geojson` — a layout
+of the real network is future work). Without an account key every
+train is schedule-only and the page says so.
+
+To host the map without a server, generate it as a static site:
+
+```sh
+cargo run --release -p mrt-map-static -- map-site data/gtfs_schedule.zip
 ```
 
 ### Generate a timetable and a train diagram
@@ -326,12 +356,21 @@ headless browser and compares them with the baselines in
 
 The library is the base for these planned applications:
 
-- An interactive live train map.
+- An interactive live train map: a proof of concept, in
+  `crates/mrt-map-web` and `crates/mrt-map-static`, on its own site
+  separate from the board. See
+  [`docs/LIVE-MAP-POC.md`](docs/LIVE-MAP-POC.md) for the plan and what
+  each phase shipped: a schematic whole-network map, why the positions
+  are derived rather than measured, and how the map says so. One phase
+  is still open, and it needs a DataMall account key to verify the feed
+  against.
 - Station destination boards (draft in `crates/mrt-board-web`).
 - Physical LED panel drivers.
 - Ports of the core model to other languages.
 - A live overlay on the train diagram: scheduled against actual,
-  from the GTFS-Realtime trip updates.
+  from the GTFS-Realtime trip updates. The interface is written down
+  in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), under "The live
+  overlay on the train diagram"; nothing implements it yet.
 
 ## Attribution
 

@@ -280,6 +280,174 @@ fn non_exact_headway_service_becomes_a_band_by_default() {
 }
 
 #[test]
+fn a_band_reports_the_span_that_its_runs_occupy() {
+    let network = network();
+    let result = network
+        .query_trip_instances(&weekday(&network, "BP"))
+        .unwrap();
+    let band = &result.frequency_bands[0];
+
+    // The block starts runs at 05:30, 05:40, and 05:50, and each run
+    // takes three minutes, so the last one arrives at 05:53.
+    assert_eq!(band.last_start().to_string(), "05:50:00");
+    assert_eq!(band.run_duration_secs(), 180);
+    assert_eq!(band.span_end().to_string(), "05:53:00");
+    // `end` keeps its GTFS meaning: no run starts at or after it.
+    assert_eq!(band.end.to_string(), "06:00:00");
+}
+
+#[test]
+fn a_window_keeps_a_band_whose_last_run_is_still_travelling() {
+    let network = network();
+    let base = weekday(&network, "BP");
+    let band_ids = |from: &str, until: &str| -> Vec<String> {
+        let query = base.clone().window(time(from), time(until));
+        network
+            .query_trip_instances(&query)
+            .unwrap()
+            .frequency_bands
+            .iter()
+            .map(|b| b.band_id.clone())
+            .collect()
+    };
+
+    // The last run of the BP block starts at 05:50 and arrives at
+    // 05:53. A window that opens between those two times still shows a
+    // train on the corridor, so it keeps the band.
+    assert_eq!(
+        band_ids("05:51:00", "06:30:00"),
+        ["20250505:BP_T1~05:30:00"]
+    );
+    // The window may open exactly at the arrival of the last run, as
+    // it may for a single run whose last time is the window start.
+    assert_eq!(
+        band_ids("05:53:00", "06:30:00"),
+        ["20250505:BP_T1~05:30:00"]
+    );
+    // One second later the block is over, even though the GTFS
+    // `end_time` of 06:00 has not been reached.
+    assert!(band_ids("05:53:01", "06:30:00").is_empty());
+    assert!(band_ids("05:54:00", "06:30:00").is_empty());
+    // The window is half-open at its end: one that ends at the first
+    // start of the block excludes it.
+    assert!(band_ids("04:00:00", "05:30:00").is_empty());
+    assert_eq!(
+        band_ids("04:00:00", "05:30:01"),
+        ["20250505:BP_T1~05:30:00"]
+    );
+}
+
+#[test]
+fn a_band_whose_runs_outlast_the_block_stays_in_a_later_window() {
+    // The owner case: a run takes 25 minutes, the block starts runs
+    // only until 06:00, and the last run therefore reaches its
+    // terminus at 06:15. A window that opens at 06:05 must still show
+    // it, although every scheduled start lies before the window.
+    let network = RailNetwork::from_feed(&long_run_headway_feed()).unwrap();
+    let band_ids = |from: &str, until: &str| -> Vec<String> {
+        let query = TripInstanceQuery::new(date("20250505")).window(time(from), time(until));
+        network
+            .query_trip_instances(&query)
+            .unwrap()
+            .frequency_bands
+            .iter()
+            .map(|b| b.band_id.clone())
+            .collect()
+    };
+
+    let all = network
+        .query_trip_instances(&TripInstanceQuery::new(date("20250505")))
+        .unwrap();
+    let band = &all.frequency_bands[0];
+    assert_eq!(band.start.to_string(), "05:00:00");
+    assert_eq!(band.end.to_string(), "06:00:00");
+    assert_eq!(band.last_start().to_string(), "05:50:00");
+    assert_eq!(band.run_duration_secs(), 25 * 60);
+    assert_eq!(band.span_end().to_string(), "06:15:00");
+
+    // After the last start, before the last arrival: the band stays.
+    assert_eq!(band_ids("06:05:00", "07:00:00"), ["20250505:T~05:00:00"]);
+    assert_eq!(band_ids("06:15:00", "07:00:00"), ["20250505:T~05:00:00"]);
+    // After the last run has arrived: the band is gone.
+    assert!(band_ids("06:15:01", "07:00:00").is_empty());
+    assert!(band_ids("06:30:00", "07:00:00").is_empty());
+}
+
+/// A feed with one non-exact headway block whose runs take longer than
+/// the block keeps starting them.
+fn long_run_headway_feed() -> GtfsFeed {
+    use mrt_gtfs::{Calendar, Frequency, Route, Stop, StopTime, Trip};
+
+    GtfsFeed {
+        stops: vec![
+            Stop {
+                stop_id: "A".into(),
+                stop_name: Some("Alpha".into()),
+                ..Default::default()
+            },
+            Stop {
+                stop_id: "B".into(),
+                stop_name: Some("Beta".into()),
+                ..Default::default()
+            },
+        ],
+        routes: vec![Route {
+            route_id: "R".into(),
+            agency_id: None,
+            route_short_name: Some("R".into()),
+            route_long_name: None,
+            route_type: 1,
+            route_color: None,
+            route_text_color: None,
+        }],
+        trips: vec![Trip {
+            route_id: "R".into(),
+            service_id: "D".into(),
+            trip_id: "T".into(),
+            ..Default::default()
+        }],
+        stop_times: vec![
+            StopTime {
+                trip_id: "T".into(),
+                arrival_time: Some(time("06:00:00")),
+                departure_time: Some(time("06:00:00")),
+                stop_id: "A".into(),
+                stop_sequence: 1,
+                ..Default::default()
+            },
+            StopTime {
+                trip_id: "T".into(),
+                arrival_time: Some(time("06:25:00")),
+                departure_time: Some(time("06:25:00")),
+                stop_id: "B".into(),
+                stop_sequence: 2,
+                ..Default::default()
+            },
+        ],
+        calendar: vec![Calendar {
+            service_id: "D".into(),
+            monday: 1,
+            tuesday: 1,
+            wednesday: 1,
+            thursday: 1,
+            friday: 1,
+            saturday: 1,
+            sunday: 1,
+            start_date: date("20250101"),
+            end_date: date("20271231"),
+        }],
+        frequencies: vec![Frequency {
+            trip_id: "T".into(),
+            start_time: time("05:00:00"),
+            end_time: time("06:00:00"),
+            headway_secs: 600,
+            exact_times: Some(0),
+        }],
+        ..Default::default()
+    }
+}
+
+#[test]
 fn non_exact_headway_service_expands_only_on_request() {
     let network = network();
     let query = weekday(&network, "BP").frequency_policy(FrequencyPolicy::ExpandApproximate);

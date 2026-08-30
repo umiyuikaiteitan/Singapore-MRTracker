@@ -1,6 +1,6 @@
 [package]
-name = "mrt-live"
-description = "Merge the static rail network with live DataMall data into render-ready view models."
+name = "mrt-map-web"
+description = "Serve the live schematic train map in the browser."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,9 +12,9 @@ publish.workspace = true
 mrt-gtfs.workspace = true
 mrt-gtfs-rt.workspace = true
 mrt-datamall.workspace = true
+# The map renders a NetworkSnapshot over a BoundLayout. Both view
+# models live in mrt-live, upstream of every renderer.
+mrt-live = { path = "../mrt-live" }
 serde.workspace = true
-# The schematic layout is an OpenFantasyMap GeoJSON export, and the
-# layout reader walks it as a value so that one bad feature is a
-# diagnostic instead of a failed parse.
 serde_json.workspace = true
-thiserror.workspace = true
+tiny_http = "0.12"

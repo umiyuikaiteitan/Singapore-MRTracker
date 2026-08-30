@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The page loads nothing. `default-src 'none'` forbids every
+     request; `connect-src` opens exactly one hole, for the snapshot
+     URL that the script polls, which is the only fetch the page makes
+     and the only one it can make. The board relies on the same single
+     request. A static site configured to poll a snapshot on another
+     origin gets that one origin appended by the renderer; a
+     same-origin snapshot leaves the placeholder empty. The two
+     `'unsafe-inline'` grants cover the page's own stylesheet and
+     script, which travel inside the document because a self-contained
+     page is the discipline of this repository; there is no external
+     script or style to allow. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'self'<!--MAP-CONNECT-->; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>MRTracker live map</title>
+<style>
+/* The live map.
+ *
+ * The page extends the grammar of the RATIS board: the same chrome
+ * colours, the same freshness lamp, the same three operational lamp
+ * colours with the same meanings. Nothing below is decoration. There
+ * is no gradient, no blur, no glow, no rounded card, no icon, and no
+ * embedded font file. */
+
+:root {
+  /* The board's chrome, unchanged. --void is the map background: the
+   * schematic sits on nothing, because it makes no geographic claim
+   * and a basemap would imply one. */
+  --void: #0b0b0d;
+  --chrome: #17181c;
+  --rule: #2a2b31;
+  --text: #e8e8e8;
+  --muted: #85858d;
+  /* The colour a line loses its identity to when the operator reports
+   * it disrupted. It is a neutral grey and nothing else: the line is
+   * still drawn, it just no longer claims to be running. */
+  --grey: #5c5d66;
+  /* The three operational colours of the board, reserved for the
+   * freshness lamp, for train delay states, and for the rule beside a
+   * disruption notice. A line keeps its own identity colour; these
+   * never colour a ribbon, and a disrupted ribbon greys rather than
+   * turning red. */
+  --amber: #e5d500;
+  --green: #35d461;
+  --red: #ff4b3a;
+  /* The LTA Identity typeface is licensed to this repository for
+   * private use only (README.md), so a page that may be published
+   * must not reference the file. This stack names widely installed
+   * faces and ends in a generic family, exactly as the publication
+   * pages do. */
+  --font: "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* One column, full height, dark. The map is the page; the chrome
+ * above and the legend below stay out of its way. */
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.4;
+  /* Aligned numbers — ages, headways, delays — must not shift width
+   * as they count. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* The chrome bar carries the title, the deployment mode, and the
+ * freshness lamp. It is a flat band, not a card: no radius, no
+ * shadow. */
+.chrome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+  padding: 12px 16px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--rule);
+}
+
+.chrome h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: .4px;
+}
+
+/* The deployment mode. A half-hourly static build is a schedule
+ * animation and the page has to say so; the plan makes that a
+ * requirement, not a footnote. */
+.deployment { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* The freshness lamp, in the board's grammar: a small dot and words,
+ * pushed to the end of the bar. */
+.status {
+  margin: 0 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* The lamp itself, in the board's three-colour grammar: green while
+ * the realtime layer is current, amber while it is ageing and its
+ * predictions still apply, red once it is stale or absent. Unlit is
+ * the state before the first fetch answers, and nothing else. The age
+ * in words sits beside it in every state. */
+.lamp {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #55565e;
+  flex: none;
+}
+.lamp.live { background: var(--green); }
+.lamp.ageing { background: var(--amber); }
+.lamp.stale { background: var(--red); }
+
+/* Controls the script reveals. They start hidden, so a page without a
+ * script never shows a control that does nothing. */
+.needs-script { display: none !important; }
+.controls { font-size: 13px; color: var(--muted); }
+.controls label { display: inline-flex; align-items: center; gap: 6px; }
+
+/* The drawing fills the space it is given and never scrolls the page
+ * sideways; the viewBox does the fitting. */
+main { padding: 10px 12px 0; }
+svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
+
+/* The dual-stroke ribbon, from OpenFantasyMap, adapted to a void
+ * background. The casing is the background colour at twice the
+ * weight, so each line cuts a clean gap through the ones drawn before
+ * it and a crossing reads without a basemap. A dark casing on a dark
+ * page would be invisible, which is why the colour is the background
+ * and not black. */
+.casing {
+  fill: none;
+  stroke: var(--void);
+  stroke-width: 12;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* The line ribbon: flat, bold, constant width, round joins. It is the
+ * strongest element on the page, and its colour is the only identity
+ * colour the map uses. */
+.ribbon {
+  fill: none;
+  stroke-width: 6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* A disrupted line keeps its shape and loses its colour. Greying is
+ * the whole statement the alert supports about the line as a whole:
+ * it is still there, it is still drawn, and it is not running
+ * normally. The rule sits here rather than on the presentation
+ * attribute so that the identity colour stays in the markup and only
+ * the state is styled. */
+.ribbon-group.disrupted .ribbon { stroke: var(--grey); }
+
+/* The section the alert actually names: the same grey at the ribbon's
+ * weight, then a dashed cut in the background colour, so the section
+ * reads as a broken line and the rest of the disrupted line stays
+ * whole. Nothing is invented — the path spans only the stations the
+ * alert lists, joined along the layout — and a line whose alert names
+ * no section gets no mark at all. No glow, no gradient: a gap is the
+ * strongest flat statement available on a schematic. */
+.disrupted-section {
+  fill: none;
+  stroke: var(--grey);
+  stroke-width: 6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.disrupted-cut {
+  fill: none;
+  stroke: var(--void);
+  stroke-width: 7;
+  stroke-dasharray: 3 7;
+  stroke-linecap: butt;
+}
+
+/* A station is a hollow disc ringed in the line colour: it reads at
+ * small sizes and stays legible with a train pill on it. */
+.station .disc { fill: var(--void); stroke-width: 2.6; }
+
+/* An interchange gets one distinct shape, used everywhere: a larger
+ * pale disc with a dark ring. One treatment, no second variant. */
+.station.interchange .disc { fill: #f2f2f4; stroke: #0b0b0d; stroke-width: 2.2; }
+
+/* Station names sit quietly beside their discs: no background, no
+ * card, no leader line. */
+.station-name { font-size: 11px; fill: #b9b9c0; }
+
+/* A headway band replaces trains with words. A line with
+ * exact_times=0 has no individual runs to draw, and the label says
+ * so rather than leaving the line looking broken. */
+.band-label { font-size: 11px; font-weight: 600; letter-spacing: .2px; }
+
+/* Trains.
+ *
+ * A pill on the ribbon, oriented along the edge, in the colour of its
+ * line. The three provenance treatments differ in shape, so a reader
+ * tells them apart without the legend:
+ *   at-station        solid pill, nothing behind it
+ *   interpolated      solid pill with a trailing uncertainty bar
+ *   schedule-only     hollow pill
+ * The legend below states the same thing in words anyway. */
+.train .tail { opacity: .45; }
+.train.schedule-only .pill { fill: none !important; stroke-width: 1.6 !important; }
+
+/* A train that should have arrived and has no newer snapshot stops at
+ * the station and fades. The script never slides it past the arrival
+ * it is due at; this is what "stopped, and stale" looks like. */
+.train.overdue { opacity: .45; }
+.train.overdue .tail { display: none; }
+
+/* The legend and the footer. Small, flat, no icons. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 10px 16px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.legend .key { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { display: block; }
+.legend b.green { color: var(--green); font-weight: 600; }
+.legend b.amber { color: var(--amber); font-weight: 600; }
+.legend b.red { color: var(--red); font-weight: 600; }
+
+/* Notices: the alert text the operator published, and the one
+ * statement the map makes about its own realtime coverage. Flat, and
+ * quiet by design — a rule on the left, no card, no radius, no icon,
+ * no fill — so a notice reads as the operator's sentence rather than
+ * as an alarm the map invented. The rule turns red only on a
+ * disruption notice, which is the same meaning red already carries in
+ * the lamp and on a late train. The section is absent entirely when
+ * there is nothing to say. */
+.notices { margin: 12px 16px 0; max-width: 62em; }
+.notice {
+  margin: 0 0 5px;
+  padding-left: 10px;
+  border-left: 2px solid var(--rule);
+  font-size: 13px;
+  color: var(--muted);
+}
+.notice.disrupted { border-left-color: var(--red); color: var(--text); }
+
+/* The note under the legend states what "live" means here, because a
+ * moving dot invites a reader to believe it is a measurement. */
+.honesty {
+  margin: 10px 16px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--rule);
+  font-size: 12.5px;
+  color: var(--muted);
+  max-width: 62em;
+}
+
+/* Diagnostics. Everything the page could not draw is listed here
+ * rather than dropped: unmatched layout stations, unplaceable runs,
+ * a stale feed. */
+.diagnostics-block { margin: 14px 16px 24px; font-size: 12.5px; color: var(--muted); }
+.diagnostics-block summary { cursor: default; }
+.diagnostics { margin: 8px 0 0; padding-left: 1.1rem; }
+.diagnostics code { color: var(--text); }
+.diagnostics .subject { color: #6f7076; }
+.no-diagnostics { margin: 8px 0 0; }
+
+/* The dated line. On screen it sits with the diagnostics; in print it
+ * is the only thing that says when the drawing was made. */
+.dated { margin: 10px 16px 0; font-size: 12.5px; color: var(--muted); }
+
+/* Print.
+ *
+ * A schematic prints well and a moving map does not, so the print
+ * profile drops the trains, the controls, and the lamp, and prints
+ * the network on white with its date. Colour is kept: the ribbons are
+ * the drawing. */
+@media print {
+  :root { --void: #ffffff; --text: #000000; --muted: #333333; }
+  body { background: #fff; color: #000; }
+  .chrome { background: transparent; border-bottom: 1px solid #999; }
+  .no-print, .status, .controls, .legend, .diagnostics-block { display: none !important; }
+  .trains { display: none !important; }
+  .casing { stroke: #ffffff; }
+  .station-name { fill: #111111; }
+  .station.interchange .disc { fill: #ffffff; stroke: #111111; }
+  svg.map { max-height: none; }
+}
+</style>
+</head>
+<body data-snapshot-url="<!--MAP-SNAPSHOT-URL-->">
+
+<header class="chrome">
+  <h1>Live map</h1>
+  <p class="deployment"><!--MAP-DEPLOYMENT--></p>
+  <div class="controls needs-script no-print">
+    <label><input type="checkbox" id="motion" checked> advance trains between polls</label>
+  </div>
+  <p class="status">
+    <span class="lamp <!--MAP-LAMP-->" id="lamp"></span>
+    <span id="statusText"><!--MAP-STATUS--></span>
+  </p>
+</header>
+
+<main>
+<!--MAP-SVG-->
+</main>
+
+<!--MAP-NOTICES-->
+
+<div class="legend no-print">
+  <span class="key">
+    <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true"><rect x="6" y="2" width="13" height="6" rx="1.2" fill="#b9b9c0"/></svg>
+    at a station
+  </span>
+  <span class="key">
+    <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true"><rect x="0" y="4.1" width="14" height="1.8" fill="#b9b9c0" opacity=".45"/><rect x="12" y="2" width="13" height="6" rx="1.2" fill="#b9b9c0"/></svg>
+    interpolated, with its uncertainty
+  </span>
+  <span class="key">
+    <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true"><rect x="6.5" y="2.5" width="12" height="5" rx="1.2" fill="none" stroke="#b9b9c0" stroke-width="1.6"/></svg>
+    schedule only
+  </span>
+  <span class="key">
+    <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true"><path d="M0 5 L26 5" stroke="#5c5d66" stroke-width="6" stroke-dasharray="4 3"/></svg>
+    disrupted, on the section the alert names
+  </span>
+  <span class="key">
+    <b class="green">on time</b> · <b class="amber">early</b> · <b class="red">delayed 60 s or more</b>
+  </span>
+</div>
+
+<p class="honesty">
+  Nothing here is a measurement. LTA publishes no vehicle positions, so
+  every train on this map is the published schedule, shifted by the most
+  recent prediction the operator issued, and interpolated along the edge
+  between two stations. A line running a headway service carries a band
+  label instead of trains, because its individual runs do not exist. The
+  drawing is schematic and makes no claim about where anything
+  physically is.
+</p>
+
+<p class="dated">Service day <!--MAP-DATE--></p>
+
+<details class="diagnostics-block no-print">
+  <summary>Diagnostics</summary>
+  <!--MAP-DIAGNOSTICS-->
+</details>
+
+<script type="application/json" id="map-geometry"><!--MAP-GEOMETRY--></script>
+<script>
+"use strict";
+
+/* The live map client.
+ *
+ * The page is already complete without this script: the network, the
+ * stations, the names, and the band labels are in the document. The
+ * script adds one thing, trains, and re-polls one URL. */
+
+var GEO = JSON.parse(document.getElementById("map-geometry").textContent);
+var SVGNS = "http://www.w3.org/2000/svg";
+var SNAPSHOT_URL = document.body.getAttribute("data-snapshot-url");
+
+/* The board's three operational colours, with the board's meanings.
+ * A train's own colour is its line colour; these only ever reach its
+ * outline. */
+var GREEN = "#35d461", AMBER = "#e5d500", RED = "#ff4b3a";
+
+/* How far a run must be off its schedule before the map calls it
+ * delayed or early, in seconds. The board uses the same threshold. */
+var OFF_SCHEDULE_SECS = 60;
+
+var trainsGroup = document.getElementById("map-trains");
+var bandsGroup = document.getElementById("map-bands");
+var lampEl = document.getElementById("lamp");
+var statusEl = document.getElementById("statusText");
+var motionEl = document.getElementById("motion");
+
+var snapshot = null;      /* the snapshot that is showing */
+var generated = null;     /* POSIX second the document was built at */
+var receivedAt = 0;       /* visitor clock when it arrived */
+var fetchedAt = 0;        /* visitor clock, last fetch that worked */
+var failedAt = 0;         /* visitor clock, last fetch that failed */
+var placed = [];          /* one record per drawn train */
+var sectionCache = {};    /* section key -> arc-length record */
+
+/* The controls carry `needs-script`, which the stylesheet hides. A
+ * control that only a script can drive must not appear before the
+ * script runs. */
+(function reveal() {
+  var hidden = document.querySelectorAll(".needs-script");
+  for (var i = 0; i < hidden.length; i++) {
+    hidden[i].classList.remove("needs-script");
+  }
+})();
+
+/* ---------------------------------------------------------------- */
+/* Geometry. The arithmetic is OpenFantasyMap's, copied as plain      */
+/* functions: cumulative arc length, then a point at a fraction of    */
+/* it. No library, no editor state.                                   */
+/* ---------------------------------------------------------------- */
+
+function arc(key) {
+  if (sectionCache[key]) return sectionCache[key];
+  var points = GEO.sections[key];
+  if (!points || points.length < 1) return null;
+  var lengths = [0], total = 0;
+  for (var i = 1; i < points.length; i++) {
+    total += Math.sqrt(
+      Math.pow(points[i][0] - points[i - 1][0], 2) +
+      Math.pow(points[i][1] - points[i - 1][1], 2)
+    );
+    lengths.push(total);
+  }
+  sectionCache[key] = { points: points, lengths: lengths, total: total };
+  return sectionCache[key];
+}
+
+function pointAtFraction(record, fraction) {
+  var points = record.points;
+  var first = points[0];
+  if (record.total <= 0) return { x: first[0], y: first[1], angle: 0 };
+  var target = Math.max(0, Math.min(1, fraction)) * record.total;
+  for (var i = 1; i < points.length; i++) {
+    if (record.lengths[i] < target) continue;
+    var span = record.lengths[i] - record.lengths[i - 1];
+    var share = span > 0 ? (target - record.lengths[i - 1]) / span : 0;
+    var a = points[i - 1], b = points[i];
+    return {
+      x: a[0] + (b[0] - a[0]) * share,
+      y: a[1] + (b[1] - a[1]) * share,
+      angle: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI
+    };
+  }
+  var last = points[points.length - 1];
+  return { x: last[0], y: last[1], angle: 0 };
+}
+
+/* ---------------------------------------------------------------- */
+/* Trains                                                            */
+/* ---------------------------------------------------------------- */
+
+function lineColor(index) {
+  var line = GEO.lines[index];
+  return (line && line.color) || "#7a7f8c";
+}
+
+/* The outline of a train: red when it has lost a minute or more,
+ * amber when it is running that far ahead, and nothing when it is on
+ * time. The identity colour of the line stays dominant. */
+function stateColor(delay) {
+  if (delay == null) return null;
+  if (delay >= OFF_SCHEDULE_SECS) return RED;
+  if (delay <= -OFF_SCHEDULE_SECS) return AMBER;
+  return null;
+}
+
+function delayWords(delay) {
+  if (delay == null) return "no live delay";
+  if (delay >= OFF_SCHEDULE_SECS) return "late by " + Math.round(delay / 60) + " min";
+  if (delay <= -OFF_SCHEDULE_SECS) return "early by " + Math.round(-delay / 60) + " min";
+  return "on time";
+}
+
+function qualityWords(quality) {
+  if (quality === "at-station") return "standing at a station";
+  if (quality === "interpolated-realtime") return "interpolated between two predicted times";
+  if (quality === "interpolated-schedule") return "interpolated, and the schedule itself was computed";
+  return "from the schedule alone";
+}
+
+/* Every string below reaches the document through textContent or a
+ * numeric attribute, so feed text cannot become markup. */
+function trainTitle(train) {
+  return train.destination + " · " + qualityWords(train.quality) +
+    " · " + delayWords(train.delay_secs);
+}
+
+function rebuildTrains() {
+  while (trainsGroup.firstChild) trainsGroup.removeChild(trainsGroup.firstChild);
+  placed = [];
+  if (!snapshot) return;
+
+  for (var i = 0; i < snapshot.trains.length; i++) {
+    var train = snapshot.trains[i];
+    var color = lineColor(train.line);
+    var group = document.createElementNS(SVGNS, "g");
+    group.setAttribute("class", "train " + train.quality);
+
+    var title = document.createElementNS(SVGNS, "title");
+    title.textContent = trainTitle(train);
+    group.appendChild(title);
+
+    /* The estimate treatment: an interpolated position trails a short
+     * bar over the part of the edge it might really be on. A position
+     * at a station, which is the strongest claim the data supports,
+     * has no bar. */
+    var interpolated = train.quality === "interpolated-realtime" ||
+      train.quality === "interpolated-schedule";
+    if (interpolated) {
+      var tail = document.createElementNS(SVGNS, "rect");
+      tail.setAttribute("class", "tail");
+      tail.setAttribute("x", "-20");
+      tail.setAttribute("y", "-0.9");
+      tail.setAttribute("width", "14");
+      tail.setAttribute("height", "1.8");
+      tail.setAttribute("fill", color);
+      group.appendChild(tail);
+    }
+
+    var pill = document.createElementNS(SVGNS, "rect");
+    pill.setAttribute("class", "pill");
+    pill.setAttribute("x", "-6.5");
+    pill.setAttribute("y", "-3");
+    pill.setAttribute("width", "13");
+    pill.setAttribute("height", "6");
+    pill.setAttribute("rx", "1.2");
+    pill.setAttribute("fill", color);
+    var outline = stateColor(train.delay_secs);
+    pill.setAttribute("stroke", outline || color);
+    pill.setAttribute("stroke-width", outline ? "1.6" : "0");
+    group.appendChild(pill);
+
+    trainsGroup.appendChild(group);
+    placed.push({ group: group, train: train });
+  }
+}
+
+function positionTrains() {
+  /* The elapsed time is measured from the moment the snapshot
+   * arrived, not from the clock it was built at: the page cannot know
+   * the server's clock offset and must not guess one. */
+  var advancing = !motionEl || motionEl.checked;
+  var elapsed = advancing && receivedAt ? Math.max(0, (Date.now() - receivedAt) / 1000) : 0;
+
+  for (var i = 0; i < placed.length; i++) {
+    var group = placed[i].group, train = placed[i].train;
+    var position = null, overdue = false;
+
+    if (train.location.kind === "at-station") {
+      var anchor = GEO.stations[train.location.station];
+      if (anchor) position = { x: anchor[0], y: anchor[1], angle: 0 };
+    } else {
+      var record = arc(train.line + "-" + train.location.from + "-" + train.location.to);
+      if (record) {
+        var fraction = train.progress;
+        if (train.edge_secs > 0) {
+          var advanced = train.progress + elapsed / train.edge_secs;
+          /* The bound the plan states, implemented exactly: a train is
+           * never drawn past the arrival it is next due at. One that
+           * should have arrived and has no newer snapshot stops at the
+           * station and takes the stale treatment. Sliding a dot
+           * forever on a dead feed is the failure this rule prevents. */
+          if (advanced >= 1) {
+            fraction = 1;
+            overdue = true;
+          } else {
+            fraction = advanced;
+          }
+        }
+        position = pointAtFraction(record, fraction);
+      }
+    }
+
+    if (!position) {
+      /* The layout draws no geometry for this edge. The train is not
+       * placed rather than placed somewhere invented; the diagnostics
+       * already name the gap. */
+      group.setAttribute("display", "none");
+      continue;
+    }
+    group.removeAttribute("display");
+    group.setAttribute(
+      "transform",
+      "translate(" + position.x.toFixed(2) + " " + position.y.toFixed(2) + ") " +
+      "rotate(" + position.angle.toFixed(1) + ")"
+    );
+    if (overdue) {
+      group.setAttribute("class", "train " + train.quality + " overdue");
+    } else {
+      group.setAttribute("class", "train " + train.quality);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Headway bands                                                     */
+/* ---------------------------------------------------------------- */
+
+function rebuildBands() {
+  if (!snapshot || !bandsGroup) return;
+  while (bandsGroup.firstChild) bandsGroup.removeChild(bandsGroup.firstChild);
+  var seen = {};
+  for (var i = 0; i < snapshot.bands.length; i++) {
+    var band = snapshot.bands[i];
+    if (seen[band.line]) continue;
+    var anchor = GEO.bands[band.line];
+    if (!anchor) continue;
+    seen[band.line] = true;
+    var label = document.createElementNS(SVGNS, "text");
+    label.setAttribute("class", "band-label");
+    label.setAttribute("x", anchor[0]);
+    label.setAttribute("y", anchor[1] - 9);
+    label.setAttribute("fill", lineColor(band.line));
+    label.textContent = "every " + band.headway_minutes + " min approximately";
+    bandsGroup.appendChild(label);
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Status                                                            */
+/* ---------------------------------------------------------------- */
+
+function ago(seconds) {
+  if (seconds < 10) return "just now";
+  if (seconds < 90) return Math.round(seconds) + " s ago";
+  var minutes = Math.round(seconds / 60);
+  if (minutes < 90) return minutes + " min ago";
+  return Math.round(minutes / 60) + " h ago";
+}
+
+/* Seconds since the document was built, by the visitor's own clock.
+ *
+ * A missing, non-numeric, or future `generated` yields 0, and so does
+ * a visitor clock that runs behind the one that built the document:
+ * the arithmetic below may only ever make a snapshot older, never
+ * younger, and where it cannot tell it says nothing. */
+function sinceGenerated() {
+  if (typeof generated !== "number" || !isFinite(generated) || generated <= 0) return 0;
+  return Math.max(0, Date.now() / 1000 - generated);
+}
+
+/* Re-age the freshness the snapshot was built with.
+ *
+ * The state in the document is a judgement made at the instant the
+ * document was written. A static deployment serves a bundled
+ * data/map.json that keeps fetching successfully for as long as it is
+ * on the host, so trusting that judgement would leave a green lamp
+ * over hours-old predictions. The document carries `generated` and
+ * both thresholds, so the page adds the time that has really passed
+ * and lets the state degrade from live through ageing to stale on its
+ * own.
+ *
+ * A layer with no age at all — an absent one, or a feed that carried
+ * no timestamp — has nothing to add to and keeps what it was given. */
+function agedFreshness() {
+  var freshness = snapshot.freshness;
+  if (freshness.age_secs == null) return { state: freshness.state, age: null };
+  var age = freshness.age_secs + sinceGenerated();
+  var state = freshness.state;
+  if (age > freshness.staleness_secs) state = "stale";
+  else if (age > freshness.ageing_secs) state = "ageing";
+  return { state: state, age: age };
+}
+
+function updateStatus() {
+  var parts = [];
+  var state = "";
+  if (snapshot) {
+    /* The same three-state mapping the page was rendered with, over
+     * the state as it stands now: green while the layer is current,
+     * amber while it is ageing, red once it is stale or absent. The
+     * words always carry the age. */
+    var freshness = agedFreshness();
+    if (freshness.state === "live") {
+      parts.push("live");
+      state = "live";
+    } else if (freshness.state === "ageing") {
+      parts.push("ageing");
+      state = "ageing";
+    } else if (freshness.state === "stale") {
+      parts.push("schedule only");
+      state = "stale";
+    } else {
+      parts.push("schedule only · no realtime layer");
+      state = "stale";
+    }
+    if (freshness.age != null) {
+      parts.push("realtime feed " + ago(freshness.age));
+    }
+    parts.push(snapshot.trains.length + " trains");
+  }
+  if (failedAt > fetchedAt) {
+    /* A page that cannot reach its one URL is not live, whatever the
+     * last snapshot said. Red, like a stale feed. */
+    parts.push("connection lost " + ago((Date.now() - failedAt) / 1000));
+    state = "stale";
+  } else if (fetchedAt) {
+    var age = (Date.now() - fetchedAt) / 1000;
+    parts.push("fetched " + ago(age));
+    /* A poll that has missed three of its own intervals is behind,
+     * whatever the feed says: the page itself is ageing. */
+    if (age > GEO.pollSecs * 3 && state !== "stale") state = "ageing";
+  } else {
+    parts.push("waiting for the snapshot");
+  }
+  lampEl.classList.toggle("live", state === "live");
+  lampEl.classList.toggle("ageing", state === "ageing");
+  lampEl.classList.toggle("stale", state === "stale");
+  statusEl.textContent = parts.join(" · ");
+}
+
+/* ---------------------------------------------------------------- */
+/* Polling. One URL, nothing else.                                   */
+/* ---------------------------------------------------------------- */
+
+function refresh() {
+  return fetch(SNAPSHOT_URL, { credentials: "omit" })
+    .then(function (response) {
+      if (!response.ok) throw new Error("snapshot fetch failed");
+      return response.json();
+    })
+    .then(function (body) {
+      snapshot = body.snapshot;
+      generated = body.generated;
+      receivedAt = Date.now();
+      fetchedAt = receivedAt;
+      failedAt = 0;
+      rebuildTrains();
+      rebuildBands();
+      positionTrains();
+      updateStatus();
+    })
+    .catch(function () {
+      failedAt = Date.now();
+      updateStatus();
+    });
+}
+
+refresh();
+setInterval(refresh, GEO.pollSecs * 1000);
+setInterval(function () {
+  positionTrains();
+  updateStatus();
+}, 1000);
+</script>
+</body>
+</html>

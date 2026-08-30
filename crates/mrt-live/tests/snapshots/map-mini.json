@@ -1,0 +1,444 @@
+{
+  "lines": [
+    {
+      "line": 0,
+      "route_id": "NS",
+      "name": "NSL",
+      "long_name": "North South Line",
+      "color": "D42E12",
+      "state": {
+        "Disrupted": {
+          "stations": [
+            "NS1",
+            "NS4"
+          ],
+          "direction": "Both",
+          "free_public_bus": [
+            "NS1"
+          ]
+        }
+      }
+    },
+    {
+      "line": 1,
+      "route_id": "EW",
+      "name": "EWL",
+      "long_name": "East West Line",
+      "color": "009645",
+      "state": "Normal"
+    },
+    {
+      "line": 2,
+      "route_id": "BP",
+      "name": "BPL",
+      "long_name": "Bukit Panjang LRT",
+      "color": "748477",
+      "state": "Normal"
+    },
+    {
+      "line": 3,
+      "route_id": "TE",
+      "name": "TEL",
+      "long_name": "Thomson-East Coast Line",
+      "color": "9D5B25",
+      "state": "Normal"
+    },
+    {
+      "line": 4,
+      "route_id": "PW",
+      "name": "PWL",
+      "long_name": "Punggol West LRT",
+      "color": "748477",
+      "state": "Normal"
+    }
+  ],
+  "stations": [
+    {
+      "station": 0,
+      "name": "Jurong East",
+      "codes": [
+        "NS1",
+        "EW24"
+      ]
+    },
+    {
+      "station": 1,
+      "name": "Choa Chu Kang",
+      "codes": [
+        "NS4",
+        "BP1"
+      ]
+    },
+    {
+      "station": 2,
+      "name": "Marina Bay",
+      "codes": [
+        "NS27"
+      ]
+    },
+    {
+      "station": 3,
+      "name": "Buona Vista",
+      "codes": [
+        "EW21"
+      ]
+    },
+    {
+      "station": 4,
+      "name": "Raffles Place",
+      "codes": [
+        "EW14"
+      ]
+    },
+    {
+      "station": 5,
+      "name": "Woodlands North",
+      "codes": [
+        "TE1"
+      ]
+    },
+    {
+      "station": 6,
+      "name": "Woodlands",
+      "codes": [
+        "TE2"
+      ]
+    },
+    {
+      "station": 7,
+      "name": "Woodlands South",
+      "codes": [
+        "TE3"
+      ]
+    },
+    {
+      "station": 8,
+      "name": "Springleaf",
+      "codes": [
+        "TE4"
+      ]
+    },
+    {
+      "station": 9,
+      "name": "Branch Alpha",
+      "codes": [
+        "TB1"
+      ]
+    },
+    {
+      "station": 10,
+      "name": "Branch Beta",
+      "codes": [
+        "TB2"
+      ]
+    },
+    {
+      "station": 11,
+      "name": "Punggol",
+      "codes": [
+        "PTC"
+      ]
+    },
+    {
+      "station": 12,
+      "name": "Sam Kee",
+      "codes": [
+        "PW1"
+      ]
+    },
+    {
+      "station": 13,
+      "name": "Teck Lee",
+      "codes": [
+        "PW2"
+      ]
+    },
+    {
+      "station": 14,
+      "name": "South View",
+      "codes": [
+        "BP2"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "pattern": 0,
+      "index": 0,
+      "line": 0,
+      "from": 0,
+      "to": 1
+    },
+    {
+      "pattern": 0,
+      "index": 1,
+      "line": 0,
+      "from": 1,
+      "to": 2
+    },
+    {
+      "pattern": 1,
+      "index": 0,
+      "line": 0,
+      "from": 2,
+      "to": 1
+    },
+    {
+      "pattern": 1,
+      "index": 1,
+      "line": 0,
+      "from": 1,
+      "to": 0
+    },
+    {
+      "pattern": 2,
+      "index": 0,
+      "line": 1,
+      "from": 0,
+      "to": 3
+    },
+    {
+      "pattern": 2,
+      "index": 1,
+      "line": 1,
+      "from": 3,
+      "to": 4
+    },
+    {
+      "pattern": 3,
+      "index": 0,
+      "line": 2,
+      "from": 1,
+      "to": 14
+    },
+    {
+      "pattern": 4,
+      "index": 0,
+      "line": 3,
+      "from": 5,
+      "to": 6
+    },
+    {
+      "pattern": 4,
+      "index": 1,
+      "line": 3,
+      "from": 6,
+      "to": 7
+    },
+    {
+      "pattern": 4,
+      "index": 2,
+      "line": 3,
+      "from": 7,
+      "to": 8
+    },
+    {
+      "pattern": 5,
+      "index": 0,
+      "line": 3,
+      "from": 5,
+      "to": 6
+    },
+    {
+      "pattern": 5,
+      "index": 1,
+      "line": 3,
+      "from": 6,
+      "to": 7
+    },
+    {
+      "pattern": 6,
+      "index": 0,
+      "line": 3,
+      "from": 8,
+      "to": 7
+    },
+    {
+      "pattern": 6,
+      "index": 1,
+      "line": 3,
+      "from": 7,
+      "to": 6
+    },
+    {
+      "pattern": 6,
+      "index": 2,
+      "line": 3,
+      "from": 6,
+      "to": 5
+    },
+    {
+      "pattern": 7,
+      "index": 0,
+      "line": 3,
+      "from": 5,
+      "to": 6
+    },
+    {
+      "pattern": 7,
+      "index": 1,
+      "line": 3,
+      "from": 6,
+      "to": 9
+    },
+    {
+      "pattern": 7,
+      "index": 2,
+      "line": 3,
+      "from": 9,
+      "to": 10
+    },
+    {
+      "pattern": 8,
+      "index": 0,
+      "line": 4,
+      "from": 11,
+      "to": 12
+    },
+    {
+      "pattern": 8,
+      "index": 1,
+      "line": 4,
+      "from": 12,
+      "to": 13
+    },
+    {
+      "pattern": 8,
+      "index": 2,
+      "line": 4,
+      "from": 13,
+      "to": 11
+    }
+  ],
+  "trains": [
+    {
+      "instance_id": "20250505:EW_T1",
+      "source_trip_id": "EW_T1",
+      "line": 1,
+      "location": {
+        "kind": "at-station",
+        "station": 0,
+        "pattern": 2,
+        "index": 0
+      },
+      "progress": 0.0,
+      "edge_secs": null,
+      "destination": "Raffles Place",
+      "quality": "at-station",
+      "delay_secs": -20,
+      "schedule_interpolated": false
+    },
+    {
+      "instance_id": "20250505:NS_T1",
+      "source_trip_id": "NS_T1",
+      "line": 0,
+      "location": {
+        "kind": "on-edge",
+        "pattern": 0,
+        "index": 0,
+        "from": 0,
+        "to": 1
+      },
+      "progress": 0.3181818181818182,
+      "edge_secs": 660,
+      "destination": "Marina Bay",
+      "quality": "interpolated-realtime",
+      "delay_secs": 60,
+      "schedule_interpolated": false
+    },
+    {
+      "instance_id": "20250505:NS_T3",
+      "source_trip_id": "NS_T3",
+      "line": 0,
+      "location": {
+        "kind": "on-edge",
+        "pattern": 1,
+        "index": 0,
+        "from": 2,
+        "to": 1
+      },
+      "progress": 0.23076923076923078,
+      "edge_secs": 1170,
+      "destination": "Jurong East",
+      "quality": "schedule-only",
+      "delay_secs": null,
+      "schedule_interpolated": false
+    },
+    {
+      "instance_id": "20250505:PW_L1",
+      "source_trip_id": "PW_L1",
+      "line": 4,
+      "location": {
+        "kind": "on-edge",
+        "pattern": 8,
+        "index": 1,
+        "from": 12,
+        "to": 13
+      },
+      "progress": 0.6,
+      "edge_secs": 150,
+      "destination": "Punggol",
+      "quality": "schedule-only",
+      "delay_secs": null,
+      "schedule_interpolated": false
+    },
+    {
+      "instance_id": "20250505:TE_T1",
+      "source_trip_id": "TE_T1",
+      "line": 3,
+      "location": {
+        "kind": "on-edge",
+        "pattern": 4,
+        "index": 1,
+        "from": 6,
+        "to": 7
+      },
+      "progress": 0.14285714285714285,
+      "edge_secs": 210,
+      "destination": "Springleaf",
+      "quality": "schedule-only",
+      "delay_secs": null,
+      "schedule_interpolated": false
+    }
+  ],
+  "bands": [
+    {
+      "band_id": "20250505:BP_T1~05:30:00",
+      "source_trip_id": "BP_T1",
+      "line": 2,
+      "pattern": 3,
+      "destination": "South View",
+      "start": "05:30:00",
+      "end": "06:00:00",
+      "headway_secs": 600,
+      "headway_minutes": 10
+    }
+  ],
+  "freshness": {
+    "service_date": "20250505",
+    "clock": "06:05:00",
+    "feed_timestamp": 1746399970,
+    "now_unix": 1746400000,
+    "age_secs": 30,
+    "ageing_secs": 60,
+    "staleness_secs": 120,
+    "state": "live"
+  },
+  "notices": [
+    "NSL: no service."
+  ],
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "time-interpolated",
+      "message": "computed 2 missing stop time(s) from the shape_dist_traveled of the trip",
+      "subject": "TE_M1"
+    },
+    {
+      "severity": "info",
+      "code": "train-canceled",
+      "message": "the trip update cancels this run, so the map draws no train for it",
+      "subject": "20250505:TE_T3"
+    }
+  ]
+}
