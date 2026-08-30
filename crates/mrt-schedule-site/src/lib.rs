@@ -38,7 +38,7 @@ pub mod hub;
 mod page;
 pub mod plan;
 
-pub use build::{accepts_partial, today_at_offset, BuildReport, SiteBuild, WrittenPages};
+pub use build::{accepts_partial, today_at_offset, BuildReport, SiteBuild, Verdict, WrittenPages};
 pub use hub::SiteInfo;
 pub use plan::{default_windows, DateEntry, LineEntry, SitePlan, StationEntry, WindowEntry};
 

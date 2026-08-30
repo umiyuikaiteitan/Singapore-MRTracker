@@ -147,17 +147,34 @@ The workflow controls the section through the environment:
 | `MRT_SITE_LINES` | Only these route identifiers, comma separated | all |
 | `MRT_SITE_ALLOW_PARTIAL` | `1` accepts a build with failed pages | unset: fail |
 
-A page that cannot be built or written is dropped from every hub —
-the site never links to a file that does not exist — and the missing
-pages are listed on standard error and under `missing` in
-`data/index.json`. By default the
-generator then exits non-zero, so an incomplete site cannot deploy
-silently. Setting `MRT_SITE_ALLOW_PARTIAL=1` accepts such a partial
-site: the hubs still omit the missing pages, only the exit code
-changes. The Pages workflow sets it, on the reasoning that one bad
-station page should not hold back the whole hourly board deploy —
-the next run fills the gap. A build that produced no pages at all
-fails regardless.
+The section is written in two passes. The first builds every
+timetable, diagram, and drawing and writes it without its navigation
+block; what lands is the manifest of files that exist. The second
+renders the hubs and every page's navigation block from that manifest
+alone. So a page that cannot be built or written is dropped from
+every hub *and* from the date, window, line, and drawing rows of
+every surviving page — no file in the section links to a file that
+does not exist. The missing pages are listed on standard error and
+under `missing` in `data/index.json`.
+
+By default the generator then exits non-zero, so an incomplete site
+cannot deploy silently. Setting `MRT_SITE_ALLOW_PARTIAL=1` accepts
+such a partial site: the links still omit the missing pages, only the
+exit code changes. The Pages workflow sets it, on the reasoning that
+one bad station page should not hold back the whole hourly board
+deploy — the next run fills the gap.
+
+A build in which every content page failed is a different case and no
+opt-in accepts it: the run writes no hub and no `data/index.json` at
+all, and exits non-zero. An entry point over nothing looks like a
+working site with no trains in it, which is worse than an empty
+directory. The summary line counts content pages apart from the
+infrastructure around them, because a build can write three hub files
+and still hold nothing to read:
+
+```text
+Wrote 217 files into site/timetables (214 content page(s), 3 infrastructure, 12.4 MiB).
+```
 
 Raising `MRT_SITE_DAYS` multiplies the page count and the build time:
 the section holds `stations x days` timetables and

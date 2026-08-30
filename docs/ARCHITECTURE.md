@@ -258,8 +258,17 @@ site, beside the live board and under the same domain.
   list. The list is markup, not a script that builds one, so the page
   works without JavaScript; the search box stays hidden until a
   script can drive it.
-- `build.rs` renders every page through `mrt-publication-html` with a
-  `PageNav` block, and writes each file atomically.
+- `build.rs` writes the section in two passes, each file atomically.
+  The first renders every content page — timetables, diagrams, and
+  drawings — through `mrt-publication-html` with no navigation, and
+  records what actually landed. The second renders the hubs and every
+  page's `PageNav` block from that manifest and splices each block in.
+  A link is only safe to write once the set of files that exist is
+  closed, so a page that failed leaves no dangling link anywhere in
+  the section. The report counts content pages apart from the hubs
+  and `data/index.json`, because a build can write every piece of
+  infrastructure and still hold nothing to read; a section with no
+  content page is written with no hub at all and fails the run.
 
 The pages are pre-generated rather than rendered in the browser. That
 keeps one renderer, one set of tests, and one escaping discipline; a
