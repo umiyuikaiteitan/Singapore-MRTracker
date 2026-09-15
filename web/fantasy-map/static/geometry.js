@@ -252,6 +252,11 @@
    *
    * `options.straight` (cableways) forces straight spans between nodes:
    * guides are ignored and no fillets are cut.
+   * `options.nodeRadii[i]` overrides the radius at interior node i when it
+   * is a finite number of at least 1 metre. Other entries inherit the line
+   * radius. Road-guide corners keep the line radius. When an interior
+   * override applies, `minimumRadii` is returned alongside `points`, with
+   * the requested minimum for each point (even if its fillet had to shrink).
    */
   function buildRouteGeometry(nodes, segments, minimumRadiusMeters, options) {
     if (nodes.length < 2) {
@@ -259,6 +264,13 @@
     }
     const straight = Boolean(options && options.straight);
     const radius = Math.max(1, minimumRadiusMeters);
+    const nodeRadii = options && Array.isArray(options.nodeRadii)
+      ? options.nodeRadii
+      : [];
+    const hasNodeOverride = !straight && nodeRadii.some((value, index) =>
+      index > 0 && index < nodes.length - 1 &&
+      Number.isFinite(value) && value >= 1,
+    );
     const projection = createProjection(nodes);
     const segmentXY = [];
     for (let i = 0; i < nodes.length - 1; i += 1) {
@@ -279,8 +291,23 @@
     for (let i = 0; !straight && i < segmentXY.length - 1; i += 1) {
       const left = segmentXY[i];
       const right = segmentXY[i + 1];
-      const fillet = junctionFillet(left, right, radius);
+      const override = nodeRadii[i + 1];
+      const junctionRadius = Number.isFinite(override) && override >= 1
+        ? override
+        : radius;
+      const fillet = junctionFillet(left, right, junctionRadius);
+      // Tag the point objects themselves so deduplication cannot separate
+      // a vertex from its minimum. A junction that cannot be rounded still
+      // uses its requested minimum when checked for curvature issues.
+      if (hasNodeOverride) {
+        left[left.length - 1].minimumRadius = junctionRadius;
+        right[0].minimumRadius = junctionRadius;
+      }
       if (!fillet) continue;
+      if (hasNodeOverride) {
+        fillet.tangentStart.minimumRadius = junctionRadius;
+        fillet.arc.forEach((point) => { point.minimumRadius = junctionRadius; });
+      }
       const half = Math.ceil(fillet.arc.length / 2);
       left.splice(
         left.length - 1,
@@ -291,14 +318,20 @@
       right.splice(0, 1, ...fillet.arc.slice(half - 1));
     }
 
-    const segmentPoints = segmentXY.map((pts) =>
-      dedupeXY(pts).map(projection.unproject),
-    );
+    const displayedSegments = segmentXY.map(dedupeXY);
+    const segmentPoints = displayedSegments.map((pts) => pts.map(projection.unproject));
     const points = [];
     segmentPoints.forEach((pts, index) => {
       points.push(...(index === 0 ? pts : pts.slice(1)));
     });
-    return { points, segmentPoints };
+    if (!hasNodeOverride) return { points, segmentPoints };
+    const minimumRadii = [];
+    displayedSegments.forEach((pts, index) => {
+      minimumRadii.push(...(index === 0 ? pts : pts.slice(1)).map(
+        (point) => point.minimumRadius ?? radius,
+      ));
+    });
+    return { points, segmentPoints, minimumRadii };
   }
 
   /** Re-anchor a stored guide between the current segment endpoints. */
@@ -358,6 +391,9 @@
    * the minimum radius, as
    * `[{index, coordinate, radiusMeters, arc}]` — `arc` being the offending
    * circle sampled between the vertex's two neighbours.
+   * The minimum can also be an array aligned with `points`; then each
+   * issue includes `minimumRadius`. Missing or invalid array entries are
+   * skipped because they do not specify a minimum to check.
    *
    * The tolerance absorbs the sampling error of an arc built at exactly
    * the minimum, so honest geometry does not report itself. Two very
@@ -370,24 +406,30 @@
    */
   function findRadiusIssues(points, minimumRadiusMeters) {
     if (!points || points.length < 3) return [];
-    const minimumRadius = Math.max(1, minimumRadiusMeters);
-    const tolerance = Math.max(0.75, minimumRadius * 0.005);
+    const perPoint = Array.isArray(minimumRadiusMeters);
     const projection = createProjection(points);
     const pts = points.map(projection.project);
     const issues = [];
     for (let i = 1; i < pts.length - 1; i += 1) {
+      const minimumRadius = perPoint
+        ? minimumRadiusMeters[i]
+        : Math.max(1, minimumRadiusMeters);
+      if (perPoint && (!Number.isFinite(minimumRadius) || minimumRadius < 1)) continue;
+      const tolerance = Math.max(0.75, minimumRadius * 0.005);
       const circle = circumscribedArc(pts[i - 1], pts[i], pts[i + 1]);
       if (!circle || circle.radius + tolerance >= minimumRadius) continue;
       const leg = Math.min(distXY(pts[i - 1], pts[i]), distXY(pts[i], pts[i + 1]));
       if (leg < JITTER_LEG_M && circle.radius < leg * JITTER_RADIUS_RATIO) {
         continue;
       }
-      issues.push({
+      const issue = {
         index: i,
         coordinate: points[i],
         radiusMeters: circle.radius,
         arc: circle.arc.map(projection.unproject),
-      });
+      };
+      if (perPoint) issue.minimumRadius = minimumRadius;
+      issues.push(issue);
     }
     return issues;
   }

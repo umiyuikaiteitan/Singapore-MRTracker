@@ -4,6 +4,7 @@ import { G } from "./geom.js";
 import { MODE_NAMES, modeRules, lineRadius } from "./modes.js";
 import {
   labelSide, labelHidden, nextLabelSide, setStationLabel, stationLabelText,
+  nodeRadius, hasNodeRadiusOverride,
 } from "./model.js";
 import {
   state, activeLine, lineGeometry, lineIssues, invalidate, selectedNodeIndexes,
@@ -86,6 +87,7 @@ export function render() {
   renderDraft();
   renderLineList();
   updateToolButtons();
+  updateRadiusControl();
   setStatus();
   save();
 }
@@ -105,8 +107,8 @@ const ISSUE_FILL = "#09101b";
 function renderIssues() {
   const line = activeLine();
   if (!line || !lineVisible(line)) return;
-  const minimum = lineRadius(line);
   for (const issue of lineIssues(line)) {
+    const minimum = issue.minimumRadius ?? lineRadius(line);
     L.polyline(issue.arc, {
       color: ISSUE_COLOUR,
       weight: 2,
@@ -148,7 +150,18 @@ function renderNodes() {
       state.selected.lineId === line.id &&
       state.selected.index === index;
     const classes = ["route-node"];
+    const overridden = hasNodeRadiusOverride(line, index);
+    const dormantReason = modeRules(line.mode).straight
+      ? "Cableway uses straight spans"
+      : isEndpoint
+        ? "endpoints have no curve"
+        : null;
+    const radiusState = overridden ? "overridden" : "inherits line default";
+    const title = `Curve radius ${nodeRadius(line, index)} m · ${radiusState}${
+      dormantReason ? ` · dormant (${dormantReason})` : ""
+    }`;
     if (isEndpoint) classes.push("endpoint");
+    if (overridden) classes.push("radius-override");
     if (isBranchAnchor) classes.push("branch-anchor");
     if (state.selectedNodes.includes(index)) classes.push("multi");
     if (isSelected) classes.push("selected");
@@ -162,6 +175,7 @@ function renderNodes() {
     const marker = L.marker(node, {
       draggable: !isBranchAnchor,
       icon: L.divIcon({ className: classes.join(" ") }),
+      title,
     }).addTo(nodeLayer);
     marker.on("click", (event) => {
       L.DomEvent.stop(event);
@@ -423,7 +437,10 @@ export function renderDraft() {
 function issueChip(line) {
   if (!lineVisible(line)) return document.createDocumentFragment();
   const issues = lineIssues(line);
-  const minimum = lineRadius(line);
+  const minimums = issues.map(
+    (issue) => issue.minimumRadius ?? lineRadius(line),
+  );
+  const distinctMinimums = [...new Set(minimums)].sort((a, b) => a - b);
   const chip = document.createElement("span");
   chip.className = `line-issues${issues.length ? " has-issues" : ""}`;
   chip.textContent = issues.length
@@ -432,9 +449,19 @@ function issueChip(line) {
   if (modeRules(line.mode).straight) {
     chip.title = "Straight spans — no curve minimum applies";
   } else if (issues.length) {
-    chip.title = `Tighter than the ${minimum} m minimum — click to show`;
+    const minimumText = distinctMinimums.length === 1
+      ? `${distinctMinimums[0]} m minimum`
+      : `${distinctMinimums[0]}–${distinctMinimums.at(-1)} m node minimums`;
+    chip.title = `Tighter than the ${minimumText} — click to show`;
   } else {
-    chip.title = `Every curve meets the ${minimum} m minimum`;
+    const hasOverrides = line.nodes.some((_, index) =>
+      index > 0 &&
+      index < line.nodes.length - 1 &&
+      hasNodeRadiusOverride(line, index),
+    );
+    chip.title = hasOverrides
+      ? `Every curve meets its minimum (line default ${lineRadius(line)} m; node overrides apply)`
+      : `Every curve meets the ${lineRadius(line)} m minimum`;
   }
   if (issues.length) {
     chip.addEventListener("click", (event) => {

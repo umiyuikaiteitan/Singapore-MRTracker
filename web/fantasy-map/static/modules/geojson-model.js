@@ -9,7 +9,7 @@
 import { G } from "./geom.js";
 import { LEGACY_MODES, lineRadius } from "./modes.js";
 import {
-  PALETTE, uid, makeLine, routeGeometry, normalizeLabel,
+  PALETTE, uid, makeLine, routeGeometry, normalizeLabel, normalizeNodeSettings,
 } from "./model.js";
 
 const toLngLat = ([lat, lng]) => [lng, lat];
@@ -40,6 +40,7 @@ export function buildFeatures(lines, geometryOf = routeGeometry) {
   const features = [];
   for (const line of lines || []) {
     const geometry = geometryOf(line);
+    const nodeSettings = normalizeNodeSettings(line.nodeSettings, line.nodes.length);
     features.push({
       type: "Feature",
       geometry: {
@@ -55,6 +56,7 @@ export function buildFeatures(lines, geometryOf = routeGeometry) {
         color: line.color,
         visible: line.visible,
         nodes: line.nodes,
+        ...(nodeSettings ? { nodeSettings } : {}),
         segments: line.segments,
         branchOf: line.branchOf,
       },
@@ -173,6 +175,8 @@ export function parseFeatures(features, options = {}) {
           color: properties.color || PALETTE[ordinal % PALETTE.length],
           visible: properties.visible !== false,
           nodes,
+          // Overrides refer to editable nodes, not sampled display points.
+          nodeSettings: nodes !== rendered ? properties.nodeSettings : undefined,
           segments,
           // Copied, not aliased: the branch parent is remapped below,
           // and the features being read must not change under the caller.

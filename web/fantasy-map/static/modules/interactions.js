@@ -5,6 +5,7 @@ import { supportsLocalRail } from "./rail-matching.js";
 import { apiEnabled } from "./config.js";
 import { G } from "./geom.js";
 import { modeRules } from "./modes.js";
+import { normalizeNodeSettings } from "./model.js";
 import {
   state, activeLine, lineById, createLine, lineGeometry,
   selectedNodeIndexes, clearSelection, pushHistory, afterGeometryChange,
@@ -69,6 +70,18 @@ function shiftAnchorsAfterInsert(line, nodeIndex) {
   }
 }
 
+/** Keep the optional per-node settings array aligned with a node edit. */
+function spliceNodeSettings(line, index, deleteCount, ...items) {
+  if (!("nodeSettings" in line)) return;
+  const settings = Array.isArray(line.nodeSettings)
+    ? line.nodeSettings.map((setting) => (setting ? { ...setting } : null))
+    : [];
+  settings.splice(index, deleteCount, ...items);
+  const normalized = normalizeNodeSettings(settings, line.nodes.length);
+  if (normalized) line.nodeSettings = normalized;
+  else delete line.nodeSettings;
+}
+
 /**
  * Insert a manual node where the user clicked on a segment. The
  * segment's guide is split in place, so matched geometry is kept on
@@ -90,6 +103,7 @@ function insertNodeOnSegment(line, segmentIndex, coordinate) {
     const split = G.splitAtProjection(guide, coordinate);
     if (!split) continue;
     target.nodes.splice(sharer.index + 1, 0, [...split.coordinate]);
+    spliceNodeSettings(target, sharer.index + 1, 0, null);
     const half = (guidePart, suffix) => ({
       profile: segment.profile,
       guide: guidePart,
@@ -333,11 +347,13 @@ function addRouteNode(coordinate) {
   let segmentIndex = -1;
   if (prepend) {
     line.nodes.unshift(coordinate);
+    spliceNodeSettings(line, 0, 0, null);
     line.segments.unshift({ profile: "manual", guide: [] });
     shiftAnchorsAfterInsert(line, 0);
     segmentIndex = 0;
   } else {
     line.nodes.push(coordinate);
+    spliceNodeSettings(line, line.nodes.length - 1, 0, null);
     if (line.nodes.length >= 2) {
       segmentIndex = line.nodes.length - 2;
       line.segments[segmentIndex] = { profile: "manual", guide: [] };
@@ -409,6 +425,7 @@ function deleteNodeAt(line, index, options = {}) {
     return;
   }
   line.nodes.splice(index, 1);
+  spliceNodeSettings(line, index, 1);
   if (index === 0) {
     line.segments.shift();
   } else if (index >= line.segments.length) {

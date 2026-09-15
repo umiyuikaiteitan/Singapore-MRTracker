@@ -2,6 +2,7 @@
 
 import { G } from "./geom.js";
 import { lineRadius } from "./modes.js";
+import { normalizeNodeSettings } from "./model.js";
 import {
   PALETTE, state, activeLine, lineById, createLine, lineGeometry,
   invalidate, clearSelection, pushHistory, afterGeometryChange, uid,
@@ -9,6 +10,14 @@ import {
 import { toast } from "./ui.js";
 import { lineVisible, render } from "./render.js";
 import { updateToolButtons } from "./controls.js";
+
+/** Clone the settings aligned with a range of nodes, omitting empty data. */
+function nodeSettingsSlice(line, from = 0, to = line.nodes.length) {
+  const settings = normalizeNodeSettings(line.nodeSettings, line.nodes.length);
+  return settings
+    ? normalizeNodeSettings(settings.slice(from, to), to - from)
+    : undefined;
+}
 
 // -------------------------------------------- branches & interlining
 
@@ -123,6 +132,7 @@ export function splitLineAt(line, cutIndexes) {
   for (let piece = 0; piece < bounds.length - 1; piece += 1) {
     const from = bounds[piece];
     const to = bounds[piece + 1];
+    const nodeSettings = nodeSettingsSlice(line, from, to + 1);
     pieces.push(
       createLine({
         name: `${line.name} ${suffixes[piece] || piece + 1}`,
@@ -131,6 +141,7 @@ export function splitLineAt(line, cutIndexes) {
         color: line.color,
         visible: line.visible,
         nodes: line.nodes.slice(from, to + 1).map((node) => [...node]),
+        ...(nodeSettings ? { nodeSettings } : {}),
         segments: line.segments.slice(from, to).map((segment) => ({
           profile: segment ? segment.profile : "manual",
           guide: segment && segment.guide ? segment.guide.map((p) => [...p]) : [],
@@ -206,12 +217,18 @@ export function branchFromSelection() {
   if (!parent) return;
   pushHistory();
   const anchor = parent.nodes[selection.index];
+  const anchorSettings = nodeSettingsSlice(
+    parent,
+    selection.index,
+    selection.index + 1,
+  );
   createLine({
     name: `${parent.name} branch`,
     mode: parent.mode,
     minRadius: lineRadius(parent),
     color: PALETTE[state.lines.length % PALETTE.length],
     nodes: [[anchor[0], anchor[1]]],
+    ...(anchorSettings ? { nodeSettings: anchorSettings } : {}),
     segments: [],
     branchOf: {
       lineId: parent.id,
@@ -240,12 +257,14 @@ export function interlineFromActive() {
     interlineId:
       (segment && segment.interlineId) || uid(`il-${index}`),
   }));
+  const nodeSettings = nodeSettingsSlice(source);
   createLine({
     name: `${source.name} interline`,
     mode: source.mode,
     minRadius: lineRadius(source),
     color: PALETTE[state.lines.length % PALETTE.length],
     nodes: source.nodes.map((node) => [node[0], node[1]]),
+    ...(nodeSettings ? { nodeSettings } : {}),
     segments: source.segments.map((segment) => ({
       profile: segment.profile,
       guide: (segment.guide || []).map((point) => [point[0], point[1]]),

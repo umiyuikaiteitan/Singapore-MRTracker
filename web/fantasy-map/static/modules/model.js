@@ -24,7 +24,7 @@ export const uid = (prefix) =>
  */
 export function makeLine(partial = {}, ordinal = 0) {
   const mode = partial.mode && MODES[partial.mode] ? partial.mode : "Mainline";
-  return {
+  const line = {
     id: uid("line"),
     name: `Line ${ordinal + 1}`,
     color: PALETTE[ordinal % PALETTE.length],
@@ -39,6 +39,50 @@ export function makeLine(partial = {}, ordinal = 0) {
       ? partial.minRadius
       : modeRules(mode).radius,
   };
+  const settings = normalizeNodeSettings(partial.nodeSettings, line.nodes.length);
+  if (settings) line.nodeSettings = settings;
+  else delete line.nodeSettings;
+  return line;
+}
+
+/**
+ * Optional settings parallel to nodes. Null entries inherit the line
+ * minimum; endpoint overrides remain stored for later extensions.
+ * Coordinates stay plain pairs because JSON drops array properties.
+ */
+export function normalizeNodeSettings(settings, nodeCount) {
+  if (!Array.isArray(settings)) return undefined;
+  const normalized = Array.from({ length: nodeCount }, (_, index) => {
+    const radius = settings[index]?.minRadius;
+    return Number.isFinite(radius) && radius >= 1 ? { minRadius: radius } : null;
+  });
+  return normalized.some(Boolean) ? normalized : undefined;
+}
+
+export const hasNodeRadiusOverride = (line, index) => {
+  const radius = line.nodeSettings?.[index]?.minRadius;
+  return Number.isFinite(radius) && radius >= 1;
+};
+
+export const nodeRadius = (line, index) =>
+  hasNodeRadiusOverride(line, index)
+    ? line.nodeSettings[index].minRadius
+    : lineRadius(line);
+
+/** Set one explicit minimum, or null to resume inheriting the line. */
+export function setNodeRadius(line, index, radius) {
+  if (!Number.isInteger(index) || index < 0 || index >= line.nodes.length) return false;
+  if (radius !== null && (!Number.isFinite(radius) || radius < 1)) return false;
+  const overridden = hasNodeRadiusOverride(line, index);
+  if (radius === null ? !overridden : overridden && nodeRadius(line, index) === radius) {
+    return false;
+  }
+  const settings = normalizeNodeSettings(line.nodeSettings, line.nodes.length)
+    || Array(line.nodes.length).fill(null);
+  settings[index] = radius === null ? null : { minRadius: radius };
+  if (settings.some(Boolean)) line.nodeSettings = settings;
+  else delete line.nodeSettings;
+  return true;
 }
 
 /**
@@ -49,6 +93,7 @@ export function makeLine(partial = {}, ordinal = 0) {
 export function routeGeometry(line) {
   return G.buildRouteGeometry(line.nodes, line.segments, lineRadius(line), {
     straight: modeRules(line.mode).straight,
+    nodeRadii: line.nodeSettings?.map((settings) => settings?.minRadius),
   });
 }
 
