@@ -4,6 +4,7 @@ import { G } from "./geom.js";
 import { MODE_NAMES, modeRules, lineRadius } from "./modes.js";
 import {
   labelSide, labelHidden, nextLabelSide, setStationLabel, stationLabelText,
+  nodeRadius, hasNodeRadiusOverride,
 } from "./model.js";
 import {
   state, activeLine, lineGeometry, lineIssues, invalidate, selectedNodeIndexes,
@@ -86,6 +87,7 @@ export function render() {
   renderDraft();
   renderLineList();
   updateToolButtons();
+  updateRadiusControl();
   setStatus();
   save();
 }
@@ -105,8 +107,8 @@ const ISSUE_FILL = "#09101b";
 function renderIssues() {
   const line = activeLine();
   if (!line || !lineVisible(line)) return;
-  const minimum = lineRadius(line);
   for (const issue of lineIssues(line)) {
+    const minimum = issue.minimumRadius ?? lineRadius(line);
     L.polyline(issue.arc, {
       color: ISSUE_COLOUR,
       weight: 2,
@@ -138,6 +140,10 @@ function extensionIndex(line) {
 function renderNodes() {
   const line = activeLine();
   if (!line || !lineVisible(line)) return;
+  // Keep the marker objects as well as their model indexes. Leaflet moves
+  // the marker receiving a drag automatically, but selected companions need
+  // to be moved explicitly so the map reflects the group edit immediately.
+  const markers = new Map();
   line.nodes.forEach((node, index) => {
     const isEndpoint = index === 0 || index === line.nodes.length - 1;
     const isBranchAnchor =
@@ -148,7 +154,23 @@ function renderNodes() {
       state.selected.lineId === line.id &&
       state.selected.index === index;
     const classes = ["route-node"];
+    const overridden = hasNodeRadiusOverride(line, index);
+    const dormantReason = modeRules(line.mode).straight
+      ? "Cableway uses straight spans"
+      : isEndpoint
+        ? "endpoints have no curve"
+        : null;
+    const radiusState = overridden ? "overridden" : "inherits line default";
+    const dragHint = isBranchAnchor
+      ? "Attached branch anchor"
+      : isEndpoint
+        ? "Drag to move endpoint"
+        : "Drag to move curve node";
+    const title = `${dragHint} · Curve radius ${nodeRadius(line, index)} m · ${radiusState}${
+      dormantReason ? ` · dormant (${dormantReason})` : ""
+    }`;
     if (isEndpoint) classes.push("endpoint");
+    if (overridden) classes.push("radius-override");
     if (isBranchAnchor) classes.push("branch-anchor");
     if (state.selectedNodes.includes(index)) classes.push("multi");
     if (isSelected) classes.push("selected");
@@ -162,7 +184,9 @@ function renderNodes() {
     const marker = L.marker(node, {
       draggable: !isBranchAnchor,
       icon: L.divIcon({ className: classes.join(" ") }),
+      title,
     }).addTo(nodeLayer);
+    markers.set(index, marker);
     marker.on("click", (event) => {
       L.DomEvent.stop(event);
       const original = event.originalEvent;
@@ -222,15 +246,22 @@ function renderNodes() {
         const dLat = lat - dragGroup.origin[0];
         const dLng = lng - dragGroup.origin[1];
         for (const member of dragGroup.members) {
-          line.nodes[member.index] = [
+          const coordinate = [
             member.start[0] + dLat,
             member.start[1] + dLng,
           ];
+          line.nodes[member.index] = coordinate;
+          if (member.index !== index) {
+            markers.get(member.index)?.setLatLng(coordinate);
+          }
         }
       } else {
         line.nodes[index] = [lat, lng];
       }
       invalidate(line.id);
+      // A line can be the parent of other branches. Keep their anchor nodes
+      // attached during the gesture so their routes do not visually lag.
+      syncBranches();
       redrawRoutesOnly();
     });
     marker.on("dragend", () => {
@@ -423,7 +454,10 @@ export function renderDraft() {
 function issueChip(line) {
   if (!lineVisible(line)) return document.createDocumentFragment();
   const issues = lineIssues(line);
-  const minimum = lineRadius(line);
+  const minimums = issues.map(
+    (issue) => issue.minimumRadius ?? lineRadius(line),
+  );
+  const distinctMinimums = [...new Set(minimums)].sort((a, b) => a - b);
   const chip = document.createElement("span");
   chip.className = `line-issues${issues.length ? " has-issues" : ""}`;
   chip.textContent = issues.length
@@ -432,9 +466,19 @@ function issueChip(line) {
   if (modeRules(line.mode).straight) {
     chip.title = "Straight spans — no curve minimum applies";
   } else if (issues.length) {
-    chip.title = `Tighter than the ${minimum} m minimum — click to show`;
+    const minimumText = distinctMinimums.length === 1
+      ? `${distinctMinimums[0]} m minimum`
+      : `${distinctMinimums[0]}–${distinctMinimums.at(-1)} m node minimums`;
+    chip.title = `Tighter than the ${minimumText} — click to show`;
   } else {
-    chip.title = `Every curve meets the ${minimum} m minimum`;
+    const hasOverrides = line.nodes.some((_, index) =>
+      index > 0 &&
+      index < line.nodes.length - 1 &&
+      hasNodeRadiusOverride(line, index),
+    );
+    chip.title = hasOverrides
+      ? `Every curve meets its minimum (line default ${lineRadius(line)} m; node overrides apply)`
+      : `Every curve meets the ${lineRadius(line)} m minimum`;
   }
   if (issues.length) {
     chip.addEventListener("click", (event) => {

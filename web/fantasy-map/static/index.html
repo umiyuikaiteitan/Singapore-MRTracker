@@ -20,7 +20,7 @@
       <section class="panel">
         <h2>Tool</h2>
         <div class="tool-row" id="tools">
-          <button data-tool="select" title="Select and move nodes or stations (V)">Select</button>
+          <button data-tool="select" title="Select a line, then drag its curve nodes or use arrow keys (V)">Select / move</button>
           <button data-tool="draw" title="Click the map to add route nodes (D)">Draw</button>
           <button data-tool="station" title="Click a route to add a station (S)">Station</button>
           <button data-tool="polygon" title="Draw a polygon station; Enter closes it (P)">Area station</button>
@@ -36,9 +36,10 @@
         </div>
         <p class="hint">Choose Manual, Follow rails, or Follow roads before drawing. Road following traces geometry; it does not apply traffic directions or turn restrictions.</p>
         <label class="slider-row">
-          <span>Min curve radius <b id="radius-value">400 m</b></span>
+          <span>Line default curve radius <b id="radius-value">400 m</b></span>
           <input id="radius" type="range" min="10" max="1000" step="5" value="400" />
         </label>
+        <p class="hint">Right-click an interior node to override this radius for that curve.</p>
       </section>
 
       <section class="panel">
@@ -52,10 +53,13 @@
         <div class="button-row">
           <button id="split-line" title="Split the line at the selected node(s) — Ctrl+Shift+X">Split at selection</button>
           <button id="delete-nodes" title="Delete the selected node(s) — Delete">Delete nodes</button>
+          <button id="trim-line-end" title="Delete a chosen number of consecutive nodes from the line's end">Delete from end…</button>
         </div>
         <p class="hint">
-          Shift or Ctrl click nodes to multi-select; Shift-drag the map to
-          box-select. Right-click for more actions.
+          Select a line and drag its curve nodes; arrow keys nudge selected nodes.
+          Shift or Ctrl click to multi-select; Shift-drag the map to box-select.
+          Right-click a node or segment to split. Right-click either endpoint to
+          delete a chosen number of nodes from that end.
         </p>
       </section>
 

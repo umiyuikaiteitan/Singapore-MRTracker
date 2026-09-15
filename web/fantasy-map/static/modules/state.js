@@ -2,7 +2,7 @@
 
 import { G } from "./geom.js";
 import { MODES, LEGACY_MODES, modeRules, lineRadius } from "./modes.js";
-import { PALETTE, uid, makeLine, routeGeometry } from "./model.js";
+import { PALETTE, uid, makeLine, routeGeometry, normalizeNodeSettings } from "./model.js";
 import { updateRadiusControl } from "./controls.js";
 import { syncSharedGeometry } from "./topology.js";
 import { render, selectLine } from "./render.js";
@@ -69,7 +69,7 @@ export function lineIssues(line) {
   if (!geometry.issues) {
     geometry.issues = modeRules(line.mode).straight
       ? []
-      : G.findRadiusIssues(geometry.points, lineRadius(line));
+      : G.findRadiusIssues(geometry.points, geometry.minimumRadii || lineRadius(line));
   }
   return geometry.issues;
 }
@@ -186,6 +186,9 @@ export function load() {
       if (!Number.isFinite(line.minRadius)) {
         line.minRadius = data.minRadius || modeRules(line.mode).radius;
       }
+      const settings = normalizeNodeSettings(line.nodeSettings, line.nodes.length);
+      if (settings) line.nodeSettings = settings;
+      else delete line.nodeSettings;
     }
     state.snapMode = data.snapMode || "manual";
     state.showCycleways = data.showCycleways !== false;

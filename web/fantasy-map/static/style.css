@@ -27,6 +27,7 @@
   --station-fill: #09101b;      /* hollow station disc interior */
   --node-fill: #fff;            /* route-node disc */
   --node-ring: #ffffff88;       /* route-node outer ring */
+  --radius-override: #78d9ff;  /* explicit node curve-radius ring */
   --endpoint: #ffd75e;          /* line endpoint / extension marker */
   --endpoint-glow: #ffd75e88;   /* extension-end halo */
   --branch-anchor: #5ee6b6;     /* branch anchor marker */
@@ -200,6 +201,10 @@ button.danger:hover { border-color: var(--danger); color: var(--danger-text); }
 .route-node.endpoint { background: var(--endpoint); }
 .route-node.branch-anchor { background: var(--branch-anchor); cursor: not-allowed; }
 .route-node.selected { box-shadow: 0 0 0 3px var(--accent); }
+.route-node.radius-override {
+  outline: 2px solid var(--radius-override);
+  outline-offset: 2px;
+}
 
 .station-marker {
   width: 12px; height: 12px;
