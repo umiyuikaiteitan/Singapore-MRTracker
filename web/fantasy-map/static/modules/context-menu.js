@@ -11,7 +11,7 @@ import { toast } from "./ui.js";
 import { map } from "./map-setup.js";
 import { selectLine } from "./render.js";
 import { branchFromSelection, splitLineAt } from "./topology.js";
-import { deleteSelectedNodes } from "./interactions.js";
+import { deleteSelectedNodes, trimLineEnd, trimmableNodeCount } from "./interactions.js";
 import { setTool } from "./controls.js";
 
 // ------------------------------------------------------ context menu
@@ -90,6 +90,26 @@ function resetSelectedNodeRadius(line, indexes) {
   afterGeometryChange(line);
 }
 
+/** Ask how many consecutive nodes to remove from one end of a line. */
+export function promptLineTrim(line, end = "end") {
+  const maximum = trimmableNodeCount(line, end);
+  if (!maximum) {
+    toast("Keep at least one node and any attached branch anchor.");
+    return;
+  }
+  const response = prompt(
+    `Delete how many nodes from the ${end} of ${line.name || "this line"}? (1–${maximum})`,
+    "1",
+  );
+  if (response === null || response.trim() === "") return;
+  const count = Number(response);
+  if (!Number.isInteger(count) || count < 1 || count > maximum) {
+    toast(`Enter a whole number from 1 to ${maximum}.`);
+    return;
+  }
+  trimLineEnd(line, count, end);
+}
+
 export function nodeMenuItems(line, index) {
   const isEndpoint = index === 0 || index === line.nodes.length - 1;
   const isBranchAnchor =
@@ -140,6 +160,10 @@ export function nodeMenuItems(line, index) {
           ? `Use line curve radius for ${resetTargets.length} nodes`
           : "Use line curve radius",
       action: () => resetSelectedNodeRadius(line, resetTargets),
+    },
+    isEndpoint && trimmableNodeCount(line, index === 0 ? "start" : "end") > 0 && {
+      label: `Delete nodes from this ${index === 0 ? "start" : "end"}…`,
+      action: () => promptLineTrim(line, index === 0 ? "start" : "end"),
     },
     {
       label: multiple ? `Delete ${selected.length} nodes` : "Delete node",

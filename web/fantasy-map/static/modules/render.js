@@ -140,6 +140,10 @@ function extensionIndex(line) {
 function renderNodes() {
   const line = activeLine();
   if (!line || !lineVisible(line)) return;
+  // Keep the marker objects as well as their model indexes. Leaflet moves
+  // the marker receiving a drag automatically, but selected companions need
+  // to be moved explicitly so the map reflects the group edit immediately.
+  const markers = new Map();
   line.nodes.forEach((node, index) => {
     const isEndpoint = index === 0 || index === line.nodes.length - 1;
     const isBranchAnchor =
@@ -157,7 +161,12 @@ function renderNodes() {
         ? "endpoints have no curve"
         : null;
     const radiusState = overridden ? "overridden" : "inherits line default";
-    const title = `Curve radius ${nodeRadius(line, index)} m · ${radiusState}${
+    const dragHint = isBranchAnchor
+      ? "Attached branch anchor"
+      : isEndpoint
+        ? "Drag to move endpoint"
+        : "Drag to move curve node";
+    const title = `${dragHint} · Curve radius ${nodeRadius(line, index)} m · ${radiusState}${
       dormantReason ? ` · dormant (${dormantReason})` : ""
     }`;
     if (isEndpoint) classes.push("endpoint");
@@ -177,6 +186,7 @@ function renderNodes() {
       icon: L.divIcon({ className: classes.join(" ") }),
       title,
     }).addTo(nodeLayer);
+    markers.set(index, marker);
     marker.on("click", (event) => {
       L.DomEvent.stop(event);
       const original = event.originalEvent;
@@ -236,15 +246,22 @@ function renderNodes() {
         const dLat = lat - dragGroup.origin[0];
         const dLng = lng - dragGroup.origin[1];
         for (const member of dragGroup.members) {
-          line.nodes[member.index] = [
+          const coordinate = [
             member.start[0] + dLat,
             member.start[1] + dLng,
           ];
+          line.nodes[member.index] = coordinate;
+          if (member.index !== index) {
+            markers.get(member.index)?.setLatLng(coordinate);
+          }
         }
       } else {
         line.nodes[index] = [lat, lng];
       }
       invalidate(line.id);
+      // A line can be the parent of other branches. Keep their anchor nodes
+      // attached during the gesture so their routes do not visually lag.
+      syncBranches();
       redrawRoutesOnly();
     });
     marker.on("dragend", () => {

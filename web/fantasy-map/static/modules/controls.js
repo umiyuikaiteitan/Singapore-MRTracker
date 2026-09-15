@@ -13,10 +13,10 @@ import {
 import { map } from "./map-setup.js";
 import { toast, setStatus } from "./ui.js";
 import { render, renderDraft } from "./render.js";
-import { hideMenu } from "./context-menu.js";
+import { hideMenu, promptLineTrim } from "./context-menu.js";
 import { splitLineAt, branchFromSelection, interlineFromActive } from "./topology.js";
 import {
-  closePolygonStation, deleteSelectedNodes, deleteSelection,
+  closePolygonStation, deleteSelectedNodes, deleteSelection, trimmableNodeCount,
 } from "./interactions.js";
 import { refreshOverlay, drawOverlay } from "./overlay.js";
 import { exportGeoJson, importGeoJson } from "./geojson.js";
@@ -29,6 +29,8 @@ export function updateToolButtons() {
     button.classList.toggle("active", button.dataset.tool === state.tool);
   });
   const line = activeLine();
+  document.getElementById("trim-line-end").disabled =
+    !line || trimmableNodeCount(line, "end") === 0;
   const allowed = line ? modeRules(line.mode).snaps : ["road", "corridor"];
   document.querySelectorAll("#snap-modes button").forEach((button) => {
     button.classList.toggle("active", button.dataset.snap === state.snapMode);
@@ -109,6 +111,10 @@ document.getElementById("delete-nodes").addEventListener("click", () => {
     return;
   }
   deleteSelectedNodes(line, selected);
+});
+document.getElementById("trim-line-end").addEventListener("click", () => {
+  const line = activeLine();
+  if (line) promptLineTrim(line);
 });
 
 export const cyclewayToggle = document.getElementById("cycleway-toggle");

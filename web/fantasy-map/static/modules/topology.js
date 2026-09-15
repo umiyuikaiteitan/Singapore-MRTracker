@@ -116,15 +116,15 @@ export function interlineSlot(line, segment) {
  * node is duplicated so both pieces keep an endpoint there; stations,
  * branches, and the line's own branch anchor follow their piece.
  */
-export function splitLineAt(line, cutIndexes) {
+export function splitLineAt(line, cutIndexes, options = {}) {
   const cuts = [...new Set(cutIndexes)]
-    .filter((index) => index > 0 && index < line.nodes.length - 1)
+    .filter((index) => Number.isInteger(index) && index > 0 && index < line.nodes.length - 1)
     .sort((a, b) => a - b);
   if (!cuts.length) {
     toast("Select an interior node (not an endpoint) to split a line.");
     return;
   }
-  pushHistory();
+  if (!options.skipHistory) pushHistory();
   const bounds = [0, ...cuts, line.nodes.length - 1];
   const geometry = lineGeometry(line);
   const suffixes = "ABCDEFGH";
@@ -203,6 +203,7 @@ export function splitLineAt(line, cutIndexes) {
   clearSelection();
   afterGeometryChange(pieces[0]);
   toast(`Split into ${pieces.length} lines.`);
+  return pieces;
 }
 
 // ------------------------------------------------- branch & interline

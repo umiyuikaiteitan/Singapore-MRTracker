@@ -9,13 +9,14 @@ import { normalizeNodeSettings } from "./model.js";
 import {
   state, activeLine, lineById, createLine, lineGeometry,
   selectedNodeIndexes, clearSelection, pushHistory, afterGeometryChange,
-  uid,
+  invalidate, uid,
 } from "./state.js";
 import { map } from "./map-setup.js";
 import { toast } from "./ui.js";
 import { snapSegment } from "./snapping.js";
 import { lineVisible, render, renderDraft, selectLine } from "./render.js";
 import { menuElement, hideMenu } from "./context-menu.js";
+import { splitLineAt } from "./topology.js";
 
 const STATION_PICK_PX = 16;
 const POLYGON_ANCHOR_MAX_M = 250;
@@ -87,8 +88,8 @@ function spliceNodeSettings(line, index, deleteCount, ...items) {
  * segment's guide is split in place, so matched geometry is kept on
  * both halves; interlined copies are split identically.
  */
-function insertNodeOnSegment(line, segmentIndex, coordinate) {
-  pushHistory();
+function insertNodeOnSegment(line, segmentIndex, coordinate, options = {}) {
+  const insertions = [];
   for (const sharer of segmentSharers(line, segmentIndex)) {
     const target = sharer.line;
     const segment = target.segments[sharer.index] || {
@@ -102,8 +103,24 @@ function insertNodeOnSegment(line, segmentIndex, coordinate) {
     );
     const split = G.splitAtProjection(guide, coordinate);
     if (!split) continue;
-    target.nodes.splice(sharer.index + 1, 0, [...split.coordinate]);
-    spliceNodeSettings(target, sharer.index + 1, 0, null);
+    const start = target.nodes[sharer.index];
+    const end = target.nodes[sharer.index + 1];
+    if (
+      !start ||
+      !end ||
+      G.haversineMeters(split.coordinate, start) < 0.001 ||
+      G.haversineMeters(split.coordinate, end) < 0.001
+    ) {
+      continue;
+    }
+    insertions.push({ ...sharer, segment, split });
+  }
+  const sourceInsertion = insertions.find(({ line: target }) => target === line);
+  if (!sourceInsertion) return null;
+  if (!options.skipHistory) pushHistory();
+  for (const { line: target, index, segment, split } of insertions) {
+    target.nodes.splice(index + 1, 0, [...split.coordinate]);
+    spliceNodeSettings(target, index + 1, 0, null);
     const half = (guidePart, suffix) => ({
       profile: segment.profile,
       guide: guidePart,
@@ -112,15 +129,29 @@ function insertNodeOnSegment(line, segmentIndex, coordinate) {
         : undefined,
     });
     target.segments.splice(
-      sharer.index,
+      index,
       1,
       half(split.before, "-a"),
       half(split.after, "-b"),
     );
-    shiftAnchorsAfterInsert(target, sharer.index + 1);
+    shiftAnchorsAfterInsert(target, index + 1);
+    // splitLineAt reads geometry before its final global invalidation.
+    invalidate(target.id);
   }
-  clearSelection();
-  afterGeometryChange(line);
+  if (options.finalize !== false) {
+    clearSelection();
+    afterGeometryChange(line);
+  }
+  return sourceInsertion.index + 1;
+}
+
+/** Insert a cut node on a segment and split there as one undoable edit. */
+export function splitLineOnSegment(line, segmentIndex, coordinate) {
+  const cutIndex = insertNodeOnSegment(line, segmentIndex, coordinate, {
+    finalize: false,
+  });
+  if (cutIndex === null) return [];
+  return splitLineAt(line, [cutIndex], { skipHistory: true });
 }
 
 /** Change one segment's profile: straight, or re-match a corridor. */
@@ -147,6 +178,10 @@ export function segmentMenuItems(line, segmentIndex, latlng) {
     {
       label: "Insert node here",
       action: () => insertNodeOnSegment(line, segmentIndex, coordinate),
+    },
+    {
+      label: "Split line here",
+      action: () => splitLineOnSegment(line, segmentIndex, coordinate),
     },
     {
       label: "Add station here",
@@ -416,14 +451,8 @@ export function closePolygonStation() {
   render();
 }
 
-/** Remove one node; adjacent segments merge into one manual segment. */
-function deleteNodeAt(line, index, options = {}) {
-  if (line.branchOf && line.branchOf.branchNodeIndex === index) {
-    if (!options.skipHistory) {
-      toast("Branch anchors are removed by deleting the branch line.");
-    }
-    return;
-  }
+/** Remove one validated node; adjacent segments merge into one manual segment. */
+function deleteNodeAt(line, index) {
   line.nodes.splice(index, 1);
   spliceNodeSettings(line, index, 1);
   if (index === 0) {
@@ -438,21 +467,30 @@ function deleteNodeAt(line, index, options = {}) {
   }
   state.lines.forEach((other) => {
     if (other.branchOf && other.branchOf.lineId === line.id) {
-      if (other.branchOf.nodeIndex > index) other.branchOf.nodeIndex -= 1;
+      if (other.branchOf.nodeIndex === index) {
+        // Its endpoint already holds the old anchor coordinate. Detaching keeps
+        // it there instead of allowing branch sync to jump it to a neighbour.
+        other.branchOf = null;
+      } else if (other.branchOf.nodeIndex > index) {
+        other.branchOf.nodeIndex -= 1;
+      }
     }
   });
-  clearSelection();
-  afterGeometryChange(line);
 }
 
 /** Delete several nodes at once (highest index first). */
 export function deleteSelectedNodes(line, indexes) {
-  const removable = indexes.filter(
+  const candidates = [...new Set(indexes)].filter(
+    (index) => Number.isInteger(index) && index >= 0 && index < line.nodes.length,
+  );
+  const removable = candidates.filter(
     (index) =>
       !(line.branchOf && line.branchOf.branchNodeIndex === index),
   );
   if (!removable.length) {
-    toast("Branch anchors are removed by deleting the branch line.");
+    if (candidates.length) {
+      toast("Branch anchors are removed by deleting the branch line.");
+    }
     return;
   }
   if (line.nodes.length - removable.length < 1) {
@@ -461,11 +499,41 @@ export function deleteSelectedNodes(line, indexes) {
   }
   pushHistory();
   for (const index of [...removable].sort((a, b) => b - a)) {
-    deleteNodeAt(line, index, { skipHistory: true });
+    deleteNodeAt(line, index);
   }
-  if (removable.length < indexes.length) {
+  clearSelection();
+  afterGeometryChange(line);
+  if (removable.length < candidates.length) {
     toast("Kept the branch anchor node.");
   }
+  return removable.length;
+}
+
+/** Nodes removable in order from an endpoint without crossing an anchor. */
+export function trimmableNodeCount(line, end = "end") {
+  if (!line || !Array.isArray(line.nodes) || !line.nodes.length) return 0;
+  if (end !== "start" && end !== "end") return 0;
+  const last = line.nodes.length - 1;
+  const anchor = line.branchOf?.branchNodeIndex;
+  if (!Number.isInteger(anchor) || anchor < 0 || anchor > last) return last;
+  return end === "start" ? Math.min(last, anchor) : Math.min(last, last - anchor);
+}
+
+/** Delete `count` sequential nodes from one endpoint as one undoable edit. */
+export function trimLineEnd(line, count, end = "end") {
+  const maximum = trimmableNodeCount(line, end);
+  if (!Number.isInteger(count) || count <= 0 || count > maximum) {
+    toast(
+      maximum
+        ? `Choose a whole number from 1 to ${maximum}.`
+        : "No nodes can be deleted from this end.",
+    );
+    return false;
+  }
+  const from = end === "start" ? 0 : line.nodes.length - count;
+  const indexes = Array.from({ length: count }, (_, offset) => from + offset);
+  deleteSelectedNodes(line, indexes);
+  return true;
 }
 
 export function deleteSelection() {
@@ -482,11 +550,6 @@ export function deleteSelection() {
     render();
   } else if (selection.kind === "node") {
     const selected = selectedNodeIndexes();
-    if (selected.length > 1) {
-      deleteSelectedNodes(line, selected);
-    } else {
-      pushHistory();
-      deleteNodeAt(line, selection.index);
-    }
+    deleteSelectedNodes(line, selected.length ? selected : [selection.index]);
   }
 }
