@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Build a relocatable editor directory using only the Python standard library."""
 import argparse
+import ipaddress
 import json
 from pathlib import Path
+import re
 import shutil
 from urllib.parse import urlsplit
 
@@ -11,10 +13,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def build(output, api_base=None, board_href=None, singapore=False):
     if api_base:
+        # urlsplit silently removes some control characters and does not
+        # validate ports until .port is accessed. Reject these before output.
+        if any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in api_base) or "\\" in api_base:
+            raise ValueError("api_base must not contain whitespace, control characters, or backslashes")
         url = urlsplit(api_base)
+        _ = url.port
         if (url.scheme != "https" or not url.hostname or url.username or url.password
                 or url.query or url.fragment):
             raise ValueError("api_base must be an absolute HTTPS API URL without credentials, query, or fragment")
+        if ":" in url.hostname:
+            if "%" in url.hostname:
+                raise ValueError("api_base must not contain an IPv6 zone ID")
+            ipaddress.IPv6Address(url.hostname)
+        else:
+            host = url.hostname.encode("idna").decode("ascii").removesuffix(".")
+            if len(host) > 253 or any(not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", label) for label in host.split(".")):
+                raise ValueError("api_base must contain a valid hostname")
+            # Browsers interpret numeric final labels as IPv4, not DNS names.
+            last_label = host.rsplit(".", 1)[-1]
+            if last_label.isdigit() or re.fullmatch(r"0[xX][0-9A-Fa-f]+", last_label):
+                ipaddress.IPv4Address(host)
     if board_href and (urlsplit(board_href).scheme or board_href.startswith("//")):
         raise ValueError("board_href must be a relative link")
     output = Path(output).resolve()

@@ -87,10 +87,24 @@ class FantasyMapBuild(unittest.TestCase):
             self.assertIn('https://api.example.test/api/', config)
 
     def test_invalid_api_does_not_publish_a_broken_editor(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            with self.assertRaises(subprocess.CalledProcessError):
-                self.build(temporary, 'http://api.example.test/api/')
-            self.assertFalse((Path(temporary) / 'fantasy-map').exists())
+        invalid = [
+            'http://api.example.test/api/',
+            'https://api.example.test:abc/api/',
+            'https://api.example.test:70000/api/',
+            'https://api example.test/api/',
+            'https://api.\nexample.test/api/',
+            'https://api.\texample.test/api/',
+            'https://-api.example.test/api/',
+            'https://api..example.test/api/',
+            'https://999.999.999.999/api/',
+            'https://example.123/api/',
+            'https://[fe80::1%eth0]/api/',
+        ]
+        for api in invalid:
+            with self.subTest(api=api), tempfile.TemporaryDirectory() as temporary:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    self.build(temporary, api)
+                self.assertFalse((Path(temporary) / 'fantasy-map').exists())
 
 if __name__ == '__main__':
     unittest.main()

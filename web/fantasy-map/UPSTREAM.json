@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/umiyuikaiteitan/OpenFantasyMap",
-  "revision": "01ca21c375dde31838095ca663750b4dfa5bef85",
+  "revision": "29f3971876aab642b4d253e8713b60bcf0b184bf",
   "files": {
-    "scripts/build-static.py": "b380e3bb64d34c15c8dfaa7cdfc49c19bdc709e7cb1adbd5b3e936f0b9085e61",
+    "scripts/build-static.py": "aac7df5c85b7277fe27023ba43f8cdc5ba8d2a3f41b10c4a0a24f21a0a988755",
     "static/app.js": "b46d6f7c056cd26a06edebfdf2ffe1ec698aaabdd9e2b38b6564411d90d1e33d",
     "static/config.js": "837741ad14c42e3d18965e751706d5d821929aafa86ee555b9e8c1b9ff3da204",
     "static/geometry.js": "cb622c9ac878051c70af67e408983a04559c2eb25e7b1c576bd27aa020c683be",
