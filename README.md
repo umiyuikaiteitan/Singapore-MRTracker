@@ -343,3 +343,12 @@ The library is the base for these planned applications:
 - `crates/mrt-board-web/assets/lta-identity.ttf`: the LTA Identity
   typeface, taken from the MRT-RATIS project for private use.
 - This project is not affiliated with the Land Transport Authority.
+
+## Fantasy map editor
+
+The Pages build includes OpenFantasyMap at `/fantasy-map/`, linked from the
+board, with a Singapore starting view. Drawing, local projects, GeoJSON
+import/export, and project-only SVG export work without a server. An optional
+`OFM_API_BASE` Actions variable enables a separately hosted matching API.
+See [FANTASY-MAP.md](docs/FANTASY-MAP.md) for hosting on `umiyui.dev`, the
+snapshot update procedure, and the boundary between static and API features.

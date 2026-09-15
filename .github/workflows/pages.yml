@@ -53,6 +53,12 @@ jobs:
           MRT_SITE_DAYS: "3"
           MRT_SITE_CONFIG: config/singapore.yaml
 
+      # The editor is pinned in this repository: no private-repo token is needed.
+      - name: Generate the fantasy map editor
+        run: python3 scripts/build-fantasy-map.py site
+        env:
+          OFM_API_BASE: ${{ vars.OFM_API_BASE }}
+
       - name: Report the site size
         run: du -sh site && du -sh site/timetables && find site -type f | wc -l
 

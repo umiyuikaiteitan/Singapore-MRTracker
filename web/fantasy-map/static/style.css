@@ -1,0 +1,284 @@
+/* OpenFantasyMap editor layout: fixed sidebar, full-height map. */
+
+:root {
+  --bg: #0b121d;
+  --panel: #111a28;
+  --panel-edge: #1e2c40;
+  --text: #e8eef5;
+  --muted: #8b9aab;
+  --accent: #3d63ff;
+  /* Chrome */
+  --control-fill: #18243a;      /* buttons, selects */
+  --map-bg: #0d1520;            /* map pane behind tiles */
+  --row-hover: #16213377;       /* list row hover wash */
+  --row-active: #16213399;      /* active list row wash */
+  --status-fill: #0b121dcc;     /* translucent status bar over the map */
+  --toast-fill: #18243aee;      /* translucent toast fill */
+  --menu-fill: #111a28f2;       /* translucent context-menu fill */
+  --menu-shadow: #000a;         /* context-menu drop shadow */
+  --label-shadow: #000;         /* station-label text shadow */
+  --selection-wash: #3d63ff22;  /* marquee interior (accent at low alpha) */
+  --danger: #d64545;            /* destructive action border */
+  --danger-text: #ff9d9d;       /* destructive action text */
+  /* State (curvature validation). One red role: error reuses --danger. */
+  --state-error: var(--danger); /* curve tighter than the line's minimum */
+  --state-ok: #4fb286;          /* every curve meets the minimum */
+  /* Map glyphs */
+  --station-fill: #09101b;      /* hollow station disc interior */
+  --node-fill: #fff;            /* route-node disc */
+  --node-ring: #ffffff88;       /* route-node outer ring */
+  --endpoint: #ffd75e;          /* line endpoint / extension marker */
+  --endpoint-glow: #ffd75e88;   /* extension-end halo */
+  --branch-anchor: #5ee6b6;     /* branch anchor marker */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+#app { display: flex; height: 100vh; }
+
+#sidebar {
+  width: 280px;
+  flex: none;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--panel-edge);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.brand h1 { margin: 0; font-size: 18px; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+button {
+  background: var(--control-fill);
+  color: var(--text);
+  border: 1px solid var(--panel-edge);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+button:hover { border-color: var(--accent); }
+button.active { background: var(--accent); border-color: var(--accent); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.danger:hover { border-color: var(--danger); color: var(--danger-text); }
+
+.tool-row, .button-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.button-row { margin-top: 6px; }
+
+.slider-row { display: block; margin-top: 10px; font-size: 13px; }
+.slider-row input { width: 100%; margin-top: 4px; }
+.slider-row b { color: var(--accent); float: right; }
+
+.check-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+#line-list { display: flex; flex-direction: column; gap: 4px; }
+
+.line-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.line-item:hover { background: var(--row-hover); }
+.line-item.active { border-color: var(--accent); background: var(--row-active); }
+.line-swatch {
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  flex: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.line-item .line-name {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  padding: 0;
+}
+.line-item .line-name:focus { outline: 1px solid var(--accent); }
+.line-meta { color: var(--muted); font-size: 11px; }
+.line-mode {
+  flex: none;
+  max-width: 84px;
+  background: var(--control-fill);
+  color: var(--muted);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 1px 2px;
+}
+.line-issues {
+  flex: none;
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  padding: 0 4px;
+  color: var(--state-ok);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.line-issues.has-issues {
+  border-color: var(--state-error);
+  color: var(--state-error);
+  cursor: pointer;
+}
+.line-item .icon-button {
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 0 3px;
+  font-size: 13px;
+}
+.line-item .icon-button:hover { color: var(--text); }
+
+.credits { margin-top: auto; color: var(--muted); font-size: 11px; }
+.credits a { color: var(--muted); }
+
+#map-wrap { position: relative; flex: 1; min-width: 0; }
+#map { position: absolute; inset: 0; background: var(--map-bg); }
+
+#status-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 800;
+  padding: 5px 12px;
+  background: var(--status-fill);
+  border-top: 1px solid var(--panel-edge);
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+#toast {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  background: var(--toast-fill);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  max-width: 70%;
+}
+
+/* Map markers */
+.route-node {
+  width: 12px; height: 12px;
+  margin: -6px 0 0 -6px !important;
+  border-radius: 50%;
+  background: var(--node-fill);
+  border: 2.5px solid var(--bg);
+  box-shadow: 0 0 0 1.5px var(--node-ring);
+}
+.route-node.endpoint { background: var(--endpoint); }
+.route-node.branch-anchor { background: var(--branch-anchor); cursor: not-allowed; }
+.route-node.selected { box-shadow: 0 0 0 3px var(--accent); }
+
+.station-marker {
+  width: 12px; height: 12px;
+  margin: -6px 0 0 -6px !important;
+  border-radius: 50%;
+  background: var(--station-fill);
+  border: 2.5px solid currentColor;
+}
+.station-marker.selected { box-shadow: 0 0 0 3px var(--accent); }
+
+.station-label {
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 11px;
+  text-shadow: 0 1px 2px var(--label-shadow);
+}
+
+/* Radius readout on a curvature-issue marker. Overrides Leaflet's own
+   light tooltip, which this stylesheet is loaded after. */
+.issue-tooltip {
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 6px;
+}
+.issue-tooltip.leaflet-tooltip-top::before { border-top-color: var(--panel-edge); }
+.issue-tooltip.leaflet-tooltip-bottom::before { border-bottom-color: var(--panel-edge); }
+.issue-tooltip.leaflet-tooltip-left::before { border-left-color: var(--panel-edge); }
+.issue-tooltip.leaflet-tooltip-right::before { border-right-color: var(--panel-edge); }
+
+.leaflet-container { font: inherit; }
+
+.route-node.extension {
+  box-shadow: 0 0 0 3px var(--endpoint), 0 0 10px 3px var(--endpoint-glow);
+}
+
+#context-menu {
+  position: fixed;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  background: var(--menu-fill);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 6px 24px var(--menu-shadow);
+}
+#context-menu button {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+#context-menu button:hover { background: var(--accent); }
+/* Must out-specify the `display: flex` above, which beats [hidden]. */
+#context-menu[hidden] { display: none; }
+
+#marquee {
+  position: absolute;
+  z-index: 850;
+  border: 1px dashed var(--accent);
+  background: var(--selection-wash);
+  pointer-events: none;
+}
+
+.route-node.multi { background: var(--accent); border-color: var(--node-fill); }
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}

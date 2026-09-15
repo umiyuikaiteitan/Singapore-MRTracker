@@ -1,13 +1,14 @@
 # Deploy on GitHub Pages
 
-The published site has two sections under one domain:
+The published site has three sections under one domain:
 
 | Path | What it is |
 |------|------------|
 | `/` | The live dot-matrix departure board. |
 | `/timetables/` | Browsable station timetables and train diagrams. |
+| `/fantasy-map/` | OpenFantasyMap transit editor; see [hosting and API setup](FANTASY-MAP.md). |
 
-GitHub Pages serves static files only. Both sections are therefore
+GitHub Pages serves static files only. The board and timetable sections are therefore
 generated ahead of time by a scheduled GitHub Actions workflow, from
 one download of the GTFS Schedule feed. The board computes wait times
 from the visitor's clock; train schedules are deterministic, so it

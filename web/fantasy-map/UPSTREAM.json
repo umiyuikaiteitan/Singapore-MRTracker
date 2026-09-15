@@ -1,0 +1,32 @@
+{
+  "repository": "https://github.com/umiyuikaiteitan/OpenFantasyMap",
+  "revision": "01ca21c375dde31838095ca663750b4dfa5bef85",
+  "files": {
+    "scripts/build-static.py": "b380e3bb64d34c15c8dfaa7cdfc49c19bdc709e7cb1adbd5b3e936f0b9085e61",
+    "static/app.js": "b46d6f7c056cd26a06edebfdf2ffe1ec698aaabdd9e2b38b6564411d90d1e33d",
+    "static/config.js": "837741ad14c42e3d18965e751706d5d821929aafa86ee555b9e8c1b9ff3da204",
+    "static/geometry.js": "cb622c9ac878051c70af67e408983a04559c2eb25e7b1c576bd27aa020c683be",
+    "static/index.html": "7c80a3217765661cf2b4248b370c3ea77c6b0187892335e01cceb5e83be87593",
+    "static/modules/config.js": "6801a0d9989771f937529c4bbe7fc46804312edd6d494d28dbdb04e21f2b4208",
+    "static/modules/context-menu.js": "ca58df3ea1c5a7e490e93face5660984eaa658ab3908c73da8c590791ab74d47",
+    "static/modules/controls.js": "b83ce295aeb7b2e0aab46a4549cd950e3d755e81fd48c4b31762c951c8181416",
+    "static/modules/geojson-model.js": "42212ba3ff281552554b17cbfc5f54e6fb14b5baaa289bca5516eb9245a06819",
+    "static/modules/geojson.js": "edee303afbb1325aa8adf5b09deb7f2532a54090787b75c8ee1f3a513447141c",
+    "static/modules/geom.js": "e2e06c22231b0f5134f834b402e7b34cc6f1203e9d028b53e18316acd787df7c",
+    "static/modules/interactions.js": "23ab99fda4f72b1a3bcebc2f6d0beb4492dca18de28daa1c7e342fa0b3eedc54",
+    "static/modules/map-setup.js": "cd48a59837cd6902d53f0f2e06a4cd42cc844f59e02d0b3a606dcf3b8a686a83",
+    "static/modules/model.js": "8f6f6b1c22427cf42218bfe5958cc81373febb2970e20b56cb95c6e9bc727e12",
+    "static/modules/modes.js": "f06547f3bc7646b066acfd10781785ad9724255dcd7840b77442d54539e8537a",
+    "static/modules/overlay.js": "dd5ad1d30462c7c9eeca7662e6b263205d5d7ff7f5819b1ccee6be85e01989e3",
+    "static/modules/render.js": "d997f7e1719a3ba597751853bd6962d285000c8c1072fb7827fdf2d98f10e1a6",
+    "static/modules/snap-guard.js": "7e96e7ddb4e73e21cd4084f02acc6e7233d0214194a4f5cd8015d02cb17a33f3",
+    "static/modules/snapping.js": "68f183db9460d5d235aab55eca91e0931ba8802a3fa71c29032b03cac9573f5f",
+    "static/modules/state.js": "139136ec482bd99697e34f59b175fdf27f338042133aa3c38ff08704d3f48ee8",
+    "static/modules/svg-export.js": "edd900c10d97e1fc8157d488b2ea1a307c26877fb3f0689f23cd7af125cedc7c",
+    "static/modules/topology.js": "587f726904a08f1114dfb69d2d4a32eb0f60e22843e2df30dd630736efec6f43",
+    "static/modules/ui.js": "e2e0ae1a7d64ba7b693cfd9bcf211c20e2af429616b387463cac54fe6cede724",
+    "static/style.css": "f9e57cef9d47ed9f6d33f3c34501ab5fd0e52228ede8f594e415f19662bc588c",
+    "static/vendor/leaflet.css": "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6",
+    "static/vendor/leaflet.js": "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a"
+  }
+}
