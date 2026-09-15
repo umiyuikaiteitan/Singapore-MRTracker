@@ -40,3 +40,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: python3 -m unittest discover -s tests -p 'test_fantasy_map.py'
+  map-client:
+    name: Check map snapshot playback
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/test_map_client.cjs

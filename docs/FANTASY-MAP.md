@@ -17,7 +17,9 @@ and links also work at the default project URL:
 The Pages workflow runs `python3 scripts/build-fantasy-map.py site` after
 the schedule generators. This adds `site/fantasy-map/` without changing
 the generated board or timetable files. The same Pages artifact contains
-all three sections, so scheduled rebuilds retain the editor.
+all standard sections, so scheduled rebuilds retain the editor. An optional
+`/map/` live schematic is built separately when `MRT_MAP_LAYOUT` names a
+reviewed real-network layout.
 
 For an editor-only local preview (no DataMall key or Rust required):
 
@@ -49,8 +51,9 @@ editing it in static mode does not re-query the matching service.
 
 Projects remain in browser storage. Export GeoJSON for a portable backup.
 A project saved on the github.io origin will not automatically appear on
-the umiyui.dev origin. This change hosts the editor; it does not implement
-the separate roadmap feature that renders MRTracker live data on a map.
+the umiyui.dev origin. The editor is separate from the live schematic in `crates/mrt-map-web`
+and `crates/mrt-map-static`; that optional `/map/` section needs a reviewed
+real-network layout. See [DEPLOY-PAGES.md](DEPLOY-PAGES.md#the-map-site).
 
 ## Optional matching service
 

@@ -7,7 +7,8 @@ use crate::key::AccountKey;
 use crate::model::{
     CrowdForecastDay, DatasetLink, Envelope, PlatformCrowd, RawLink, TrainLine, TrainServiceAlerts,
 };
-use crate::transport::{Response, Transport};
+use crate::snapshot::{redact_url, require_https};
+use crate::transport::{Response, Transport, MAX_DATASET_BYTES};
 
 /// The production base URL of the DataMall OData service.
 pub const DEFAULT_BASE_URL: &str = "https://datamall2.mytransport.sg/ltaodataservice";
@@ -64,6 +65,12 @@ impl<T: Transport> DataMallClient<T> {
     }
 
     /// Change the base URL. Useful for tests and proxies.
+    ///
+    /// The HTTPS rule of [`DataMallClient::download_limited`] covers
+    /// the pre-signed links that DataMall hands out, not this value: a
+    /// local mock or a loopback proxy is a legitimate `http://` base.
+    /// The account key does travel to this host in a header, so point
+    /// it at a plain-HTTP address only when that address is local.
     pub fn with_base_url(mut self, base_url: impl Into<String>) -> Self {
         self.base_url = base_url.into().trim_end_matches('/').to_string();
         self
@@ -206,12 +213,49 @@ impl<T: Transport> DataMallClient<T> {
     ///
     /// The request goes to the given URL without the account key,
     /// because the link carries its own signature.
+    ///
+    /// The link must use HTTPS, and the body must stay within
+    /// [`MAX_DATASET_BYTES`]. Both rules hold for every download in
+    /// this crate; see [`DataMallClient::download_limited`], which
+    /// this method calls with the default limit.
     pub fn download(&self, url: &str) -> Result<Vec<u8>, DataMallError> {
+        self.download_limited(url, MAX_DATASET_BYTES)
+    }
+
+    /// Download a file from a pre-signed dataset link, refusing a body
+    /// beyond `limit` bytes.
+    ///
+    /// This is the single download path of the crate. Every `fetch_*`
+    /// method and every snapshot ends up here, so the two rules below
+    /// hold for all of them:
+    ///
+    /// - The link must use HTTPS. The check happens before the
+    ///   request, so a plain-HTTP link never reaches the network, and
+    ///   the error names the scheme that the link used.
+    /// - The body must stay within `limit`, which the client caps at
+    ///   [`MAX_DATASET_BYTES`], because the transport refuses to read
+    ///   more than that anyway. An oversized body is a
+    ///   [`DataMallError::TooLarge`], never a truncated success: the
+    ///   built-in transport detects it while reading, and this check
+    ///   repeats the measurement on whatever a custom transport
+    ///   delivered.
+    ///
+    /// No error message from this path repeats the signed query of the
+    /// link.
+    pub fn download_limited(&self, url: &str, limit: usize) -> Result<Vec<u8>, DataMallError> {
+        require_https(url)?;
+        let limit = limit.min(MAX_DATASET_BYTES);
         let response = self.transport.get(url, &[])?;
         if !(200..300).contains(&response.status) {
             return Err(DataMallError::Http {
                 status: response.status,
-                url: url.to_string(),
+                url: redact_url(url),
+            });
+        }
+        if response.body.len() > limit {
+            return Err(DataMallError::TooLarge {
+                url: redact_url(url),
+                limit,
             });
         }
         Ok(response.body)

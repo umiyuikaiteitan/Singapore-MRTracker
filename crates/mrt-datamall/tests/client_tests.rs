@@ -227,6 +227,57 @@ fn fetch_gtfs_schedule_downloads_without_the_key() {
     assert!(recorded[1].headers.is_empty());
 }
 
+/// The same sample with a plain-HTTP link, as a hostile or
+/// misconfigured mirror would answer.
+const GTFS_SCHEDULE_HTTP_LINK: &str = r#"{
+    "value": [
+        {
+            "timestamp": "2026-07-31T17:14:35+08:00",
+            "link": "http://dmprod-datasets.s3.ap-southeast-1.amazonaws.com/train-gtfs-schedule/gtfs_schedule.zip?X-Amz-Signature=deadbeef"
+        }
+    ]
+}"#;
+
+#[test]
+fn the_legacy_fetch_methods_refuse_a_plain_http_link() {
+    // These are the methods that the deployed boards call. They obey
+    // the same scheme rule as the snapshot path.
+    for endpoint in ["schedule", "trip-updates", "service-alerts"] {
+        let transport = MockTransport::default();
+        transport.queue_json(200, GTFS_SCHEDULE_HTTP_LINK);
+        transport.queue_bytes(200, b"payload");
+        let client = client(&transport);
+
+        let result = match endpoint {
+            "schedule" => client.fetch_gtfs_schedule(),
+            "trip-updates" => client.fetch_trip_updates(),
+            _ => client.fetch_service_alerts(),
+        };
+        let error = result.unwrap_err();
+        let message = error.to_string();
+        assert!(
+            matches!(&error, DataMallError::InsecureScheme { scheme, .. } if scheme == "http"),
+            "{endpoint}: {message}"
+        );
+        assert!(message.contains("HTTPS"), "{endpoint}: {message}");
+        assert!(!message.contains("deadbeef"), "{endpoint}: {message}");
+        // The link request happened; the download did not.
+        assert_eq!(transport.recorded().len(), 1, "{endpoint}");
+    }
+}
+
+#[test]
+fn the_legacy_fetch_methods_refuse_an_oversized_body() {
+    let transport = MockTransport::default();
+    transport.queue_json(200, GTFS_SCHEDULE_SAMPLE);
+    transport.queue_bytes(200, b"payload");
+    // The default limit is the documented crate maximum, so a small
+    // body passes; the oversize case is pinned in the snapshot tests,
+    // which can set a small limit without allocating 256 MiB.
+    assert!(client(&transport).fetch_trip_updates().is_ok());
+    assert_eq!(mrt_datamall::MAX_DATASET_BYTES, 256 * 1024 * 1024);
+}
+
 #[test]
 fn empty_link_lists_are_an_error() {
     let transport = MockTransport::default();

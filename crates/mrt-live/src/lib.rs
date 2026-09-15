@@ -11,9 +11,11 @@
 //! - the decoded GTFS-Realtime data from `mrt-gtfs-rt`,
 //!
 //! and produces flat structures that a renderer shows directly: a
-//! per-line network status and a live destination board. All view
-//! models serialize with `serde`, so a web map, a destination board,
-//! or an LED panel driver can consume them as JSON.
+//! per-line network status, a live destination board, and a snapshot
+//! of the whole network for a live map. It also reads the schematic
+//! layout that the map is drawn on and binds it to the network. All
+//! view models serialize with `serde`, so a web map, a destination
+//! board, or an LED panel driver can consume them as JSON.
 //!
 //! This crate does no input/output. The application fetches the data
 //! and passes it in. This keeps render loops testable and fast.
@@ -45,11 +47,27 @@
 
 #![warn(missing_docs)]
 
+pub mod clock;
+mod layout;
+mod map;
+mod matching;
+
+pub use layout::{
+    BoundLayout, BoundStation, Layout, LayoutBranch, LayoutError, LayoutLine, LayoutPoint,
+    LayoutStation, UncoveredStation, UnmatchedReason, UnmatchedStation,
+};
+pub use map::{
+    Freshness, FreshnessState, MapBand, MapEdge, MapLine, MapStation, MapTrain, NetworkSnapshot,
+    NetworkSnapshotBuilder, PositionQuality, TrainLocation,
+};
+
 use serde::Serialize;
 
 use mrt_datamall::{CrowdLevel, PlatformCrowd, ServiceStatus, TrainLine, TrainServiceAlerts};
-use mrt_gtfs::{GtfsTime, Line, RailNetwork, ServiceDate, StationId};
+use mrt_gtfs::{BoardEntry, GtfsTime, Line, RailNetwork, ServiceDate, StationId};
 use mrt_gtfs_rt::{Alert, RailRtFeed};
+
+use crate::matching::{RunKey, TripUpdateIndex};
 
 // ----------------------------------------------------------------------
 // Line matching
@@ -193,13 +211,23 @@ pub struct LiveBoardRow {
     pub line_color: Option<String>,
     /// The destination text.
     pub destination: String,
-    /// The wait time until the departure, in seconds.
+    /// The wait time until the predicted departure, in seconds.
+    ///
+    /// With a realtime layer attached this is the scheduled time plus
+    /// the delay that applies here. Without one, and for a canceled
+    /// departure, it is the scheduled wait.
     pub departs_in_secs: u32,
-    /// The departure time on the 24-hour clock, as `HH:MM:SS`.
+    /// The predicted departure time on the 24-hour clock, as
+    /// `HH:MM:SS`. It carries the same shift as
+    /// [`LiveBoardRow::departs_in_secs`].
     pub clock_time: String,
     /// `true` if the time comes from a headway and is approximate.
     pub approximate: bool,
-    /// The live delay in seconds, if a trip update reports one.
+    /// The live delay in seconds, if a trip update reports one. The
+    /// board has already applied it to
+    /// [`LiveBoardRow::departs_in_secs`] and
+    /// [`LiveBoardRow::clock_time`]; the figure is here for a row that
+    /// wants to name it.
     pub delay_secs: Option<i32>,
     /// `true` if a trip update or a service alert cancels this trip.
     pub canceled: bool,
@@ -211,6 +239,38 @@ pub struct LiveBoardRow {
     pub crowd: Option<CrowdLevel>,
 }
 
+/// What the realtime layer says about one departure at one station.
+#[derive(Debug, Clone, Copy, Default)]
+struct TripStatus {
+    /// The delay that applies to the scheduled time, in seconds.
+    delay_secs: Option<i32>,
+    /// `true` when a trip update cancels the whole trip.
+    canceled: bool,
+    /// `true` when a trip update marks the call at this station
+    /// skipped: the train will not call here.
+    skipped: bool,
+}
+
+/// The seconds in one day, for wrapping a shifted clock time.
+const SECS_PER_DAY: i64 = 24 * 3600;
+
+/// The largest realtime shift the board widens its schedule query by.
+///
+/// Three hours covers any plausible delay on a metro. A feed that
+/// reports more still shifts the rows it names; it only stops widening
+/// the query.
+const MAX_SHIFT_SECS: u32 = 3 * 3600;
+
+/// The clock time of a departure with the realtime shift applied.
+///
+/// The result stays on the 24-hour clock, the way
+/// [`mrt_gtfs::BoardEntry::clock_time`] does: a trip that runs past
+/// midnight, and a shift that crosses it, both wrap.
+fn shifted_clock(scheduled: GtfsTime, shift_secs: i64) -> GtfsTime {
+    let seconds = i64::from(scheduled.seconds()) + shift_secs;
+    GtfsTime::from_seconds(seconds.rem_euclid(SECS_PER_DAY) as u32)
+}
+
 /// A live destination board for one station.
 #[derive(Debug, Clone, Serialize)]
 pub struct LiveBoard {
@@ -218,7 +278,7 @@ pub struct LiveBoard {
     pub station_name: String,
     /// The station codes, for example `NS1` and `EW24`.
     pub station_codes: Vec<String>,
-    /// The board rows, in wait-time order.
+    /// The board rows, in predicted wait-time order.
     pub rows: Vec<LiveBoardRow>,
     /// Alert messages for the lines that serve this station.
     pub notices: Vec<String>,
@@ -228,6 +288,11 @@ pub struct LiveBoard {
 ///
 /// Every layer is optional. Without live layers the board shows the
 /// static schedule.
+///
+/// With a realtime layer the board predicts: every row carries its
+/// scheduled time plus the delay the feed reports for it, and the
+/// predicted time decides the order of the rows, the window they must
+/// fall in, and which of them survive [`LiveBoardBuilder::max_rows`].
 pub struct LiveBoardBuilder<'a> {
     network: &'a RailNetwork,
     alerts: Option<&'a TrainServiceAlerts>,
@@ -293,8 +358,36 @@ impl<'a> LiveBoardBuilder<'a> {
 
     /// Build the board for one station.
     ///
-    /// The board lists the departures from `clock` to
-    /// `clock + lookahead_secs` on the given date.
+    /// The board lists the departures predicted between `clock` and
+    /// `clock + lookahead_secs` on the given date. A realtime layer
+    /// moves a departure across either edge of that window: a late
+    /// train scheduled before `clock` still shows, and an early train
+    /// scheduled after the window comes in. The rows are in predicted
+    /// order and the last of them fall away at
+    /// [`LiveBoardBuilder::max_rows`].
+    ///
+    /// A row a trip update marks skipped at this station never
+    /// appears: the operator says that train will not call here. A
+    /// canceled row stays, so the board can read `CANC`, and keeps its
+    /// scheduled time for the order and the window.
+    ///
+    /// # Which trip update reaches which row
+    ///
+    /// A row is one run of one trip, not the trip: the board scans two
+    /// service days, and a headway block expands one trip into a row
+    /// every few minutes. So a `trip_id` alone does not decide which
+    /// update reaches which row. An update reaches a row only where it
+    /// can be shown to belong to that run: it must name the service
+    /// date of the row or name no date at all, and — where a headway
+    /// block expanded the row — it must name that run's own start
+    /// time. A delay, a cancellation, or a skipped call therefore
+    /// moves one row and leaves its siblings alone, and today's update
+    /// cannot reach yesterday's run.
+    ///
+    /// These are the rules that place a train on the live map, in one
+    /// shared implementation, so the board and the map cannot disagree
+    /// about which train the operator meant. The `matching` module of
+    /// this crate carries the decision table.
     pub fn build(
         &self,
         station: StationId,
@@ -305,43 +398,113 @@ impl<'a> LiveBoardBuilder<'a> {
         let station_data = self.network.station(station);
         let crowd = self.station_crowd(station_data.codes.iter().map(String::as_str));
 
-        let mut rows = Vec::new();
-        for entry in self
-            .network
-            .departure_board(station, date, clock, lookahead_secs)
-        {
-            if rows.len() >= self.max_rows {
-                break;
+        // The realtime layer moves departures across both edges of the
+        // window, so the schedule query runs wider than the window the
+        // caller asked for and the predicted time decides afterwards.
+        // Without a realtime layer both margins are zero and the query
+        // is the plain scheduled one.
+        let (back, forward) = self.window_margins();
+        let back = back.min(clock.seconds());
+        let from = GtfsTime::from_seconds(clock.seconds() - back);
+        let span = lookahead_secs.saturating_add(back).saturating_add(forward);
+
+        // The board publishes no diagnostics, so the notes the index
+        // makes about unreadable descriptor fields are dropped here.
+        // The live map raises the same notes from the same feed.
+        let updates = TripUpdateIndex::from_feed(self.realtime, &mut Vec::new());
+
+        let mut rows: Vec<(i64, LiveBoardRow)> = Vec::new();
+        for entry in self.network.departure_board(station, date, from, span) {
+            let status = self.trip_status(&updates, &entry, station);
+            // The operator says this run does not call here at all, so
+            // the row leaves the board rather than merely losing its
+            // delay.
+            if status.skipped {
+                continue;
             }
             let line = self.network.line(entry.departure.line);
+            let (alert_canceled, alerted) =
+                self.alert_status(&entry.departure.trip_id, line, station);
+            let canceled = status.canceled || alert_canceled;
+            // Nothing predicts a train that will not run: a canceled
+            // row keeps the scheduled time it was booked for.
+            let shift = if canceled {
+                0
+            } else {
+                i64::from(status.delay_secs.unwrap_or(0))
+            };
+            let wait = i64::from(entry.wait_secs) - i64::from(back) + shift;
+            if wait < 0 || wait > i64::from(lookahead_secs) {
+                continue;
+            }
             let destination = entry
                 .departure
                 .headsign
                 .clone()
                 .unwrap_or_else(|| self.network.station(entry.departure.terminus).name.clone());
-            let (delay_secs, canceled) = self.trip_status(&entry.departure.trip_id, station);
-            let (alert_canceled, alerted) =
-                self.alert_status(&entry.departure.trip_id, line, station);
-            rows.push(LiveBoardRow {
-                line_code: line.name.clone(),
-                line_color: line.color.clone(),
-                destination,
-                departs_in_secs: entry.wait_secs,
-                clock_time: entry.clock_time().to_string(),
-                approximate: !entry.departure.exact,
-                delay_secs,
-                canceled: canceled || alert_canceled,
-                alerted,
-                crowd,
-            });
+            rows.push((
+                wait,
+                LiveBoardRow {
+                    line_code: line.name.clone(),
+                    line_color: line.color.clone(),
+                    destination,
+                    departs_in_secs: wait as u32,
+                    clock_time: shifted_clock(entry.departure.time, shift).to_string(),
+                    approximate: !entry.departure.exact,
+                    delay_secs: status.delay_secs,
+                    canceled,
+                    alerted,
+                    crowd,
+                },
+            ));
         }
+
+        // The schedule query returns its entries in scheduled order,
+        // built deterministically. This sort is stable, so rows that
+        // share a predicted time keep that scheduled order and the
+        // board stays deterministic.
+        rows.sort_by_key(|(wait, _)| *wait);
+        rows.truncate(self.max_rows);
 
         LiveBoard {
             station_name: station_data.name.clone(),
             station_codes: station_data.codes.clone(),
-            rows,
+            rows: rows.into_iter().map(|(_, row)| row).collect(),
             notices: self.notices(station),
         }
+    }
+
+    /// How far the realtime layer can move a scheduled departure, in
+    /// seconds before and after the window the caller asked for.
+    ///
+    /// The margins come from the delays the feed actually carries, so
+    /// the widened schedule query stays as narrow as the data allows
+    /// and stays deterministic. [`MAX_SHIFT_SECS`] caps them: a longer
+    /// delay still applies to the rows it names, but does not widen
+    /// the query further.
+    fn window_margins(&self) -> (u32, u32) {
+        let Some(feed) = self.realtime else {
+            return (0, 0);
+        };
+        let mut latest: i32 = 0;
+        let mut earliest: i32 = 0;
+        for update in &feed.trip_updates {
+            let mut note = |delay: Option<i32>| {
+                if let Some(delay) = delay {
+                    latest = latest.max(delay);
+                    earliest = earliest.min(delay);
+                }
+            };
+            note(update.delay_secs);
+            for stop_update in &update.stop_updates {
+                note(stop_update.arrival.and_then(|event| event.delay_secs));
+                note(stop_update.departure.and_then(|event| event.delay_secs));
+            }
+        }
+        (
+            latest.unsigned_abs().min(MAX_SHIFT_SECS),
+            earliest.unsigned_abs().min(MAX_SHIFT_SECS),
+        )
     }
 
     /// Get the worst live crowd level among the station codes.
@@ -360,39 +523,73 @@ impl<'a> LiveBoardBuilder<'a> {
         worst
     }
 
-    /// Get the live delay and the cancel flag for one trip at one
+    /// Get what the realtime layer says about one departure at one
     /// station.
-    fn trip_status(&self, trip_id: &str, station: StationId) -> (Option<i32>, bool) {
-        let Some(feed) = self.realtime else {
-            return (None, false);
-        };
-        let Some(update) = feed
-            .trip_updates
-            .iter()
-            .find(|u| u.trip_id.as_deref() == Some(trip_id))
+    ///
+    /// The update has to belong to the run this row came from, not
+    /// merely to name its `trip_id`: the row carries a service date and,
+    /// where a headway block expanded it, the start of its own run, and
+    /// [`crate::matching`] reads both. An update that cannot be shown to
+    /// belong to this run says nothing about it, so the row keeps its
+    /// scheduled time — the treatment the map gives such a run.
+    ///
+    /// Where an update does belong here, the per-stop event of the call
+    /// wins if the feed supplies one for a platform of the station: its
+    /// departure delay first, then its arrival delay. The trip-level
+    /// delay fills in for a call the feed says nothing about. This is
+    /// the rule the map view model applies to the same feed.
+    ///
+    /// [`crate::matching::UpdateMatch::targeted`] is not read here. It
+    /// exists so that a cancellation can outlive a stale realtime
+    /// layer, and the board judges no freshness: its caller decides
+    /// which layers reach it.
+    fn trip_status(
+        &self,
+        updates: &TripUpdateIndex<'_>,
+        entry: &BoardEntry,
+        station: StationId,
+    ) -> TripStatus {
+        let Some(update) = updates
+            .lookup(RunKey::new(
+                entry.departure.trip_id.as_str(),
+                entry.service_date,
+                entry.departure.run_start,
+            ))
+            .update
         else {
-            return (None, false);
+            return TripStatus::default();
         };
         if update.canceled {
-            return (None, true);
+            return TripStatus {
+                canceled: true,
+                ..TripStatus::default()
+            };
         }
         let platforms = &self.network.station(station).platform_stop_ids;
-        let stop_update = update.stop_updates.iter().find(|su| {
+        let announced = update.stop_updates.iter().find(|su| {
             su.stop_id
                 .as_deref()
                 .is_some_and(|id| platforms.iter().any(|p| p == id))
         });
-        let delay = stop_update
+        // A skipped call carries no prediction at all: the operator
+        // says the train passes this station by.
+        if announced.is_some_and(|su| su.skipped) {
+            return TripStatus {
+                skipped: true,
+                ..TripStatus::default()
+            };
+        }
+        let delay_secs = announced
             .and_then(|su| {
-                if su.skipped {
-                    return None;
-                }
                 su.departure
-                    .or(su.arrival)
                     .and_then(|event| event.delay_secs)
+                    .or_else(|| su.arrival.and_then(|event| event.delay_secs))
             })
             .or(update.delay_secs);
-        (delay, false)
+        TripStatus {
+            delay_secs,
+            ..TripStatus::default()
+        }
     }
 
     /// The effect of the active service alerts on one departure.

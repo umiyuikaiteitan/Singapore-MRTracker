@@ -850,7 +850,9 @@ fn a_headway_block_becomes_a_band_with_two_envelope_paths() {
     assert!(band.label.contains("approximately"));
     assert!(!band.first_path.is_empty());
     assert!(!band.last_path.is_empty());
-    // The last representative run starts one headway before the end.
+    // The last representative run starts at the block's last scheduled
+    // start (here one headway before the end; the two differ when the
+    // block length is not a whole multiple of the headway).
     assert_eq!(band.last_path[0].time.to_string(), "05:50:00");
     assert!(document.legend.iter().any(|l| l.key == "approximate"));
 }

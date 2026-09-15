@@ -11,7 +11,12 @@
 //! - The account key travels only in the `AccountKey` header of a
 //!   request to the DataMall host. The pre-signed link carries its own
 //!   signature, and the download therefore sends no key.
-//! - A download link must use HTTPS.
+//! - A download link must use HTTPS. [`require_https`] is the one
+//!   check, and `DataMallClient::download_limited` applies it to every
+//!   external link that the crate fetches, whether the caller asked
+//!   for a snapshot or for the plain bytes.
+//! - A download stops at [`MAX_DATASET_BYTES`]; an oversized response
+//!   is an error, never a truncated file.
 //! - An expired link is not retried. The client asks for a new link,
 //!   a bounded number of times.
 //! - Nothing that this module writes to a log or a manifest contains
@@ -21,7 +26,7 @@ use std::time::SystemTime;
 
 use crate::client::DataMallClient;
 use crate::error::DataMallError;
-use crate::transport::Transport;
+use crate::transport::{Transport, MAX_DATASET_BYTES};
 
 /// The bytes of one dataset, with their provenance.
 #[derive(Clone)]
@@ -74,12 +79,6 @@ impl std::fmt::Debug for DataMallSnapshot {
 /// fails with a status that an expired signature produces.
 const LINK_ATTEMPTS: usize = 3;
 
-/// The largest dataset that the client accepts, in bytes.
-///
-/// The train GTFS archive is a few megabytes. The cap stops a
-/// misbehaving host from filling memory.
-pub const MAX_DATASET_BYTES: usize = 256 * 1024 * 1024;
-
 impl<T: Transport> DataMallClient<T> {
     /// Fetch the train GTFS Schedule archive as a snapshot.
     ///
@@ -106,7 +105,10 @@ impl<T: Transport> DataMallClient<T> {
         let mut last: Option<DataMallError> = None;
         for _ in 0..LINK_ATTEMPTS {
             let link = self.dataset_link_for(endpoint)?;
-            require_https(&link.url)?;
+            // `download_limited` is the only download path in the
+            // crate, and it checks the scheme before it opens a
+            // connection, so a plain-HTTP link never reaches the
+            // network here either.
             match self.download_limited(&link.url, MAX_DATASET_BYTES) {
                 Ok(bytes) => {
                     return Ok(DataMallSnapshot {
@@ -130,36 +132,45 @@ impl<T: Transport> DataMallClient<T> {
             url: endpoint.to_string(),
         }))
     }
-
-    /// Download a file, refusing a body beyond `limit` bytes.
-    pub fn download_limited(&self, url: &str, limit: usize) -> Result<Vec<u8>, DataMallError> {
-        require_https(url)?;
-        let bytes = self.download(url)?;
-        if bytes.len() > limit {
-            return Err(DataMallError::Decode {
-                url: redact_url(url),
-                message: format!(
-                    "the dataset is {} bytes; the limit is {limit} bytes",
-                    bytes.len()
-                ),
-            });
-        }
-        Ok(bytes)
-    }
 }
 
 /// Reject a download URL that is not HTTPS.
 ///
 /// A pre-signed link carries a signature but no confidentiality. Plain
-/// HTTP would expose it, and any redirect to HTTP would too.
-fn require_https(url: &str) -> Result<(), DataMallError> {
-    if url.starts_with("https://") {
-        Ok(())
-    } else {
-        Err(DataMallError::Decode {
-            url: redact_url(url),
-            message: "a dataset download link must use HTTPS".to_string(),
-        })
+/// HTTP would expose it, and any redirect to HTTP would too. Every
+/// fetch of an external link in this crate goes through this check:
+/// `DataMallClient::download`, `DataMallClient::download_limited`, and
+/// therefore every `fetch_*` method and every snapshot.
+///
+/// The error names the scheme that the link used, so a misconfigured
+/// mirror is easy to recognise, and it never repeats the signed query.
+pub(crate) fn require_https(url: &str) -> Result<(), DataMallError> {
+    // RFC 3986 makes the scheme case-insensitive.
+    if url.len() >= 8 && url[..8].eq_ignore_ascii_case("https://") {
+        return Ok(());
+    }
+    Err(DataMallError::InsecureScheme {
+        url: redact_url(url),
+        scheme: scheme_of(url),
+    })
+}
+
+/// Get the scheme of a URL, for an error message.
+///
+/// The function accepts only a syntactically valid scheme, so that a
+/// string without one can never push part of a signed query into the
+/// message.
+fn scheme_of(url: &str) -> String {
+    match url.split_once("://") {
+        Some((scheme, _))
+            if !scheme.is_empty()
+                && scheme
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.')) =>
+        {
+            scheme.to_ascii_lowercase()
+        }
+        _ => "unknown".to_string(),
     }
 }
 
@@ -218,8 +229,29 @@ mod tests {
     #[test]
     fn only_https_links_are_downloaded() {
         assert!(require_https("https://host.example/x.zip").is_ok());
+        // RFC 3986 makes the scheme case-insensitive.
+        assert!(require_https("HTTPS://host.example/x.zip").is_ok());
+
         let error = require_https("http://host.example/x.zip?sig=abc").unwrap_err();
         assert!(error.to_string().contains("HTTPS"));
+        assert!(!error.to_string().contains("sig=abc"));
+        assert!(matches!(
+            error,
+            DataMallError::InsecureScheme { ref scheme, .. } if scheme == "http"
+        ));
+    }
+
+    #[test]
+    fn the_scheme_in_an_error_is_a_scheme_and_never_a_query() {
+        assert_eq!(scheme_of("http://host.example/x"), "http");
+        assert_eq!(scheme_of("FTP://host.example/x"), "ftp");
+        // Without a scheme, the message says so instead of quoting
+        // whatever stood before the first "://".
+        assert_eq!(scheme_of("host.example/x?sig=abc"), "unknown");
+        assert_eq!(scheme_of("/x?sig=abc://y"), "unknown");
+        assert_eq!(scheme_of(""), "unknown");
+
+        let error = require_https("host.example/x.zip?sig=abc").unwrap_err();
         assert!(!error.to_string().contains("sig=abc"));
     }
 

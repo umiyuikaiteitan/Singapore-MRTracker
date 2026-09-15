@@ -153,6 +153,11 @@ fn a_plain_http_link_is_refused_before_it_is_fetched() {
         .unwrap_err();
     let message = error.to_string();
     assert!(message.contains("HTTPS"), "{message}");
+    // The error names the scheme that the link used.
+    assert!(
+        matches!(&error, DataMallError::InsecureScheme { scheme, .. } if scheme == "http"),
+        "{message}"
+    );
     // The signature never reaches the message.
     assert!(!message.contains("deadbeef"));
     // Only the link request happened; nothing was downloaded.
@@ -160,20 +165,119 @@ fn a_plain_http_link_is_refused_before_it_is_fetched() {
 }
 
 #[test]
-fn an_oversized_dataset_is_refused() {
+fn every_download_path_refuses_a_link_that_is_not_https() {
+    // The same rule for the plain download, the limited download, and
+    // the legacy fetch_* methods that the deployed boards call.
+    for url in [
+        "http://host.example/gtfs.zip?X-Amz-Signature=deadbeef",
+        "ftp://host.example/gtfs.zip",
+        "host.example/gtfs.zip?X-Amz-Signature=deadbeef",
+    ] {
+        let transport = MockTransport::default();
+        transport.queue(200, b"payload");
+        let error = client(&transport).download(url).unwrap_err();
+        assert!(
+            matches!(error, DataMallError::InsecureScheme { .. }),
+            "{url}"
+        );
+        assert!(error.to_string().contains("HTTPS"), "{url}");
+        assert!(!error.to_string().contains("deadbeef"), "{url}");
+
+        let transport = MockTransport::default();
+        transport.queue(200, b"payload");
+        assert!(
+            client(&transport).download_limited(url, 1024).is_err(),
+            "{url}"
+        );
+
+        // Nothing reached the network on either call.
+        assert!(transport.recorded().is_empty(), "{url}");
+    }
+
+    // The scheme is case-insensitive, as RFC 3986 says.
+    let transport = MockTransport::default();
+    transport.queue(200, b"payload");
+    assert!(client(&transport)
+        .download("HTTPS://host.example/gtfs.zip")
+        .is_ok());
+}
+
+#[test]
+fn an_https_link_is_downloaded_without_the_account_key() {
+    let transport = MockTransport::default();
+    transport.queue(200, b"PK\x03\x04payload");
+
+    let bytes = client(&transport).download(SIGNED).unwrap();
+    assert_eq!(bytes, b"PK\x03\x04payload");
+    let requests = transport.recorded();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].url, SIGNED);
+    assert!(requests[0].headers.is_empty());
+}
+
+#[test]
+fn a_failed_download_never_repeats_the_signed_query() {
+    let transport = MockTransport::default();
+    transport.queue(500, b"boom");
+    let error = client(&transport).download(SIGNED).unwrap_err();
+    let message = error.to_string();
+    assert!(
+        matches!(error, DataMallError::Http { status: 500, .. }),
+        "{message}"
+    );
+    assert!(!message.contains("deadbeef"), "{message}");
+    assert!(message.contains("<redacted>"), "{message}");
+}
+
+#[test]
+fn an_oversized_dataset_is_refused_and_not_truncated() {
+    let transport = MockTransport::default();
+    transport.queue(200, &[0u8; 64]);
+
+    let error = client(&transport).download_limited(SIGNED, 16).unwrap_err();
+    let message = error.to_string();
+    assert!(
+        matches!(error, DataMallError::TooLarge { limit: 16, .. }),
+        "{message}"
+    );
+    assert!(
+        message.contains("larger than the limit of 16 bytes"),
+        "{message}"
+    );
+    assert!(!message.contains("deadbeef"));
+
+    // A body at the limit still arrives whole.
+    let transport = MockTransport::default();
+    transport.queue(200, &[7u8; 16]);
+    let bytes = client(&transport).download_limited(SIGNED, 16).unwrap();
+    assert_eq!(bytes, vec![7u8; 16]);
+}
+
+#[test]
+fn a_snapshot_of_an_oversized_dataset_fails_rather_than_shortening_it() {
     let transport = MockTransport::default();
     transport.queue_link(SIGNED);
     transport.queue(200, &[0u8; 64]);
 
-    let error = client(&transport).download_limited(SIGNED, 16).unwrap_err();
-    let _ = error;
+    // The default limit is far above 64 bytes, so the snapshot path
+    // succeeds here and delivers every byte. The size contract only
+    // ever refuses; it never shortens.
+    let snapshot = client(&transport).fetch_gtfs_schedule_snapshot().unwrap();
+    assert_eq!(snapshot.len(), 64);
+    assert_eq!(snapshot.sha256, sha256_hex(&[0u8; 64]));
+}
 
+#[test]
+fn the_limit_never_rises_above_the_crate_maximum() {
     let transport = MockTransport::default();
-    transport.queue(200, &[0u8; 64]);
-    let error = client(&transport).download_limited(SIGNED, 16).unwrap_err();
-    let message = error.to_string();
-    assert!(message.contains("the limit is 16 bytes"), "{message}");
-    assert!(!message.contains("deadbeef"));
+    transport.queue(200, &[0u8; 8]);
+    // A caller cannot ask for more than the documented maximum, and a
+    // request for more is still served within it.
+    let bytes = client(&transport)
+        .download_limited(SIGNED, usize::MAX)
+        .unwrap();
+    assert_eq!(bytes.len(), 8);
+    assert_eq!(mrt_datamall::MAX_DATASET_BYTES, 256 * 1024 * 1024);
 }
 
 #[test]
