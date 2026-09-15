@@ -81,6 +81,12 @@ The crate has four internal layers. Data flows down:
      policy left unexpanded, plus the diagnostics that explain
      everything it could not represent. Renderers use this API and
      never touch the private `TripSchedule`.
+   - A run enters the answer when its own span overlaps the
+     half-open window. A `FrequencyBand` follows the same rule with
+     its span, which runs from its first start to the moment its
+     last run reaches the end of the pattern — past the GTFS
+     `end_time` whenever a run takes longer than one headway,
+     because `end_time` bounds only the starts.
 
 Two more modules support it:
 
@@ -148,6 +154,12 @@ The crate talks to the LTA DataMall OData API.
 - The `Transport` trait isolates the HTTP stack. The default
   implementation uses `ureq` and sits behind the `http-ureq`
   feature. Tests use a mock transport with recorded responses.
+- One size limit, `MAX_DATASET_BYTES` (256 MiB), bounds every
+  response body, and it refuses rather than truncates: the built-in
+  transport reads one byte past the limit and fails, and the client
+  measures the delivered body against the same constant, so a custom
+  transport cannot hand over more. No caller ever receives a
+  shortened body presented as a whole file.
 - `AccountKey` wraps the secret API key. Its debug output is
   redacted. The key travels only in the `AccountKey` request header.
 - Dataset endpoints return pre-signed download links that expire
@@ -155,6 +167,10 @@ The crate talks to the LTA DataMall OData API.
   `fetch_*` methods that get the link and download the file in one
   step. Downloads do not carry the account key, because the link
   carries its own signature.
+- Every download, from a `fetch_*` method or from a snapshot, goes
+  through `download_limited`, which refuses a link that does not use
+  HTTPS before it opens a connection and names the offending scheme
+  in the error. The signed query never appears in an error message.
 - `get_raw` gives access to endpoints that the crate does not model
   yet.
 
@@ -242,8 +258,17 @@ site, beside the live board and under the same domain.
   list. The list is markup, not a script that builds one, so the page
   works without JavaScript; the search box stays hidden until a
   script can drive it.
-- `build.rs` renders every page through `mrt-publication-html` with a
-  `PageNav` block, and writes each file atomically.
+- `build.rs` writes the section in two passes, each file atomically.
+  The first renders every content page — timetables, diagrams, and
+  drawings — through `mrt-publication-html` with no navigation, and
+  records what actually landed. The second renders the hubs and every
+  page's `PageNav` block from that manifest and splices each block in.
+  A link is only safe to write once the set of files that exist is
+  closed, so a page that failed leaves no dangling link anywhere in
+  the section. The report counts content pages apart from the hubs
+  and `data/index.json`, because a build can write every piece of
+  infrastructure and still hold nothing to read; a section with no
+  content page is written with no hub at all and fails the run.
 
 The pages are pre-generated rather than rendered in the browser. That
 keeps one renderer, one set of tests, and one escaping discipline; a
@@ -258,10 +283,18 @@ The crate merges the three data sources into view models:
 - `NetworkStatus::from_alerts` maps the legacy alerts into one
   status entry per known line. The list is stable, so status boards
   can render a fixed layout.
-- `LiveBoardBuilder` decorates the static departure board with live
+- `LiveBoardBuilder` merges the static departure board with live
   layers: delays and cancellations from trip updates, crowd levels
   from `PCDRealTime`, notices from the legacy alerts, and the
   GTFS-Realtime service alerts. Every layer is optional.
+- With a realtime layer the board predicts rather than decorates:
+  each row shows its scheduled time plus the delay the feed reports
+  for it (the per-stop event of the call where the feed names one,
+  otherwise the trip-level delay), and the predicted time drives the
+  wait, the clock time, the row order, the lookahead window, and the
+  row limit. A call the feed marks skipped leaves the board entirely.
+  A canceled run stays visible as `CANC` and keeps its scheduled
+  slot, because nothing predicts a train that will not run.
 - A service alert reaches a departure when it names the trip, the
   route of the line, or a platform of the station, and one of its
   active periods covers the build time. A no-service alert cancels
@@ -275,9 +308,71 @@ The crate merges the three data sources into view models:
   lines permanently flagged and bury the live disruptions.
 - `match_train_line` maps GTFS route names to the DataMall line
   codes with simple heuristics.
+- `map.rs` builds a `NetworkSnapshot`, the view model of the live
+  map: every line with its live state, every edge between two
+  neighbouring stations, every placed run with a `PositionQuality`
+  marking where its position came from, the headway blocks that carry
+  no individual runs, the alert messages, and a `Freshness` record
+  with three drawn states — live, ageing, stale — and the two
+  thresholds that produced them. `docs/LIVE-MAP-POC.md` is its plan.
+- `layout.rs` reads the schematic that the map is drawn on. The
+  layout is data, authored in OpenFantasyMap, exported as GeoJSON,
+  and committed under `config/`; the binder joins its stations to
+  network stations by station code and never by name, because two
+  stations share the name `Bukit Panjang`. Both directions of the
+  join report what they could not match.
 
 The crate does no input/output. The application fetches the data and
 passes it in. This keeps render loops testable and fast.
+
+## The live overlay on the train diagram
+
+The roadmap lists a live layer on the train diagram, and
+`docs/LIVE-MAP-POC.md` ends its last phase by writing that interface
+down rather than building it. This section is that record. No code
+implements it yet.
+
+The attachment point is the run identifier.
+`docs/SINGAPORE-GTFS-PROFILE.md` already names it: a `MapTrain`
+carries `instance_id` and `source_trip_id`, and a `DiagramRun` carries
+the same two fields with the same meaning — `instance_id` identifies
+one run on one service day, `source_trip_id` is the GTFS `trip_id`
+behind it. Joining the two view models is a lookup on `instance_id`,
+with `source_trip_id` as the fallback when the diagram covers a
+service day the snapshot does not.
+
+The overlay adds two things to a path the diagram has already drawn:
+
+- **A "now" marker.** `Freshness::clock` is the service-day time the
+  snapshot was evaluated at, and the run's `points` already map a
+  `GtfsTime` to an `x` in `DiagramLayout` coordinates. The marker is
+  that `x`, at the `y` of the corridor node the run stands at or the
+  pair it lies between: `TrainLocation` names the station or the two
+  stations, and `progress` gives the share of the way along.
+- **A delay overlay.** `MapTrain::delay_secs` shifts a call, and
+  `DiagramCallView` carries the scheduled `x_arrival` and
+  `x_departure` to shift it from. Scheduled against actual is two
+  polylines — the second the first plus the shift — drawn in the
+  treatment that `PositionQuality` selects, the way the map draws an
+  estimate as an estimate.
+
+What the interface deliberately leaves out:
+
+- It does not recompute the diagram. `mrt-publication` reads no
+  realtime data and stays a pure projection of the schedule. The
+  overlay is a second layer over a document that was already built,
+  and the document stays byte-identical without it.
+- It does not invent a position. A run with no trip update, a run
+  from a non-exact headway block, and a stale realtime layer all lose
+  the overlay and keep the scheduled path, exactly as they do on the
+  map.
+- It does not reverse the dependency direction. `mrt-publication`
+  never learns about `mrt-live`. The join belongs to whichever
+  renderer wants both, the way `mrt-map-web` already sits downstream
+  of a snapshot and a layout at once.
+- It does not become a dispatching display.
+  `docs/KNOWN-LIMITATIONS.md` draws that boundary around the diagram,
+  and a live marker on a scheduled path does not move it.
 
 ## Error handling
 
@@ -300,8 +395,10 @@ the HTTP status. The library does not panic on bad input data.
 - Security tests build hostile zip archives and check that the loader
   refuses them, and render a feed whose text fields try to break out
   of the markup.
-- Snapshot tests pin the timetable and diagram view models and the
-  normalized SVG. Run with `UPDATE_SNAPSHOTS=1` to accept a change.
+- Snapshot tests pin the timetable and diagram view models, the map
+  view model, and the normalized SVG of both the diagram and the map,
+  in its normal and its disrupted state. Run with `UPDATE_SNAPSHOTS=1`
+  to accept a change.
 - The site tests build the whole section from the fixture and check
   that every link resolves to a file that exists, that no path is
   absolute, that the hub lists every station in the document, and

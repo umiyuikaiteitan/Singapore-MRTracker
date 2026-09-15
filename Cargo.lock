@@ -521,6 +521,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "mrt-map-static"
+version = "0.1.0"
+dependencies = [
+ "mrt-datamall",
+ "mrt-gtfs",
+ "mrt-gtfs-rt",
+ "mrt-live",
+ "mrt-map-web",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "mrt-map-web"
+version = "0.1.0"
+dependencies = [
+ "mrt-datamall",
+ "mrt-gtfs",
+ "mrt-gtfs-rt",
+ "mrt-live",
+ "serde",
+ "serde_json",
+ "tiny_http",
+]
+
+[[package]]
 name = "mrt-publication"
 version = "0.1.0"
 dependencies = [

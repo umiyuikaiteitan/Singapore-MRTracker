@@ -7,6 +7,8 @@ members = [
     "crates/mrt-live",
     "crates/mrt-board-web",
     "crates/mrt-board-static",
+    "crates/mrt-map-web",
+    "crates/mrt-map-static",
     "crates/mrt-publication",
     "crates/mrt-publication-html",
     "crates/mrt-schedule-cli",
