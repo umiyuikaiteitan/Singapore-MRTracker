@@ -15,7 +15,7 @@
         <p>Line-based transit GIS</p>
         <a id="board-link" hidden>MRTracker board</a>
       </header>
-      <p id="hosting-notice" class="hint" hidden>Draw and edit locally. The map loads from OSM; street and corridor matching need a matching service.</p>
+      <p id="hosting-notice" class="hint" hidden>Draw and edit locally. The map loads from OSM; rail following works locally; street and ferry matching need a matching service.</p>
 
       <section class="panel">
         <h2>Tool</h2>
@@ -60,9 +60,15 @@
 
       <section class="panel">
         <h2>Layers</h2>
+        <label for="basemap-mode">Basemap renderer</label>
+        <select id="basemap-mode">
+          <option value="tiles">OSM tiles — fast</option>
+          <option value="overpass">Overpass — rail &amp; boundaries</option>
+        </select>
+        <p id="basemap-hint" class="hint"></p>
         <label class="check-row">
           <input type="checkbox" id="overlay-toggle" />
-          <span>Existing stations &amp; railways (OSM)</span>
+          <span>Highlight existing rail lines (OSM)</span>
         </label>
         <label class="check-row">
           <input type="checkbox" id="cycleway-toggle" checked />
@@ -83,6 +89,21 @@
         <input id="import-file" type="file" accept=".json,.geojson,application/geo+json,application/json" hidden />
       </section>
 
+      <section class="panel">
+        <h2>Start from GTFS</h2>
+        <p class="hint">Add a rail network from a GTFS-Static ZIP. Routes, shapes, and stops become editable lines and stations.</p>
+        <button id="import-gtfs">Import GTFS ZIP</button>
+        <input id="gtfs-file" type="file" accept=".zip,application/zip" hidden />
+        <label for="gtfs-url">Or a public feed URL</label>
+        <input id="gtfs-url" type="url" placeholder="https://…/gtfs.zip" />
+        <div class="button-row">
+          <button id="load-gtfs-url">Load feed</button>
+          <button id="cancel-gtfs" hidden>Cancel import</button>
+        </div>
+        <p class="hint">Up to 32 MiB zipped. Repeated trips are combined into route patterns. Existing lines are kept.</p>
+        <p id="gtfs-status" class="hint" role="status"></p>
+      </section>
+
       <footer class="credits">
         Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors
       </footer>
@@ -90,7 +111,7 @@
 
     <main id="map-wrap">
       <div id="map"></div>
-      <div id="status-bar"><span id="status-text">Ready</span><br /><span id="osm-status" role="status">Loading OSM map…</span> <button id="retry-basemap" hidden>Retry map</button></div>
+      <div id="status-bar"><span id="status-text">Ready</span><br /><span id="osm-status" role="status">Loading OSM map…</span> <span id="rail-status" role="status"></span> <button id="retry-basemap" hidden>Retry map</button></div>
       <div id="toast" hidden></div>
     </main>
   </div>

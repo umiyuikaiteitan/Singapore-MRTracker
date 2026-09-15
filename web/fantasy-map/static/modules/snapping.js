@@ -1,5 +1,6 @@
 /** Street and corridor matching: the /api/route-snap round trip for one segment. */
 
+import { supportsLocalRail, requestRailMatch } from "./rail-matching.js";
 import { apiEnabled, postApi } from "./config.js";
 import { G } from "./geom.js";
 import { modeRules, lineRadius } from "./modes.js";
@@ -10,6 +11,7 @@ import { beginSnap, snapIsCurrent } from "./snap-guard.js";
 // --------------------------------------------------------- snapping
 
 async function requestSnap(start, end, snapKind, line) {
+  if (!apiEnabled && snapKind === "corridor" && supportsLocalRail(line.mode)) return requestRailMatch(start, end, line.mode);
   return postApi("route-snap", {
     start,
     end,
@@ -25,8 +27,8 @@ async function requestSnap(start, end, snapKind, line) {
  * anchored between them.
  */
 export async function snapSegment(line, index, snapKind) {
-  if (!apiEnabled) {
-    toast("Street and corridor matching are unavailable in this edition.");
+  if (!apiEnabled && !(snapKind === "corridor" && supportsLocalRail(line.mode))) {
+    toast("This matching mode needs the optional matching service.");
     return;
   }
   const start = line.nodes[index];

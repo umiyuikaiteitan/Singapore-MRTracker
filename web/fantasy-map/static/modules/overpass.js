@@ -10,7 +10,7 @@ export function viewportBounds(bounds) {
   return [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()];
 }
 
-export function buildQuery(bounds, zoom = 13) {
+export function buildQuery(bounds, zoom = 13, profile = "boundaries") {
   const [south, west, north, east] = bounds;
   if (bounds.length !== 4 || !bounds.every(Number.isFinite)
       || south < -90 || north > 90 || west < -180 || east > 180
@@ -18,66 +18,71 @@ export function buildQuery(bounds, zoom = 13) {
   if (north - south > 0.45 || east - west > 0.65 || zoom < 12) {
     throw new Error("Zoom in to load OSM data (city scale or closer)");
   }
-  const detail = zoom >= 16 ? "street" : zoom >= 14 ? "district" : "city";
-  const roads = "motorway|trunk|primary|secondary" + (zoom >= 14 ? "|tertiary" : "")
-    + (zoom >= 16 ? "|residential|unclassified|service|living_street|pedestrian|cycleway" : "");
+  if (!["rails", "boundaries"].includes(profile)) throw new Error("Unknown OSM query profile");
+  const detail = profile;
   const bbox = bounds.join(",");
   return { key: detail + ":" + bbox, detail, query: `[out:json][timeout:20][maxsize:67108864];
 (
-  way["highway"~"^(${roads})(_link)?$"](${bbox});
-  way["railway"~"^(rail|subway|light_rail|tram|monorail)$"](${bbox});
-  way["waterway"~"^(river|canal|stream)$"](${bbox});
-  way["natural"~"^(water|wood)$"](${bbox});
-  way["landuse"~"^(forest|grass|recreation_ground|meadow)$"](${bbox});
-  way["leisure"="park"](${bbox});
-  nwr["railway"~"^(station|halt|tram_stop)$"](${bbox});
-  nwr["public_transport"="station"](${bbox});
+  way["railway"~"^(rail|narrow_gauge|subway|light_rail|tram|monorail|funicular|disused|abandoned)$"](${bbox});
+  ${profile === "boundaries" ? `wr["boundary"="administrative"](${bbox});
+  wr["natural"~"^(coastline|water|wood|scrub|heath|grassland|wetland|bare_rock|sand|beach|glacier)$"](${bbox});
+  wr["landuse"~"^(forest|grass|meadow|farmland|orchard|vineyard|reservoir)$"](${bbox});
+  wr["leisure"="park"](${bbox});` : ""}
 );
-out tags geom;` };
+out tags geom(${bbox});` };
 }
 
+export function emptyFeatures() { return { railways: [], borders: [], terrain: [] }; }
+
 export function parseFeatures(body) {
-  if (!body || typeof body !== "object") throw new Error("Overpass returned an invalid map response");
+  if (!body || typeof body !== "object" || !Array.isArray(body.elements)) throw new Error("Overpass returned an invalid map response");
   if (body.remark) throw new Error("Overpass could not finish this viewport; zoom in or retry later");
-  if (!Array.isArray(body.elements)) throw new Error("Overpass returned an invalid map response");
   if (body.elements.length > 20000) throw new Error("Too many OSM features; zoom in");
-  const result = { roads: [], railways: [], stations: [], waterways: [], areas: [] };
+  const result = emptyFeatures();
   const seen = new Set();
-  let pointCount = 0;
-  for (const element of body.elements) {
-    if (!element || !["node", "way", "relation"].includes(element.type)) continue;
-    const id = element.type + "/" + element.id;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    const tags = element.tags || {};
-    const raw = Array.isArray(element.geometry) ? element.geometry : [];
+  let pointCount = 0, featureCount = 0;
+  function append(raw, id, name, category, kind) {
+    if (!Array.isArray(raw)) return;
     pointCount += raw.length;
     if (pointCount > 150000) throw new Error("OSM geometry is too detailed; zoom in");
-    // Never bridge across missing/malformed geometry points.
-    const coordinates = raw.map(coordinate);
-    const validWay = element.type === "way" && coordinates.length >= 2 && coordinates.every(Boolean);
-    const name = String(tags.name || tags["name:en"] || tags.ref || "");
-    if (validWay) {
-      const feature = { id, name, coordinates };
-      if (tags.highway) result.roads.push({ ...feature, kind: tags.highway });
-      if (/^(rail|subway|light_rail|tram|monorail)$/.test(tags.railway)) result.railways.push(feature);
-      if (tags.waterway) result.waterways.push(feature);
-      const closed = coordinates.length >= 4 && coordinates[0][0] === coordinates.at(-1)[0]
-        && coordinates[0][1] === coordinates.at(-1)[1];
-      if (closed && (tags.natural === "water" || tags.natural === "wood" || tags.landuse || tags.leisure === "park")) {
-        result.areas.push({ ...feature, kind: tags.natural === "water" ? "water" : "green" });
+    // Clipped relation members contain gaps. Draw each valid run separately;
+    // never close a partial ring or connect across missing geometry.
+    let run = [];
+    function flush() {
+      if (run.length >= 2) {
+        const key = category + ":" + id + ":" + JSON.stringify(run);
+        if (!seen.has(key)) {
+          seen.add(key);
+          if (++featureCount > 20000) throw new Error("Too many OSM features; zoom in");
+          result[category].push({ id, name, kind, coordinates: run });
+        }
       }
+      run = [];
     }
-    if (/^(station|halt|tram_stop)$/.test(tags.railway) || tags.public_transport === "station") {
-      let point = coordinate(element) || coordinate(element.center);
-      if (!point && validWay) {
-        point = coordinates.reduce((sum, p) => [sum[0] + p[0] / coordinates.length, sum[1] + p[1] / coordinates.length], [0, 0]);
+    for (const point of raw) {
+      const value = coordinate(point);
+      if (value) run.push(value); else flush();
+    }
+    flush();
+  }
+  for (const element of body.elements) {
+    if (!element || !["way", "relation"].includes(element.type)) continue;
+    const tags = element.tags || {};
+    let category;
+    if (tags.boundary === "administrative") category = "borders";
+    else if (/^(coastline|water|wood|scrub|heath|grassland|wetland|bare_rock|sand|beach|glacier)$/.test(tags.natural)
+      || /^(forest|grass|meadow|farmland|orchard|vineyard|reservoir)$/.test(tags.landuse)
+      || tags.leisure === "park") category = "terrain";
+    else if (element.type === "way" && /^(rail|narrow_gauge|subway|light_rail|tram|monorail|funicular|disused|abandoned)$/.test(tags.railway)) category = "railways";
+    else continue;
+    const name = String(tags.name || tags["name:en"] || tags.ref || "");
+    if (element.type === "way") append(element.geometry, "way/" + element.id, name, category, tags.railway);
+    else if (Array.isArray(element.members)) {
+      for (const member of element.members) {
+        if (member?.type === "way" && ["", "outer", "inner"].includes(member.role || "")) {
+          append(member.geometry, "way/" + member.ref, name, category, tags.railway);
+        }
       }
-      if (!point && element.bounds) {
-        const b = element.bounds;
-        point = coordinate({ lat: (b.minlat + b.maxlat) / 2, lon: (b.minlon + b.maxlon) / 2 });
-      }
-      if (point) result.stations.push({ id, name: name || "Mapped station", coordinate: point });
     }
   }
   return result;
@@ -114,12 +119,12 @@ function wait(ms, signal) {
   });
 }
 
-export function createOverpassClient({ fetchImpl = globalThis.fetch, now = Date.now, minInterval = 2000 } = {}) {
+export function createOverpassClient({ fetchImpl = globalThis.fetch, now = Date.now, minInterval = 2000, gate = { lastStarted: -Infinity, retryAt: 0 } } = {}) {
   const cache = new Map();
-  let active = null, lastStarted = -Infinity, retryAt = 0;
+  let active = null;
   function cancel() { active?.controller.abort(); active = null; }
-  function get(bounds, zoom) {
-    const request = buildQuery(bounds, zoom);
+  function get(bounds, zoom, profile = "boundaries") {
+    const request = buildQuery(bounds, zoom, profile);
     if (active?.key === request.key) return active.promise;
     cancel();
     for (const [key, entry] of cache) {
@@ -127,13 +132,16 @@ export function createOverpassClient({ fetchImpl = globalThis.fetch, now = Date.
       if (entry.detail === request.detail && entry.bounds[0] <= bounds[0] && entry.bounds[1] <= bounds[1]
           && entry.bounds[2] >= bounds[2] && entry.bounds[3] >= bounds[3]) return Promise.resolve(entry.features);
     }
-    if (now() < retryAt) return Promise.reject(new Error("Overpass is busy; retry in " + Math.ceil((retryAt - now()) / 1000) + " seconds"));
+    if (now() < gate.retryAt) return Promise.reject(new Error("Overpass is busy; retry in " + Math.ceil((gate.retryAt - now()) / 1000) + " seconds"));
     const controller = new AbortController();
     const current = { key: request.key, controller, promise: null };
     current.promise = (async () => {
-      await wait(Math.max(0, lastStarted + minInterval - now()), controller.signal);
-      controller.signal.throwIfAborted();
-      lastStarted = now();
+      do {
+        await wait(Math.max(0, gate.lastStarted + minInterval - now()), controller.signal);
+        controller.signal.throwIfAborted();
+      } while (now() < gate.lastStarted + minInterval);
+      if (now() < gate.retryAt) throw new Error("Overpass is busy; retry later");
+      gate.lastStarted = now();
       const timer = setTimeout(() => controller.abort(new Error("Overpass timed out; zoom in or retry later")), 30000);
       try {
         const response = await fetchImpl(OVERPASS_ENDPOINT, {
@@ -143,7 +151,7 @@ export function createOverpassClient({ fetchImpl = globalThis.fetch, now = Date.
         if (!response.ok) {
           if (response.status === 429 || response.status === 504 || response.status === 503) {
             const seconds = Number(response.headers.get("Retry-After")) || 60;
-            retryAt = now() + Math.max(30, Math.min(300, seconds)) * 1000;
+            gate.retryAt = now() + Math.max(30, Math.min(300, seconds)) * 1000;
           }
           await response.body?.cancel();
           throw new Error("Overpass is unavailable (" + response.status + "); retry later");
@@ -160,4 +168,6 @@ export function createOverpassClient({ fetchImpl = globalThis.fetch, now = Date.
   }
   return { get, cancel };
 }
-export const overpass = createOverpassClient();
+const serviceGate = { lastStarted: -Infinity, retryAt: 0 };
+export const overpass = createOverpassClient({ gate: serviceGate });
+export const matchingOverpass = createOverpassClient({ gate: serviceGate });

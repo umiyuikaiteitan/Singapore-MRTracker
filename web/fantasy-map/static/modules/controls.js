@@ -1,5 +1,6 @@
 /** Sidebar wiring: tool and snap buttons, the radius slider, and keyboard shortcuts. */
 
+import { supportsLocalRail } from "./rail-matching.js";
 import { apiEnabled } from "./config.js";
 import { modeRules, lineRadius } from "./modes.js";
 import {
@@ -31,7 +32,7 @@ export function updateToolButtons() {
     button.classList.toggle("active", button.dataset.snap === state.snapMode);
     button.disabled =
       button.dataset.snap !== "manual" &&
-      (!apiEnabled || !allowed.includes(button.dataset.snap));
+      (!allowed.includes(button.dataset.snap) || (!apiEnabled && !(button.dataset.snap === "corridor" && supportsLocalRail(line?.mode))));
   });
   map.getContainer().style.cursor =
     state.tool === "draw" || state.tool === "polygon" ? "crosshair" : "";

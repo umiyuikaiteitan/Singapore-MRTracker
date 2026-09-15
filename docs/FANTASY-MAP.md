@@ -42,24 +42,48 @@ timetables, and `/fantasy-map/` after the Pages deployment completes.
 
 ## What works without an API
 
-Drawing and editing lines/stations, branches and interlines, radius checks,
-browser-local save/restore, GeoJSON import/export, and SVG export work in
-the static edition. The browser requests OSM features directly from
-`https://overpass-api.de/api/interpreter` and renders roads, railways,
-waterways, parks, and optional station overlays on a dark vector basemap.
-No tile provider, provider account, or API key is required. SVG exports
-include the OSM context when available and still export the project during
-an outage. Only street/corridor matching needs an application API.
-Imported matched geometry is retained; editing it in static mode does not
-re-query the matching service.
+The static editor supports drawing/editing, branches, interlines, radius
+checks, local save/restore, GeoJSON import/export, and SVG export.
 
-The public Overpass service needs internet access. Queries are limited to
-city-scale viewports (zoom 12 or closer, at most 0.45° by 0.65°), with local
-streets from zoom 16. Panning is debounced, obsolete requests are cancelled,
-responses are bounded, and four viewports are cached for five minutes.
-Busy responses trigger a cooldown; a visible retry action handles failures.
-Area fills cover closed ways, not multipolygon relations. Attribution stays
-visible in the browser and SVG exports.
+**OSM tiles** is the fast default renderer. **Overpass** mode draws only
+rail lines, administrative borders, and terrain outlines (including
+coastlines and multipolygon members) on a dark background. The Layers
+selector remembers your choice. Both modes fetch Overpass rail alignments;
+tile mode does not request border/terrain geometry. No provider account or
+API key is needed. The OSM tile layer uses normal HTTP caching and referrer
+headers without offline/prefetch features; see the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+
+Rail **Corridor** matching runs locally for Mainline, Metro, Tram, and
+Monorail/funicular. It follows connected compatible OSM tracks, including
+mapped disused/abandoned alignments, with endpoints within 500 m of a track.
+Disconnected tracks fail without inventing links. Streets and Ferry matching
+still need the optional API. Configured API deployments keep their existing
+matching service.
+
+The public Overpass endpoint is `https://overpass-api.de/api/interpreter`.
+Queries are bounded to zoom 12 or closer and a viewport at most 0.45° by
+0.65°. Panning is debounced; stale requests are cancelled; responses and
+geometry are capped. Map and matching clients share request pacing and busy
+cooldowns. Errors retain previous context and expose Retry. SVGs include
+rail vectors in tile mode and rails/borders/terrain in Overpass mode;
+raster tiles are omitted. Project export still works during an outage.
+
+## Start with a GTFS rail network
+
+Use **Start from GTFS** to upload a GTFS-Static ZIP or load a public HTTPS
+feed URL. URL downloads need the feed host to allow CORS; otherwise download
+the ZIP and upload it. Parsing happens in a browser worker. The importer
+reads routes, trips, stops, stop_times, and optional shapes. It preserves
+rail route names/colours, shapes, and named stations, collapsing repeated
+trips into route/shape/stop patterns. Separate directions/branches may remain
+separate editable lines. Schedules and realtime data are not imported.
+
+Imports append to existing lines in one undoable step. Missing shapes use
+straight connections between stops with a visible notice. Limits are
+32 MiB zipped, 64 MiB expanded tables, 250 rail patterns, 10,000 points per
+shape, 100,000 points total, and 10,000 stops across patterns. Use a regional
+feed for large systems. Stored/deflated ZIP entries are supported; encrypted
+and ZIP64 archives are not.
 
 Projects remain in browser storage. Export GeoJSON for a portable backup.
 A project saved on the github.io origin will not automatically appear on
