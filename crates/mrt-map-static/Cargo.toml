@@ -1,5 +1,6 @@
 [package]
 name = "mrt-map-static"
+default-run = "mrt-map-static"
 description = "Generate the live schematic train map as a static site for GitHub Pages."
 version.workspace = true
 edition.workspace = true

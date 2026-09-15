@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://hw737.user.srcf.net https://raw.githubusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Singapore live train map · MRTracker</title>
+<link rel="stylesheet" href="vendor/leaflet.css"><link rel="stylesheet" href="style.css">
+<script src="vendor/leaflet.js" defer></script><script type="module" src="app.mjs"></script>
+</head>
+<body>
+<header><div><p class="eyebrow">SINGAPORE MRT &amp; LRT</p><h1>Live train map</h1></div><nav><a href="../">Departure board</a><a href="../timetables/">Timetables</a><a href="../fantasy-map/">Map editor</a></nav></header>
+<section class="toolbar" aria-label="Map controls"><label>Line <select id="line"><option value="">All lines</option></select></label><label><input id="tiles" type="checkbox" checked> Street map</label><label><input id="stations" type="checkbox" checked> Stations</label><button id="fit" type="button">Fit network</button><span id="count" aria-live="polite"></span><time id="clock"></time></section>
+<main id="map" aria-label="Singapore rail network and estimated train positions"></main>
+<section class="status"><p id="status" role="status">Loading the rail network…</p><p id="alerts" aria-live="polite"></p><p id="bands"></p><p>Train positions are estimates from the timetable, adjusted when fresh operator predictions are available. LTA does not publish measured train locations. Hollow markers use the schedule; solid markers include a fresh delay prediction. Select a train or station for details.</p><p class="attribution">Track geometry © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> · Schedule: LTA DataMall · <a href="provenance.json">Geometry coverage</a></p></section>
+<noscript>This interactive map needs JavaScript. The departure board and timetables are linked above.</noscript>
+</body></html>

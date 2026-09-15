@@ -49,7 +49,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --test tests/test_map_client.cjs tests/test_gtfs_reconstruction.mjs
+      - run: node --test tests/test_map_client.cjs tests/test_gtfs_reconstruction.mjs tests/test_live_map.mjs
 
   singapore-osm:
     name: Check actual Singapore OSM reconstruction

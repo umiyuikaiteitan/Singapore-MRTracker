@@ -174,19 +174,18 @@ Then open <http://127.0.0.1:8601>. The server takes the same feed
 argument as the board (`cargo run -p mrt-map-web --
 data/gtfs_schedule.zip`), listens where `MRT_MAP_ADDR` says, and draws
 the OpenFantasyMap layout named by `MRT_MAP_LAYOUT` (the default is
-the miniature fixture layout, `config/layout-mini.geojson` — a layout
-of the real network is future work). Without an account key every
+the miniature fixture layout, `config/layout-mini.geojson` — the prototype fixture only). Without an account key every
 train is schedule-only and the page says so.
 
-To host the map without a server, generate a static directory. It can live
-at `/map/` beside the board or on its own domain. A production deployment
-requires a reviewed real-network layout; the bundled layout contains
-fictional fixture stations. The Pages workflow skips the map until the
-`MRT_MAP_LAYOUT` Actions variable names that real layout:
+The deployed map lives at [`/map/`](https://umiyuikaiteitan.github.io/Singapore-MRTracker/map/).
+Pages builds it automatically from the real LTA service calendar and the
+OSM-reconstructed track shapes. Its browser renderer advances each train
+through its complete trip, with a 36-hour schedule and fresh operator delay
+updates when available. All locations are labelled as estimates.
 
-```sh
-cargo run --release -p mrt-map-static -- map-site data/gtfs_schedule.zip
-```
+The `mrt-map-web` server above remains the schematic prototype. The production
+browser map uses `web/live-map`, `mrt-map-schedule`, and
+`scripts/build-live-map.mjs`; see [LIVE-MAP.md](docs/LIVE-MAP.md).
 
 ### Generate a timetable and a train diagram
 

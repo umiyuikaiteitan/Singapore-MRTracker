@@ -101,6 +101,7 @@ pub fn live_snapshot<T: Transport>(client: &DataMallClient<T>, now_unix: i64) ->
 
     serde_json::json!({
         "generated": now_unix,
+        "trip_updates_timestamp": trip_feed.as_ref().and_then(|feed| feed.feed_timestamp),
         "live": live,
         "disrupted": disrupted,
         "segments": segments,
@@ -240,6 +241,15 @@ fn trip_updates_json(feed: Option<&RailRtFeed>) -> serde_json::Value {
             continue;
         }
         let mut entry = serde_json::Map::new();
+        if let Some(date) = &update.start_date {
+            entry.insert("sd".to_string(), serde_json::json!(date));
+        }
+        if let Some(start) = &update.start_time {
+            entry.insert("st".to_string(), serde_json::json!(start));
+        }
+        if let Some(timestamp) = update.timestamp {
+            entry.insert("ts".to_string(), serde_json::json!(timestamp));
+        }
         if let Some(delay) = update.delay_secs {
             entry.insert("d".to_string(), serde_json::json!(delay));
         }
