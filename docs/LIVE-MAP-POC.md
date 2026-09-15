@@ -14,10 +14,13 @@ implemented: the layout reader and the binder live in
 fixture network is committed as `config/layout-mini.geojson`. Phase 3
 is implemented, in `crates/mrt-map-web` (the renderer library and the
 map server) and `crates/mrt-map-static` (the static site generator),
-under one constraint the plan did not originally state: **the board UI
-does not change at all — the map is a separate site, deployable on its
-own subdomain**. Where the text below says the map extends the board's
-deployments, that structure is superseded; the semantics are not.
+as independent crates. The map does not replace the departure board:
+it can run on its own domain or as an optional `/map/` section in the
+shared Pages deployment. The implementation also improves the board's
+realtime matching and freshness behavior; its UI is not unchanged.
+The production map is disabled until a reviewed real-network layout is
+configured, because the committed miniature layout includes fictional
+fixture stations and branches.
 Phase 4 is implemented: the disruption treatment, the three-state
 freshness lamp, the notice area, and the diagram interface, all in the
 map's own crates and in `mrt-live`. Phase 0 is the one item of this
@@ -51,10 +54,9 @@ preference.
 
 **Not a phone application.** One self-contained page, readable in a
 desktop or mobile browser, deployable both from a small server and as
-a static page on GitHub Pages. (Originally the plan attached both
-deployments to the board's; the owner's constraint above moved them to
-the map's own crates, `mrt-map-web` and `mrt-map-static`, on their own
-subdomain.)
+a static page on GitHub Pages. The map lives in its own crates,
+`mrt-map-web` and `mrt-map-static`, and can be hosted independently or
+beside the board.
 
 **Not a replacement for the board.** The board answers "what is next
 here". The map answers "what is the network doing". They share view

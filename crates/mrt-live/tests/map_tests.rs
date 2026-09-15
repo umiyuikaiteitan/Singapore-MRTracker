@@ -325,6 +325,33 @@ fn a_per_stop_event_wins_over_the_trip_delay() {
     assert_eq!(run.delay_secs, Some(120));
 }
 
+#[test]
+fn an_ignored_absolute_prediction_keeps_schedule_provenance() {
+    let network = network();
+    let absolute = StopTimeUpdate {
+        stop_id: Some("CCK_NS".to_string()),
+        arrival: Some(StopTimeEvent {
+            time: Some(NOW_UNIX as i64 + 300),
+            delay_secs: None,
+        }),
+        ..Default::default()
+    };
+    let realtime = feed(NOW_UNIX, vec![update("NS_T1", None, vec![absolute])]);
+    // Check both the edge approaching this call and the scheduled
+    // arrival itself: neither used the absolute prediction.
+    for clock in [GtfsTime::from_hms(6, 5, 0), GtfsTime::from_hms(6, 10, 0)] {
+        let scheduled = NetworkSnapshotBuilder::new(&network).build(date(), clock);
+        let snapshot = NetworkSnapshotBuilder::new(&network)
+            .with_realtime(&realtime, NOW_UNIX)
+            .build(date(), clock);
+        let run = train(&snapshot, "NS_T1");
+        assert_eq!(run.quality, PositionQuality::ScheduleOnly);
+        assert_eq!(run.delay_secs, None);
+        assert_eq!(run.progress, train(&scheduled, "NS_T1").progress);
+        assert!(has_diagnostic(&snapshot, "stop-update-without-delay"));
+    }
+}
+
 // ----------------------------------------------------------------------
 // Which update belongs to which run
 // ----------------------------------------------------------------------
@@ -1060,6 +1087,55 @@ fn a_loop_pattern_visits_a_station_twice() {
         .map(|e| e.index)
         .collect();
     assert_eq!(touching, vec![0, 2]);
+}
+
+#[test]
+fn an_update_for_the_last_loop_visit_cannot_change_the_first() {
+    let network = network();
+    // PW_L1 visits PGL_1 at sequences 1 and 4. A skip or delay for
+    // sequence 4 must not remove its initial 06:00 dwell from the map.
+    for skipped in [false, true] {
+        for trip_delay in [None, Some(120)] {
+            let last_visit = StopTimeUpdate {
+                stop_id: Some("PGL_1".to_string()),
+                stop_sequence: Some(4),
+                skipped,
+                arrival: Some(StopTimeEvent {
+                    time: None,
+                    delay_secs: Some(300),
+                }),
+                ..Default::default()
+            };
+            let realtime = feed(
+                NOW_UNIX,
+                vec![update("PW_L1", trip_delay, vec![last_visit])],
+            );
+            let clock = GtfsTime::from_hms(6, 0, 15).plus_seconds(trip_delay.unwrap_or(0) as u32);
+            let snapshot = NetworkSnapshotBuilder::new(&network)
+                .with_realtime(&realtime, NOW_UNIX)
+                .build(date(), clock);
+            let run = train(&snapshot, "PW_L1");
+            assert!(matches!(
+                run.location,
+                TrainLocation::AtStation { index: 0, .. }
+            ));
+            assert_eq!(run.delay_secs, trip_delay);
+            assert_eq!(
+                run.quality,
+                if trip_delay.is_some() {
+                    PositionQuality::AtStation
+                } else {
+                    PositionQuality::ScheduleOnly
+                }
+            );
+            assert!(has_diagnostic(&snapshot, "stop-update-ambiguous-call"));
+            assert!(!has_diagnostic_about(
+                &snapshot,
+                "train-call-skipped",
+                run.instance_id.as_str()
+            ));
+        }
+    }
 }
 
 // ----------------------------------------------------------------------

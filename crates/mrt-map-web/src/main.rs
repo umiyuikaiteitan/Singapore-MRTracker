@@ -50,6 +50,11 @@ use mrt_map_web::{load_layout, map_snapshot_json, render_map_page, MapPageInput,
 /// its own 20-second TTL.
 const MAP_TTL: Duration = Duration::from_secs(20);
 
+/// Legacy alerts carry no expiry or feed timestamp. Stop applying an
+/// unsuccessful upstream's last response after the board's five-minute
+/// cache horizon, even when trip updates are still arriving.
+const ALERT_MAX_AGE: Duration = Duration::from_secs(MAP_TTL.as_secs() * 15);
+
 /// The default listen address. Override with `MRT_MAP_ADDR`.
 ///
 /// The port is one above the board's 8600, so both servers run side by
@@ -64,6 +69,15 @@ const DEFAULT_ADDR: &str = "127.0.0.1:8601";
 struct LiveCache {
     alerts: Option<(Instant, TrainServiceAlerts)>,
     realtime: Option<(Instant, RailRtFeed)>,
+}
+
+impl LiveCache {
+    fn applied_alerts(&self, now: Instant) -> Option<&TrainServiceAlerts> {
+        self.alerts
+            .as_ref()
+            .filter(|(at, _)| now.duration_since(*at) <= ALERT_MAX_AGE)
+            .map(|(_, alerts)| alerts)
+    }
 }
 
 /// One built snapshot, with the two stamps that identify it.
@@ -267,7 +281,7 @@ fn live_layers(app: &App) -> (Option<TrainServiceAlerts>, Option<RailRtFeed>) {
         }
     }
     (
-        cache.alerts.as_ref().map(|(_, a)| a.clone()),
+        cache.applied_alerts(Instant::now()).cloned(),
         cache.realtime.as_ref().map(|(_, r)| r.clone()),
     )
 }
@@ -294,4 +308,65 @@ fn json(body: String) -> HttpResponse {
 
 fn error_json(status: u16, message: &str) -> HttpResponse {
     json(serde_json::json!({ "error": message }).to_string()).with_status_code(status)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn disrupted_alerts() -> TrainServiceAlerts {
+        serde_json::from_value(serde_json::json!({
+            "Status": 2,
+            "AffectedSegments": [{ "Line": "NSL", "Stations": "NS1-NS4" }],
+            "Message": [{ "Content": "North South Line disruption" }]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn expired_legacy_alerts_stop_affecting_the_map() {
+        let at = Instant::now();
+        let cache = LiveCache {
+            alerts: Some((at, disrupted_alerts())),
+            realtime: None,
+        };
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../mrt-gtfs/tests/fixtures/mini");
+        let network = RailNetwork::from_feed(&GtfsFeed::from_dir(path).unwrap()).unwrap();
+        let snapshot_at = |now| {
+            let mut builder = NetworkSnapshotBuilder::new(&network);
+            if let Some(alerts) = cache.applied_alerts(now) {
+                builder = builder.with_alerts(alerts);
+            }
+            builder.build("20250505".parse().unwrap(), "08:05:00".parse().unwrap())
+        };
+
+        // Match the board's inclusive boundary, then remove both the
+        // disruption state and its public notice on expiry.
+        let alive = snapshot_at(at + ALERT_MAX_AGE);
+        assert!(!alive.notices.is_empty());
+        assert!(alive
+            .lines
+            .iter()
+            .any(|line| matches!(line.state, mrt_live::LineState::Disrupted { .. })));
+        let expired = snapshot_at(at + ALERT_MAX_AGE + Duration::from_secs(1));
+        assert!(expired.notices.is_empty());
+        assert!(expired
+            .lines
+            .iter()
+            .all(|line| matches!(line.state, mrt_live::LineState::Normal)));
+    }
+
+    #[test]
+    fn trip_updates_cannot_refresh_legacy_alerts() {
+        let at = Instant::now();
+        let now = at + ALERT_MAX_AGE + Duration::from_secs(1);
+        let mut cache = LiveCache {
+            alerts: Some((at, disrupted_alerts())),
+            realtime: Some((now, RailRtFeed::default())),
+        };
+        assert!(cache.applied_alerts(now).is_none());
+        cache.alerts = Some((now, disrupted_alerts()));
+        assert!(cache.applied_alerts(now).is_some());
+    }
 }

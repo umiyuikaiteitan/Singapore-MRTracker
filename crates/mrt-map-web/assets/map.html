@@ -389,7 +389,9 @@ var motionEl = document.getElementById("motion");
 
 var snapshot = null;      /* the snapshot that is showing */
 var generated = null;     /* POSIX second the document was built at */
-var receivedAt = 0;       /* visitor clock when it arrived */
+var receivedAt = 0;       /* visitor clock when this snapshot first arrived */
+var receivedAge = 0;      /* document age at first receipt, in seconds */
+var snapshotIdentity = null; /* unchanged polls must not restart motion */
 var fetchedAt = 0;        /* visitor clock, last fetch that worked */
 var failedAt = 0;         /* visitor clock, last fetch that failed */
 var placed = [];          /* one record per drawn train */
@@ -538,15 +540,23 @@ function rebuildTrains() {
 }
 
 function positionTrains() {
-  /* The elapsed time is measured from the moment the snapshot
-   * arrived, not from the clock it was built at: the page cannot know
-   * the server's clock offset and must not guess one. */
+  /* Account for time spent on the host before the first fetch, then
+   * continue from the first receipt of this snapshot. Re-fetching the
+   * same document must neither rewind a train nor revive an old one. */
   var advancing = !motionEl || motionEl.checked;
-  var elapsed = advancing && receivedAt ? Math.max(0, (Date.now() - receivedAt) / 1000) : 0;
+  var elapsed = advancing ? sinceGenerated() : 0;
 
   for (var i = 0; i < placed.length; i++) {
     var group = placed[i].group, train = placed[i].train;
     var position = null, overdue = false;
+
+    if (predictionExpired(train)) {
+      /* The document has no unadjusted trajectory to fall back to.
+       * Hide expired predictions instead of relabelling them as a
+       * scheduled position we cannot calculate. */
+      group.setAttribute("display", "none");
+      continue;
+    }
 
     if (train.location.kind === "at-station") {
       var anchor = GEO.stations[train.location.station];
@@ -630,15 +640,21 @@ function ago(seconds) {
   return Math.round(minutes / 60) + " h ago";
 }
 
-/* Seconds since the document was built, by the visitor's own clock.
- *
- * A missing, non-numeric, or future `generated` yields 0, and so does
- * a visitor clock that runs behind the one that built the document:
- * the arithmetic below may only ever make a snapshot older, never
- * younger, and where it cannot tell it says nothing. */
+/* The snapshot's age at first receipt plus time spent in this page.
+ * A visitor clock behind the server cannot make the initial age
+ * negative; repeated polls do not change this origin. */
 function sinceGenerated() {
-  if (typeof generated !== "number" || !isFinite(generated) || generated <= 0) return 0;
-  return Math.max(0, Date.now() / 1000 - generated);
+  if (!snapshot) return 0;
+  return receivedAge + Math.max(0, (Date.now() - receivedAt) / 1000);
+}
+
+/* All qualities except schedule-only include realtime predictions,
+ * including a station dwell and an interpolated scheduled call that
+ * was adjusted by the feed. */
+function predictionExpired(train) {
+  if (train.quality === "schedule-only") return false;
+  var state = agedFreshness().state;
+  return state === "stale" || state === "unavailable" || failedAt > fetchedAt;
 }
 
 /* Re-age the freshness the snapshot was built with.
@@ -680,7 +696,7 @@ function updateStatus() {
       parts.push("ageing");
       state = "ageing";
     } else if (freshness.state === "stale") {
-      parts.push("schedule only");
+      parts.push("realtime stale");
       state = "stale";
     } else {
       parts.push("schedule only · no realtime layer");
@@ -689,7 +705,9 @@ function updateStatus() {
     if (freshness.age != null) {
       parts.push("realtime feed " + ago(freshness.age));
     }
-    parts.push(snapshot.trains.length + " trains");
+    var hidden = snapshot.trains.filter(predictionExpired).length;
+    if (hidden) parts.push(hidden + " expired prediction(s) hidden");
+    parts.push((snapshot.trains.length - hidden) + " trains");
   }
   if (failedAt > fetchedAt) {
     /* A page that cannot reach its one URL is not live, whatever the
@@ -715,6 +733,25 @@ function updateStatus() {
 /* Polling. One URL, nothing else.                                   */
 /* ---------------------------------------------------------------- */
 
+/* generated identifies a server build. Ignore older responses (polls
+ * can finish out of order) and retain the origin for an identical
+ * static document. Legacy documents without a timestamp use their
+ * contents as an identity instead. */
+function acceptSnapshot(body) {
+  var stamp = body.generated;
+  var validStamp = typeof stamp === "number" && isFinite(stamp) && stamp > 0;
+  if (validStamp && typeof generated === "number" && stamp < generated) return;
+  var identity = validStamp ? "generated:" + stamp : JSON.stringify(body.snapshot);
+  if (snapshot && identity === snapshotIdentity) return;
+  snapshot = body.snapshot;
+  generated = validStamp ? stamp : null;
+  snapshotIdentity = identity;
+  receivedAt = Date.now();
+  receivedAge = validStamp ? Math.max(0, receivedAt / 1000 - generated) : 0;
+  rebuildTrains();
+  rebuildBands();
+}
+
 function refresh() {
   return fetch(SNAPSHOT_URL, { credentials: "omit" })
     .then(function (response) {
@@ -722,18 +759,15 @@ function refresh() {
       return response.json();
     })
     .then(function (body) {
-      snapshot = body.snapshot;
-      generated = body.generated;
-      receivedAt = Date.now();
-      fetchedAt = receivedAt;
+      acceptSnapshot(body);
+      fetchedAt = Date.now();
       failedAt = 0;
-      rebuildTrains();
-      rebuildBands();
       positionTrains();
       updateStatus();
     })
     .catch(function () {
       failedAt = Date.now();
+      positionTrains();
       updateStatus();
     });
 }

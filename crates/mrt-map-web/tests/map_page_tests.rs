@@ -492,16 +492,18 @@ fn the_script_re_ages_the_freshness_it_was_given() {
     // on its text, as the rest of the page's script tests are.
     let page = schedule_page("data/map.json");
 
-    assert!(page.contains("generated = body.generated;"));
+    assert!(page.contains("generated = validStamp ? stamp : null;"));
     assert!(page.contains("function sinceGenerated()"));
     assert!(page.contains("freshness.age_secs + sinceGenerated()"));
     assert!(page.contains("age > freshness.staleness_secs"));
     assert!(page.contains("age > freshness.ageing_secs"));
     // The lamp and the words follow the recomputed state.
     assert!(page.contains("var freshness = agedFreshness();"));
-    // A document without a usable stamp keeps the state it was built
-    // with rather than guessing a clock offset.
-    assert!(page.contains("typeof generated !== \"number\""));
+    // Missing timestamps start ageing at receipt; unchanged polls keep
+    // that origin. Executable browser-client regressions live in
+    // tests/test_map_client.cjs.
+    assert!(page.contains("receivedAge + Math.max(0, (Date.now() - receivedAt) / 1000)"));
+    assert!(page.contains("identity === snapshotIdentity"));
 
     // The stamp the script ages against is in the document the page
     // polls, whichever deployment writes it.

@@ -63,12 +63,26 @@
 //! cannot say which day it was made on: yesterday's cancellation must
 //! not suppress today's train.
 //!
+//! # Repeated stops
+//!
+//! A loop can visit the same `stop_id` more than once. Scheduled calls
+//! do not yet retain the original GTFS `stop_sequence`, so a per-stop
+//! update cannot be attributed to one such visit, even when the update
+//! supplies a sequence. The map ignores that ambiguous per-stop update
+//! and reports `stop-update-ambiguous-call`; a legitimate trip-level
+//! delay still applies. This avoids moving or skipping every visit on
+//! an operator statement about just one of them. Supporting these
+//! predictions requires preserving the original sequence in the call
+//! model; the vector index is not a substitute for a GTFS sequence.
+//!
 //! # No input, no output, no clock
 //!
 //! The builder reads no clock and touches no network. The caller
 //! fetches the feeds and passes the service date, the clock, and the
 //! realtime `now_unix` in, exactly as [`crate::LiveBoardBuilder`] does.
 //! The same inputs always produce the same snapshot, byte for byte.
+
+use std::collections::HashMap;
 
 use serde::Serialize;
 
@@ -135,12 +149,12 @@ const SECS_PER_DAY: u32 = 24 * 3600;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PositionQuality {
-    /// The run stands at a station, and the realtime layer carried a
-    /// time or a delay for that call. This is the strongest claim the
+    /// The run stands at a station, and the realtime layer supplied an
+    /// applied delay for that call. This is the strongest claim the
     /// data supports.
     AtStation,
     /// The run lies between two stations, both bracketing times are
-    /// published ones, and the realtime layer carried a time or a
+    /// published ones, and the realtime layer supplied an applied
     /// delay for at least one of them.
     InterpolatedRealtime,
     /// The run lies between two stations, and at least one bracketing
@@ -843,11 +857,28 @@ impl<'a> NetworkSnapshotBuilder<'a> {
 
         let update = if live { update } else { None };
         let mut notes = ShiftNotes::default();
+        let mut visits = HashMap::new();
+        for call in &trip.calls {
+            *visits.entry(call.platform_stop_id.as_str()).or_insert(0) += 1;
+        }
         let adjusted: Vec<Option<AdjustedCall>> = trip
             .calls
             .iter()
-            .map(|call| adjust(call, update, &mut notes))
+            .map(|call| {
+                let repeated = visits[call.platform_stop_id.as_str()] > 1;
+                adjust(call, update, repeated, &mut notes)
+            })
             .collect();
+        if notes.ambiguous_call {
+            diagnostics.push(
+                Diagnostic::info(
+                    "stop-update-ambiguous-call",
+                    "a stop update names a platform visited more than once, but scheduled \
+                     calls do not retain stop_sequence, so only the trip-level delay applies",
+                )
+                .about(trip.instance_id.clone()),
+            );
+        }
         if notes.time_without_delay {
             diagnostics.push(
                 Diagnostic::info(
@@ -1007,8 +1038,8 @@ struct AdjustedCall {
     delay_secs: Option<i32>,
     /// Where the scheduled time of the call came from.
     quality: TimeQuality,
-    /// `true` when the realtime layer carried a time or a delay that
-    /// applies to this call. An update that said nothing about it —
+    /// `true` when the realtime layer carried a delay that applies to
+    /// this call. An update that said nothing usable about it —
     /// an update with no delay and no stop events at all, or one that
     /// names other stops only — leaves this `false`, and a position
     /// this call brackets stays schedule-only.
@@ -1026,6 +1057,8 @@ struct ShiftNotes {
     time_without_delay: bool,
     /// How many calls the trip update marks skipped.
     skipped: usize,
+    /// A per-stop update could not be attributed to one repeated visit.
+    ambiguous_call: bool,
 }
 
 /// Apply the realtime shift to one scheduled call.
@@ -1047,6 +1080,7 @@ struct ShiftNotes {
 fn adjust(
     call: &ScheduledCall,
     update: Option<&TripUpdate>,
+    repeated: bool,
     notes: &mut ShiftNotes,
 ) -> Option<AdjustedCall> {
     let arrival = call.arrival_or_departure()?;
@@ -1057,6 +1091,10 @@ fn adjust(
             .iter()
             .find(|su| su.stop_id.as_deref() == Some(call.platform_stop_id.as_str()))
     });
+    if repeated && announced.is_some() {
+        notes.ambiguous_call = true;
+    }
+    let announced = announced.filter(|_| !repeated);
     let skipped = announced.is_some_and(|su| su.skipped);
     if skipped {
         notes.skipped += 1;
@@ -1086,17 +1124,10 @@ fn adjust(
         })
         .or(trip_delay);
 
-    // What the realtime layer actually said about this call. An update
-    // that carried neither a time nor a delay here shifted nothing, and
-    // a position it brackets keeps the schedule-only treatment rather
-    // than claiming a provenance the operator did not publish.
-    let realtime = trip_delay.is_some()
-        || stop_update.is_some_and(|su| {
-            [su.arrival, su.departure]
-                .iter()
-                .flatten()
-                .any(|event| event.time.is_some() || event.delay_secs.is_some())
-        });
+    // Only an applied prediction gives the position realtime provenance.
+    // Absolute times without a delay are reported above but cannot shift
+    // this call, so they must not relabel an unchanged schedule position.
+    let realtime = arrival_delay.is_some() || departure_delay.is_some();
 
     let arrival_secs = i64::from(arrival.seconds()) + i64::from(arrival_delay.unwrap_or(0));
     let departure_secs = i64::from(departure.seconds()) + i64::from(departure_delay.unwrap_or(0));

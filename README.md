@@ -164,8 +164,7 @@ cargo run --release -p mrt-board-static -- site data/gtfs_schedule.zip
 
 ### Run the map UI
 
-The live map is its own site, separate from the board, so it deploys
-on its own subdomain:
+The live map has its own server and renderer. Run it independently:
 
 ```sh
 cargo run -p mrt-map-web
@@ -179,7 +178,11 @@ the miniature fixture layout, `config/layout-mini.geojson` — a layout
 of the real network is future work). Without an account key every
 train is schedule-only and the page says so.
 
-To host the map without a server, generate it as a static site:
+To host the map without a server, generate a static directory. It can live
+at `/map/` beside the board or on its own domain. A production deployment
+requires a reviewed real-network layout; the bundled layout contains
+fictional fixture stations. The Pages workflow skips the map until the
+`MRT_MAP_LAYOUT` Actions variable names that real layout:
 
 ```sh
 cargo run --release -p mrt-map-static -- map-site data/gtfs_schedule.zip
@@ -357,8 +360,8 @@ headless browser and compares them with the baselines in
 The library is the base for these planned applications:
 
 - An interactive live train map: a proof of concept, in
-  `crates/mrt-map-web` and `crates/mrt-map-static`, on its own site
-  separate from the board. See
+  `crates/mrt-map-web` and `crates/mrt-map-static`, independently hosted
+  or as an optional `/map/` section beside the board. See
   [`docs/LIVE-MAP-POC.md`](docs/LIVE-MAP-POC.md) for the plan and what
   each phase shipped: a schematic whole-network map, why the positions
   are derived rather than measured, and how the map says so. One phase
