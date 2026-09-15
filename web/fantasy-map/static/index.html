@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenFantasyMap — transit line GIS</title>
+  <link rel="stylesheet" href="static/vendor/leaflet.css" />
+  <link rel="stylesheet" href="static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <header class="brand">
+        <h1>OpenFantasyMap</h1>
+        <p>Line-based transit GIS</p>
+        <a id="board-link" hidden>MRTracker board</a>
+      </header>
+      <p id="hosting-notice" class="hint" hidden>Draw and edit locally. Street matching and OSM overlays are unavailable; SVG exports include your project only.</p>
+
+      <section class="panel">
+        <h2>Tool</h2>
+        <div class="tool-row" id="tools">
+          <button data-tool="select" title="Select and move nodes or stations (V)">Select</button>
+          <button data-tool="draw" title="Click the map to add route nodes (D)">Draw</button>
+          <button data-tool="station" title="Click a route to add a station (S)">Station</button>
+          <button data-tool="polygon" title="Draw a polygon station; Enter closes it (P)">Area station</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Snapping</h2>
+        <div class="tool-row" id="snap-modes">
+          <button data-snap="manual" title="Straight segments between nodes">Manual</button>
+          <button data-snap="road" title="New segments follow the street network (BRT, Tram, Cycleway)">Streets</button>
+          <button data-snap="corridor" title="New segments follow the mode's own corridor: tracks, ferry routes, aerialways">Corridor</button>
+        </div>
+        <label class="slider-row">
+          <span>Min curve radius <b id="radius-value">400 m</b></span>
+          <input id="radius" type="range" min="10" max="1000" step="5" value="400" />
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>Lines</h2>
+        <div id="line-list"></div>
+        <div class="button-row">
+          <button id="new-line">New line</button>
+          <button id="branch-line" title="Start a branch at the selected node">Branch</button>
+          <button id="interline-line" title="Create a service sharing this line's alignment">Interline</button>
+        </div>
+        <div class="button-row">
+          <button id="split-line" title="Split the line at the selected node(s) — Ctrl+Shift+X">Split at selection</button>
+          <button id="delete-nodes" title="Delete the selected node(s) — Delete">Delete nodes</button>
+        </div>
+        <p class="hint">
+          Shift or Ctrl click nodes to multi-select; Shift-drag the map to
+          box-select. Right-click for more actions.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>Layers</h2>
+        <label class="check-row">
+          <input type="checkbox" id="overlay-toggle" />
+          <span>Existing stations &amp; railways (OSM)</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="cycleway-toggle" checked />
+          <span>Cycling network (your Cycleway lines)</span>
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>Project</h2>
+        <div class="button-row">
+          <button id="export-geojson">Export GeoJSON</button>
+          <button id="import-geojson">Import GeoJSON</button>
+        </div>
+        <div class="button-row">
+          <button id="export-svg">Render to SVG</button>
+          <button id="clear-project" class="danger">Clear</button>
+        </div>
+        <input id="import-file" type="file" accept=".json,.geojson,application/geo+json,application/json" hidden />
+      </section>
+
+      <footer class="credits">
+        Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors
+      </footer>
+    </aside>
+
+    <main id="map-wrap">
+      <div id="map"></div>
+      <div id="status-bar"><span id="status-text">Ready</span></div>
+      <div id="toast" hidden></div>
+    </main>
+  </div>
+
+  <script src="static/config.js"></script>
+  <script src="static/vendor/leaflet.js"></script>
+  <script src="static/geometry.js"></script>
+  <script type="module" src="static/app.js"></script>
+</body>
+</html>

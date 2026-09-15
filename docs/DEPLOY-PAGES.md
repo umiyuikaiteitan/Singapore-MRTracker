@@ -1,11 +1,12 @@
 # Deploy on GitHub Pages
 
-The published site has two standard sections and an optional map:
+The site has three standard sections and an optional live map:
 
 | Path | What it is |
 |------|------------|
 | `/` | The live dot-matrix departure board. |
 | `/timetables/` | Browsable station timetables and train diagrams. |
+| `/fantasy-map/` | OpenFantasyMap transit editor; see [hosting and API setup](FANTASY-MAP.md). |
 | `/map/` | Optional schematic map, enabled with a reviewed real-network layout. |
 
 GitHub Pages serves static files only. The board and timetable sections are therefore

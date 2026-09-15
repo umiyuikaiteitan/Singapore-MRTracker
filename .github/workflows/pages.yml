@@ -76,6 +76,12 @@ jobs:
           MRT_MAP_LAYOUT: ${{ vars.MRT_MAP_LAYOUT }}
           MRT_MAP_SNAPSHOT_URL: ${{ vars.MRT_MAP_SNAPSHOT_URL }}
 
+      # The editor is pinned in this repository: no private-repo token is needed.
+      - name: Generate the fantasy map editor
+        run: python3 scripts/build-fantasy-map.py site
+        env:
+          OFM_API_BASE: ${{ vars.OFM_API_BASE }}
+
       - name: Report the site size
         run: |
           du -sh site site/timetables
