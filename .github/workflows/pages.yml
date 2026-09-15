@@ -60,22 +60,6 @@ jobs:
           # exits non-zero on any failed page.
           MRT_SITE_ALLOW_PARTIAL: "1"
 
-      # Publish a real network layout only after it has been supplied and
-      # reviewed. The miniature layout includes fictional fixture stations.
-      - name: Generate the live map
-        if: ${{ vars.MRT_MAP_LAYOUT != '' }}
-        run: |
-          if [ "$MRT_MAP_LAYOUT" = "config/layout-mini.geojson" ]; then
-            echo "The fixture layout cannot be used for the production map." >&2
-            exit 1
-          fi
-          test -f "$MRT_MAP_LAYOUT"
-          cargo run --release -p mrt-map-static -- site/map feed.zip
-        env:
-          LTA_DATAMALL_ACCOUNT_KEY: ${{ secrets.LTA_DATAMALL_ACCOUNT_KEY }}
-          MRT_MAP_LAYOUT: ${{ vars.MRT_MAP_LAYOUT }}
-          MRT_MAP_SNAPSHOT_URL: ${{ vars.MRT_MAP_SNAPSHOT_URL }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -91,6 +75,16 @@ jobs:
 
       - name: Reconstruct Singapore track shapes from OSM
         run: python3 scripts/prepare-singapore-starter.py feed.zip singapore-starter.zip
+
+      - name: Export the live map schedule
+        run: cargo run --release -p mrt-map-static --bin mrt-map-schedule -- map-schedule.json feed.zip
+
+      - name: Build the Singapore live train map
+        run: |
+          node scripts/build-live-map.mjs singapore-starter.zip map-schedule.json site/map
+          cp singapore-starter.json site/map/provenance.json
+          cp docs/SINGAPORE-OSM-NOTICE.txt site/map/NOTICE.txt
+          node scripts/check-live-map.mjs site/map/network.json
 
       # The editor is pinned in this repository: no private-repo token is needed.
       - name: Generate the fantasy map editor

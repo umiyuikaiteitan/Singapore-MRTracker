@@ -17,9 +17,9 @@ and links also work at the default project URL:
 The Pages workflow runs `python3 scripts/build-fantasy-map.py site --singapore-gtfs feed.zip` after
 the schedule generators. This adds `site/fantasy-map/` without changing
 the generated board or timetable files. The same Pages artifact contains
-all standard sections, so scheduled rebuilds retain the editor. An optional
-`/map/` live schematic is built separately when `MRT_MAP_LAYOUT` names a
-reviewed real-network layout.
+all standard sections, so scheduled rebuilds retain the editor. The
+`/map/` train map is built automatically from the reconstructed tracks and the
+LTA service calendar. See [LIVE-MAP.md](LIVE-MAP.md).
 
 For an editor-only local preview (no DataMall key or Rust required):
 
@@ -95,9 +95,8 @@ and ZIP64 archives are not.
 
 Projects remain in browser storage. Export GeoJSON for a portable backup.
 A project saved on the github.io origin will not automatically appear on
-the umiyui.dev origin. The editor is separate from the live schematic in `crates/mrt-map-web`
-and `crates/mrt-map-static`; that optional `/map/` section needs a reviewed
-real-network layout. See [DEPLOY-PAGES.md](DEPLOY-PAGES.md#the-map-site).
+the umiyui.dev origin. The deployed `/map/` uses the reconstructed GTFS shapes
+with its own browser renderer. See [LIVE-MAP.md](LIVE-MAP.md).
 
 ## Optional matching service
 

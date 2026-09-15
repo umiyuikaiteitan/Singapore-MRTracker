@@ -101,6 +101,7 @@ pub fn live_snapshot<T: Transport>(client: &DataMallClient<T>, now_unix: i64) ->
 
     serde_json::json!({
         "generated": now_unix,
+        "trip_updates_timestamp": trip_feed.as_ref().and_then(|feed| feed.feed_timestamp),
         "live": live,
         "disrupted": disrupted,
         "segments": segments,
@@ -228,8 +229,8 @@ fn trip_updates_json(feed: Option<&RailRtFeed>) -> serde_json::Value {
             };
             let delay = stop_update
                 .departure
-                .or(stop_update.arrival)
-                .and_then(|event| event.delay_secs);
+                .and_then(|event| event.delay_secs)
+                .or_else(|| stop_update.arrival.and_then(|event| event.delay_secs));
             if stop_update.skipped {
                 stops.insert(stop_id.clone(), serde_json::json!("skip"));
             } else if let Some(delay) = delay {
@@ -240,6 +241,15 @@ fn trip_updates_json(feed: Option<&RailRtFeed>) -> serde_json::Value {
             continue;
         }
         let mut entry = serde_json::Map::new();
+        if let Some(date) = &update.start_date {
+            entry.insert("sd".to_string(), serde_json::json!(date));
+        }
+        if let Some(start) = &update.start_time {
+            entry.insert("st".to_string(), serde_json::json!(start));
+        }
+        if let Some(timestamp) = update.timestamp {
+            entry.insert("ts".to_string(), serde_json::json!(timestamp));
+        }
         if let Some(delay) = update.delay_secs {
             entry.insert("d".to_string(), serde_json::json!(delay));
         }
@@ -296,7 +306,39 @@ mod tests {
         let snapshot = live_snapshot(&client(DownTransport), 1_000);
         assert_eq!(snapshot["live"], serde_json::json!(false));
         assert_eq!(snapshot["generated"], serde_json::json!(1_000));
+        assert!(snapshot["trip_updates_timestamp"].is_null());
         assert!(snapshot["trips"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn map_matching_identifiers_survive_compact_serialization() {
+        let feed = RailRtFeed {
+            feed_timestamp: Some(1000),
+            trip_updates: vec![mrt_gtfs_rt::TripUpdate {
+                trip_id: Some("T1".to_string()),
+                start_date: Some("20260915".to_string()),
+                start_time: Some("05:30:00".to_string()),
+                timestamp: Some(999),
+                delay_secs: Some(60),
+                stop_updates: vec![mrt_gtfs_rt::StopTimeUpdate {
+                    stop_id: Some("S1".to_string()),
+                    arrival: Some(mrt_gtfs_rt::StopTimeEvent {
+                        delay_secs: Some(90),
+                        ..Default::default()
+                    }),
+                    departure: Some(mrt_gtfs_rt::StopTimeEvent::default()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let trips = trip_updates_json(Some(&feed));
+        assert_eq!(trips["T1"]["sd"], "20260915");
+        assert_eq!(trips["T1"]["st"], "05:30:00");
+        assert_eq!(trips["T1"]["ts"], 999);
+        assert_eq!(trips["T1"]["d"], 60);
+        assert_eq!(trips["T1"]["s"]["S1"], 90);
     }
 
     #[test]
