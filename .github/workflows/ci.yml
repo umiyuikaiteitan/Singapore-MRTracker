@@ -61,7 +61,7 @@ jobs:
         with:
           node-version: "22"
       - name: Read the public starter feed
-        run: curl --fail --location --max-time 90 --max-filesize 33554432 https://umiyui.dev/fantasy-map/singapore-mrt.zip --output feed.zip
+        run: curl --fail --location --max-time 90 --max-filesize 33554432 https://umiyuikaiteitan.github.io/Singapore-MRTracker/fantasy-map/singapore-mrt.zip --output feed.zip
       - name: Reconstruct and check the actual network
         run: |
           python3 - <<'PYTHON'

@@ -52,7 +52,11 @@ export function shapeThroughStops(ways,stops){
   });
   let chosen=null,cost=Infinity;
   for(const group of candidates[0].keys())if(candidates.every(c=>c.has(group))){const sum=candidates.reduce((n,c)=>n+c.get(group).gap,0);if(sum<cost){cost=sum;chosen=group;}}
-  if(chosen===null)throw new Error('No connected active rail component within 500 m of every stop');
+  if(chosen===null){
+    const error=new Error('No connected active rail component within 500 m of every stop');
+    error.legs=[];for(let i=1;i<candidates.length;i++)if(![...candidates[i-1].keys()].some(key=>candidates[i].has(key)))error.legs.push(i-1);
+    error.scope=error.legs.length?'segments':'whole-pattern-component-mismatch';throw error;
+  }
   const projections=candidates.map(c=>c.get(chosen)),onEdge=new Map();
   const calls=projections.map((p,i)=>{const v=vertex(p.coordinate,'call:'+i);if(!onEdge.has(p.edge))onEdge.set(p.edge,[]);onEdge.get(p.edge).push([p.t,v]);return v;});
   for(const [edge,list] of onEdge){const [a,b]=edges[edge];list.push([0,a],[1,b]);list.sort((x,y)=>x[0]-y[0]);for(let i=1;i<list.length;i++){const x=list[i-1][1],y=list[i][1];const d=distance(vertices[x],vertices[y]);adj[x].push([y,d]);adj[y].push([x,d]);}}
@@ -62,8 +66,9 @@ export function shapeThroughStops(ways,stops){
     const push=item=>{let at=heap.length;heap.push(item);while(at>0){const p=(at-1)>>1;if(heap[p][0]<=item[0])break;heap[at]=heap[p];at=p;}heap[at]=item;};
     const pop=()=>{const first=heap[0],last=heap.pop();if(heap.length){let at=0;while(at*2+1<heap.length){let c=at*2+1;if(c+1<heap.length&&heap[c+1][0]<heap[c][0])c++;if(heap[c][0]>=last[0])break;heap[at]=heap[c];at=c;}heap[at]=last;}return first;};
     push([0,start]);while(heap.length){const [cost,v]=pop();if(cost!==costs.get(v))continue;if(v===end)break;for(const [n,w] of adj[v]){const total=cost+w;if(total<(costs.get(n)??Infinity)){costs.set(n,total);previous.set(n,v);push([total,n]);}}}
-    if(!costs.has(end))throw new Error('OSM track gap between stops');
-    if(costs.get(end)>Math.max(3000,distance(stops[i-1],stops[i])*5))throw new Error('OSM track match makes an excessive detour');
+    if(!costs.has(end)||costs.get(end)>Math.max(3000,distance(stops[i-1],stops[i])*5)){
+      const error=new Error(!costs.has(end)?'OSM track gap between stops':'OSM track match makes an excessive detour');error.legs=[i-1];error.scope='segments';throw error;
+    }
     const leg=[];for(let v=end;;v=previous.get(v)){leg.push(vertices[v]);if(v===start)break;}leg.reverse();
     for(const p of leg)if(!path.length||distance(path.at(-1),p)>0.01)path.push(p);
   }
@@ -92,7 +97,7 @@ export function reconstruct(files,osm){
     let shapeId;do{shapeId='osm-reconstructed-'+(++index);}while(existing.has(shapeId));existing.add(shapeId);
     path.forEach((p,i)=>generated.push({shape_id:shapeId,shape_pt_lat:p[0],shape_pt_lon:p[1],shape_pt_sequence:i}));
     pattern.trips.forEach(t=>{t.shape_id=shapeId;});report.reconstructed++;
-  }catch(error){report.unmatched.push({route:pattern.route.route_short_name||pattern.route.route_id,stops:pattern.calls.map(s=>s.stop_id),reason:error.message});}
+  }catch(error){report.unmatched.push({route:pattern.route.route_short_name||pattern.route.route_id,stops:pattern.calls.map(s=>s.stop_id),reason:error.message,scope:error.scope||'pattern',segments:(error.legs||[]).map(i=>({from:pattern.calls[i].stop_id,to:pattern.calls[i+1].stop_id}))});}
   const shapeHead=['shape_id','shape_pt_lat','shape_pt_lon','shape_pt_sequence'];
   // Preserve original columns (including distance) when supplied shapes exist.
   const oldShapes=rows(files['shapes.txt']),head=oldShapes.length?Object.keys(oldShapes[0]):shapeHead;
