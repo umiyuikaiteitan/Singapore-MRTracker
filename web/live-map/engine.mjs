@@ -5,6 +5,12 @@ export function freshness(live,now){
   const predictions=report&&Number.isFinite(stamp)&&stamp<=now+30&&now-stamp<=120;
   return {report,predictions,age:report?Math.max(0,now-live.generated):null};
 }
+export function preferReport(current,candidate,now){
+  if(!candidate)return current;
+  if(!current)return candidate;
+  const a=freshness(current,now).predictions,b=freshness(candidate,now).predictions;
+  return (b&&!a)||(a===b&&candidate.generated>current.generated)?candidate:current;
+}
 export function pointAt(shape,distance){
   let low=1,high=shape.length-1;
   if(distance<=shape[0][2])return shape[0].slice(0,2);

@@ -29,8 +29,8 @@ export function buildMap(files,schedule){
   }
   const patternList=Object.values(patterns),indexes=new Map(Object.keys(patterns).map((key,i)=>[key,i]));runs.forEach(r=>{r.pattern=indexes.get(r.pattern);});
   const stationRows=rows(files['stops.txt']),byId=new Map(stationRows.map(s=>[s.stop_id,s])),stations=new Map();
-  for(const p of patternList)for(const id of p.stops){const stop=byId.get(id),s=byId.get(stop?.parent_station)||stop;if(!s)throw Error('Missing station');const lat=Number(s.stop_lat),lon=Number(s.stop_lon);if(!Number.isFinite(lat)||!Number.isFinite(lon))throw Error('Invalid station');stations.set(s.stop_id,{id:s.stop_id,name:s.stop_name,code:s.stop_code||s.stop_id,point:[lat,lon]});}
-  return {...schedule,runs,patterns:patternList,shapes,routes,stations:[...stations.values()],lines:network.lines.map(l=>({name:l.name,color:l.color,points:l.segments[0].guide})),duplicates:network.duplicates};
+  for(const p of patternList)for(const id of p.stops){const stop=byId.get(id),s=byId.get(stop?.parent_station)||stop;if(!s)throw Error('Missing station');const lat=Number(s.stop_lat),lon=Number(s.stop_lon);if(!Number.isFinite(lat)||!Number.isFinite(lon))throw Error('Invalid station');if(!stations.has(s.stop_id))stations.set(s.stop_id,{id:s.stop_id,name:s.stop_name,codes:new Set(s.stop_code?[s.stop_code]:[]),point:[lat,lon]});if(stop.stop_code)stations.get(s.stop_id).codes.add(stop.stop_code);}
+  return {...schedule,runs,patterns:patternList,shapes,routes,stations:[...stations.values()].map(s=>({...s,codes:[...s.codes].sort(),code:[...s.codes].sort().join(' / ')||s.id})),lines:network.lines.map(l=>({name:l.name,color:l.color,points:l.segments[0].guide})),duplicates:network.duplicates};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const bytes=await readFile(process.argv[2]),files=await readGtfsZip(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));

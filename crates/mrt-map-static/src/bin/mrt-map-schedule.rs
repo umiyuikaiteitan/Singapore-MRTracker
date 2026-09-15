@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 fn schedule(network: &RailNetwork, now: i64) -> Value {
     let (today, time) = clock::sgt_from_unix(now);
     let midnight = now - i64::from(time.seconds());
-    let valid_from = now - 3600;
+    let valid_from = now - 7200;
     let valid_until = now + 36 * 3600;
     let mut runs = Vec::new();
     let mut bands = Vec::new();

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {freshness,positionRun} from '../web/live-map/engine.mjs';
+import {freshness,positionRun,preferReport} from '../web/live-map/engine.mjs';
 import {buildMap} from '../scripts/build-live-map.mjs';
 const shape=[[1,103,0],[1.01,103.01,100],[1,103,200],[1.02,103,300]];
 const pattern={stops:['A','B','A','C'],distances:[0,100,200,300]};
@@ -14,3 +14,5 @@ test('headway-free builder binds each schedule instance to the correct shape and
 
 test('future-only delays do not relabel current schedule position',()=>{const p=positionRun(run,pattern,shape,1050,live({s:{C:60}},1050));assert.equal(p.adjusted,false);assert.equal(p.delay,0);});
 test('frequency run rejects a trip update without an instance start time',()=>{assert.ok(positionRun({...run,frequency:true},pattern,shape,1150,live({c:1})));});
+
+test('live-source selection cannot roll back a fresh report and prefers usable predictions',()=>{const current=live({},1150),older=live({},1140);assert.equal(preferReport(current,older,1160),current);assert.equal(preferReport({live:true,generated:1155},current,1160),current);});

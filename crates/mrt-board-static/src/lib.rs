@@ -229,8 +229,8 @@ fn trip_updates_json(feed: Option<&RailRtFeed>) -> serde_json::Value {
             };
             let delay = stop_update
                 .departure
-                .or(stop_update.arrival)
-                .and_then(|event| event.delay_secs);
+                .and_then(|event| event.delay_secs)
+                .or_else(|| stop_update.arrival.and_then(|event| event.delay_secs));
             if stop_update.skipped {
                 stops.insert(stop_id.clone(), serde_json::json!("skip"));
             } else if let Some(delay) = delay {
@@ -306,7 +306,39 @@ mod tests {
         let snapshot = live_snapshot(&client(DownTransport), 1_000);
         assert_eq!(snapshot["live"], serde_json::json!(false));
         assert_eq!(snapshot["generated"], serde_json::json!(1_000));
+        assert!(snapshot["trip_updates_timestamp"].is_null());
         assert!(snapshot["trips"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn map_matching_identifiers_survive_compact_serialization() {
+        let feed = RailRtFeed {
+            feed_timestamp: Some(1000),
+            trip_updates: vec![mrt_gtfs_rt::TripUpdate {
+                trip_id: Some("T1".to_string()),
+                start_date: Some("20260915".to_string()),
+                start_time: Some("05:30:00".to_string()),
+                timestamp: Some(999),
+                delay_secs: Some(60),
+                stop_updates: vec![mrt_gtfs_rt::StopTimeUpdate {
+                    stop_id: Some("S1".to_string()),
+                    arrival: Some(mrt_gtfs_rt::StopTimeEvent {
+                        delay_secs: Some(90),
+                        ..Default::default()
+                    }),
+                    departure: Some(mrt_gtfs_rt::StopTimeEvent::default()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let trips = trip_updates_json(Some(&feed));
+        assert_eq!(trips["T1"]["sd"], "20260915");
+        assert_eq!(trips["T1"]["st"], "05:30:00");
+        assert_eq!(trips["T1"]["ts"], 999);
+        assert_eq!(trips["T1"]["d"], 60);
+        assert_eq!(trips["T1"]["s"]["S1"], 90);
     }
 
     #[test]
