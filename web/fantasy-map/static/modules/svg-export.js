@@ -1,6 +1,6 @@
 /** Rendering the current display, viewport-sized, to a standalone SVG file. */
 
-import { apiEnabled, postApi } from "./config.js";
+import { getViewportFeatures } from "./basemap.js";
 import { G } from "./geom.js";
 import { labelSide, labelHidden, stationLabelText } from "./model.js";
 import { state, lineGeometry } from "./state.js";
@@ -67,17 +67,13 @@ export async function exportSvg() {
   const button = document.getElementById("export-svg");
   button.disabled = true;
   try {
-    let featureData = { roads: [], railways: [], stations: [] };
-    if (apiEnabled) {
-      const bounds = map.getBounds();
-      if (bounds.getNorth() - bounds.getSouth() > 0.45 || bounds.getEast() - bounds.getWest() > 0.65) {
-        toast("Zoom in before rendering — the OSM base layers need a city-scale viewport.");
-        return;
-      }
-      featureData = await postApi("map-features", {
-        south: bounds.getSouth(), west: bounds.getWest(),
-        north: bounds.getNorth(), east: bounds.getEast(),
-      });
+    let featureData = { roads: [], railways: [], stations: [], areas: [], waterways: [] };
+    let hasOsm = false;
+    try {
+      featureData = await getViewportFeatures();
+      hasOsm = true;
+    } catch (_) {
+      // An unavailable public service must not prevent exporting the project.
     }
     const size = map.getSize();
     const roads = [...featureData.roads].sort(
@@ -93,6 +89,12 @@ export async function exportSvg() {
         );
       })
       .join("");
+    const areaMarkup = featureData.areas.map(area =>
+      `<path d="${svgPath(area.coordinates)} Z" fill="${area.kind === "water" ? "#183648" : "#1a302b"}" />`
+    ).join("");
+    const waterMarkup = featureData.waterways.map(water =>
+      `<path d="${svgPath(water.coordinates)}" stroke="#285064" stroke-width="2" />`
+    ).join("");
     const railMarkup = featureData.railways
       .map((railway) => {
         const path = svgPath(railway.coordinates);
@@ -160,16 +162,17 @@ export async function exportSvg() {
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size.x}" height="${size.y}" viewBox="0 0 ${size.x} ${size.y}">
 <title>OpenFantasyMap export</title>
-<desc>${apiEnabled ? "Display-sized map of OpenStreetMap features and authored transit services." : "Authored transit lines and stations; OSM base features are not included."}</desc>
+<desc>${hasOsm ? "Display-sized map of OpenStreetMap features and authored transit services." : "Authored transit lines and stations; OSM base features are not included."}</desc>
 <rect width="100%" height="100%" fill="#0b121d"/>
-<g fill="none" stroke-linecap="round" stroke-linejoin="round">${roadMarkup}</g>
+<g>${areaMarkup}</g>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">${waterMarkup}${roadMarkup}</g>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round">${railMarkup}</g>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round">${transitMarkup}</g>
 <g>${existingStations}${userStations}</g>
 <text x="${size.x - 12}" y="${size.y - 12}" text-anchor="end" fill="#8b9aab" font-family="sans-serif" font-size="10">© OpenStreetMap contributors · OpenFantasyMap</text>
 </svg>`;
     downloadFile(svg, `transit-map-${size.x}x${size.y}.svg`, "image/svg+xml");
-    toast(`SVG rendered at ${size.x} × ${size.y}.`);
+    toast(`SVG rendered at ${size.x} × ${size.y}${hasOsm ? " with OSM context" : " — project only; OSM unavailable"}.`);
   } catch (error) {
     toast(`SVG render failed: ${error.message}`);
   } finally {

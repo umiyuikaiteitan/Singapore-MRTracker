@@ -15,7 +15,7 @@
         <p>Line-based transit GIS</p>
         <a id="board-link" hidden>MRTracker board</a>
       </header>
-      <p id="hosting-notice" class="hint" hidden>Draw and edit locally. Street matching and OSM overlays are unavailable; SVG exports include your project only.</p>
+      <p id="hosting-notice" class="hint" hidden>Draw and edit locally. The map loads from OSM; street and corridor matching need a matching service.</p>
 
       <section class="panel">
         <h2>Tool</h2>
@@ -90,7 +90,7 @@
 
     <main id="map-wrap">
       <div id="map"></div>
-      <div id="status-bar"><span id="status-text">Ready</span></div>
+      <div id="status-bar"><span id="status-text">Ready</span><br /><span id="osm-status" role="status">Loading OSM map…</span> <button id="retry-basemap" hidden>Retry map</button></div>
       <div id="toast" hidden></div>
     </main>
   </div>

@@ -11,6 +11,7 @@
  * used to mark with a comment rule; they wire their own map and DOM
  * handlers as they load, and this file boots what they set up.
  */
+import { refreshBasemap } from "./modules/basemap.js";
 import { apiEnabled, config } from "./modules/config.js";
 import { state, load } from "./modules/state.js";
 import { render } from "./modules/render.js";
@@ -38,3 +39,5 @@ cyclewayToggle.checked = state.showCycleways;
 updateToolButtons();
 updateRadiusControl();
 render();
+
+refreshBasemap();

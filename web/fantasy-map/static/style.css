@@ -9,7 +9,7 @@
   --accent: #3d63ff;
   /* Chrome */
   --control-fill: #18243a;      /* buttons, selects */
-  --map-bg: #0d1520;            /* map pane behind tiles */
+  --map-bg: #0d1520;            /* map pane behind OSM vectors */
   --row-hover: #16213377;       /* list row hover wash */
   --row-active: #16213399;      /* active list row wash */
   --status-fill: #0b121dcc;     /* translucent status bar over the map */
@@ -282,3 +282,5 @@ button.danger:hover { border-color: var(--danger); color: var(--danger-text); }
   font-size: 11px;
   line-height: 1.4;
 }
+
+#retry-basemap { pointer-events: auto; }
