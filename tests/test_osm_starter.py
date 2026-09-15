@@ -76,7 +76,7 @@ class PrepareTests(unittest.TestCase):
                 tables['stops.txt']+=f'C{n},C{n},1.4,104.0\n'
                 tables['stop_times.txt']+=f'X{n},A,1\nX{n},C{n},2\n'
             write_feed()
-            with self.assertRaisesRegex(ValueError,'more than half'):
+            with self.assertRaisesRegex(ValueError,'without shapes'):
                 module.prepare(feed,output,directory/'cache.json')
             self.assertFalse(output.exists())
 

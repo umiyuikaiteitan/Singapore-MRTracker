@@ -172,7 +172,7 @@ ordered stops to connected OSM node topology, uses matching route relations to
 restrict corridors when available, and preserves supplied GTFS shapes. It never
 joins disconnected OSM components. Each failed pattern stays shapeless and is
 listed in the published `singapore-mrt-provenance.json`; the importer discloses
-stop-to-stop fallbacks. Publication fails if more than half of visible patterns
+stop-to-stop fallbacks. Publication fails if any visible patterns
 are still missing shapes, or if the shipped importer rejects the result.
 
 A bounded 32 MiB Singapore query runs at most once per ISO week in hourly Pages
@@ -184,3 +184,9 @@ The downloadable shapes are attributed to OpenStreetMap contributors with an
 ODbL notice at `singapore-mrt-NOTICE.txt`. Original LTA data is retained. The
 editor deduplicates opposite directions and contiguous short-turn copies within
 each route, while retaining distinct branches and non-equivalent loops.
+
+OSM reconstruction considers nearby parallel tracks across the complete stop
+sequence, with a separate distance-bounded graph search for each candidate.
+Generated shape and stop distance markers keep loops on the correct pass.
+Short-turn route IDs with matching agency, line names, mode and color are
+deduplicated together; physical branches remain separate.

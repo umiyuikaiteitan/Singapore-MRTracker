@@ -81,8 +81,8 @@ def prepare(feed, output, cache):
         result = json.loads(result_path.read_text())
     report = {**result['report'], 'cache': cache_info}
     # Never ship a total failure as a successful reconstructed starter.
-    if report['fallback'] > report['patterns'] / 2:
-        raise ValueError('OSM reconstruction left more than half of rail patterns without shapes')
+    if report['fallback']:
+        raise ValueError('OSM reconstruction left rail patterns without shapes')
     tables = result['files']
     if sum(len(value.encode()) for value in tables.values()) > 64 * 1024 * 1024:
         raise ValueError('Enriched GTFS exceeds importer size limit')
