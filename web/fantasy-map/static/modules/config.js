@@ -14,6 +14,7 @@ export function resolveConfig(raw = {}, base = "http://localhost/") {
     apiBase,
     initialView: raw.initialView || { center: [51.505, -0.09], zoom: 13 },
     boardHref: raw.boardHref || null,
+    singaporeGtfsUrl: raw.singaporeGtfsUrl || "https://umiyui.dev/fantasy-map/singapore-mrt.zip",
   };
 }
 export const config = resolveConfig(globalThis.OFM_CONFIG, globalThis.document?.baseURI);

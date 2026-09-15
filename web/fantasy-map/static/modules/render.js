@@ -1,6 +1,5 @@
 /** Drawing the network: routes, nodes, stations, the polygon draft, and the line list. */
 
-import { apiEnabled } from "./config.js";
 import { G } from "./geom.js";
 import { MODE_NAMES, modeRules, lineRadius } from "./modes.js";
 import {
@@ -14,7 +13,7 @@ import {
   map, routeLayer, issueLayer, nodeLayer, stationLayer, draftLayer,
 } from "./map-setup.js";
 import { setStatus, tooltipContent } from "./ui.js";
-import { snapSegment } from "./snapping.js";
+import { rematchAdjacentSegments } from "./snapping.js";
 import { syncBranches, interlineSlot } from "./topology.js";
 import { menuElement, showMenu, hideMenu, nodeMenuItems } from "./context-menu.js";
 import { clickSwallowed, onRouteClick, segmentMenuItems } from "./interactions.js";
@@ -242,21 +241,7 @@ function renderNodes() {
       // Manual nodes moved by hand: re-match adjacent corridor segments
       // between the (unchanged) new endpoints.
       afterGeometryChange(line);
-      const touched = new Set();
-      for (const movedIndex of moved) {
-        touched.add(movedIndex - 1);
-        touched.add(movedIndex);
-      }
-      for (const segmentIndex of touched) {
-        const segment = line.segments[segmentIndex];
-        if (apiEnabled && segment && (segment.profile === "road" || segment.profile === "rail")) {
-          snapSegment(
-            line,
-            segmentIndex,
-            segment.profile === "road" ? "road" : "corridor",
-          );
-        }
-      }
+      rematchAdjacentSegments(line, moved);
     });
   });
 }

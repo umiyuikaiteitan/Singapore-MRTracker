@@ -1,4 +1,5 @@
 """Exercise the deployed directory layout without feed credentials or Rust."""
+import zipfile
 import hashlib
 import functools
 import http.server
@@ -79,6 +80,30 @@ class FantasyMapBuild(unittest.TestCase):
         actual = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
                   for p in root.rglob('*') if p.is_file() and p.name != 'UPSTREAM.json'}
         self.assertEqual(actual, manifest['files'])
+
+    def test_packaged_singapore_starter_passes_the_shipped_importer(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            feed = root / 'feed.zip'
+            tables = {
+                'routes.txt': 'route_id,route_type,route_short_name\nr,1,MRT\n',
+                'trips.txt': 'route_id,trip_id\nr,t\n',
+                'stops.txt': 'stop_id,stop_name,stop_lat,stop_lon\na,Alpha,1.3,103.8\nb,Beta,1.31,103.81\n',
+                'stop_times.txt': 'trip_id,stop_id,stop_sequence\nt,a,1\nt,b,2\n',
+            }
+            with zipfile.ZipFile(feed, 'w') as archive:
+                for name, content in tables.items():
+                    archive.writestr(name, content)
+                archive.writestr('unrelated.txt', 'not published')
+            for prefix in ['', 'Singapore-MRTracker']:
+                site = root / 'site' / prefix
+                subprocess.run([sys.executable, str(ROOT / 'scripts/build-fantasy-map.py'), str(site), '--singapore-gtfs', str(feed)], env={**os.environ, 'OFM_API_BASE': ''}, check=True, capture_output=True)
+                config = json.loads((site / 'fantasy-map/static/config.js').read_text().removeprefix('window.OFM_CONFIG = ').strip().removesuffix(';'))
+                self.assertEqual(config['singaporeGtfsUrl'], 'singapore-mrt.zip')
+                starter = site / 'fantasy-map' / config['singaporeGtfsUrl']
+                with zipfile.ZipFile(starter) as archive:
+                    self.assertEqual(set(archive.namelist()), set(tables))
+                subprocess.run(['node', str(ROOT / 'scripts/check-singapore-starter.mjs'), str(starter)], check=True, capture_output=True)
 
     def test_optional_api_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:

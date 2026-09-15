@@ -1,5 +1,7 @@
 /** Sidebar wiring: tool and snap buttons, the radius slider, and keyboard shortcuts. */
 
+import { scheduleRematchAdjacentSegments } from "./snapping.js";
+import { supportsLocalRoad } from "./road-matching.js";
 import { supportsLocalRail } from "./rail-matching.js";
 import { apiEnabled } from "./config.js";
 import { modeRules, lineRadius } from "./modes.js";
@@ -30,9 +32,11 @@ export function updateToolButtons() {
   const allowed = line ? modeRules(line.mode).snaps : ["road", "corridor"];
   document.querySelectorAll("#snap-modes button").forEach((button) => {
     button.classList.toggle("active", button.dataset.snap === state.snapMode);
+    button.setAttribute("aria-pressed", String(button.dataset.snap === state.snapMode));
+    if (button.dataset.snap === "corridor") button.textContent = line?.mode === "Ferry" ? "Follow ferry" : "Follow rails";
     button.disabled =
       button.dataset.snap !== "manual" &&
-      (!allowed.includes(button.dataset.snap) || (!apiEnabled && !(button.dataset.snap === "corridor" && supportsLocalRail(line?.mode))));
+      (!allowed.includes(button.dataset.snap) || (!apiEnabled && !(button.dataset.snap === "corridor" && supportsLocalRail(line?.mode || "Mainline")) && !(button.dataset.snap === "road" && supportsLocalRoad(line?.mode || "Mainline"))));
   });
   map.getContainer().style.cursor =
     state.tool === "draw" || state.tool === "polygon" ? "crosshair" : "";
@@ -175,6 +179,7 @@ function nudgeSelectedNode(direction, big) {
     line.nodes[index] = [moved.lat, moved.lng];
   }
   afterGeometryChange(line);
+  scheduleRematchAdjacentSegments(line, movable);
   return true;
 }
 

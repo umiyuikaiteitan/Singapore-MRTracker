@@ -14,7 +14,7 @@ and links also work at the default project URL:
 
 ## Build and deploy
 
-The Pages workflow runs `python3 scripts/build-fantasy-map.py site` after
+The Pages workflow runs `python3 scripts/build-fantasy-map.py site --singapore-gtfs feed.zip` after
 the schedule generators. This adds `site/fantasy-map/` without changing
 the generated board or timetable files. The same Pages artifact contains
 all standard sections, so scheduled rebuilds retain the editor. An optional
@@ -53,12 +53,12 @@ tile mode does not request border/terrain geometry. No provider account or
 API key is needed. The OSM tile layer uses normal HTTP caching and referrer
 headers without offline/prefetch features; see the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
-Rail **Corridor** matching runs locally for Mainline, Metro, Tram, and
+The **Follow rails** option runs locally for Mainline, Metro, Tram, and
 Monorail/funicular. It follows connected compatible OSM tracks, including
 mapped disused/abandoned alignments, with endpoints within 500 m of a track.
-Disconnected tracks fail without inventing links. Streets and Ferry matching
-still need the optional API. Configured API deployments keep their existing
-matching service.
+Disconnected tracks fail without inventing links. Ferry matching still
+needs the optional API. Configured API deployments keep their existing
+rail matching service.
 
 The public Overpass endpoint is `https://overpass-api.de/api/interpreter`.
 Queries are bounded to zoom 12 or closer and a viewport at most 0.45° by
@@ -70,8 +70,16 @@ raster tiles are omitted. Project export still works during an outage.
 
 ## Start with a GTFS rail network
 
-Use **Start from GTFS** to upload a GTFS-Static ZIP or load a public HTTPS
-feed URL. URL downloads need the feed host to allow CORS; otherwise download
+Click **Start with Singapore MRT** to add the official LTA train network.
+The Pages workflow passes its existing `feed.zip` to the editor builder,
+which packages only routes, trips, stops, stop_times, and optional shapes
+as `fantasy-map/singapore-mrt.zip`. The configured URL is relative, so the
+button works on the custom domain and project Pages paths without a CORS
+request or visitor API key. Each build validates this actual starter through
+the shipped importer before deployment. It appends lines with one Undo step.
+For a local build, pass `--singapore-gtfs /path/to/feed.zip` to the wrapper.
+
+Other feeds work through **Import GTFS ZIP** or a public HTTPS feed URL. URL downloads need the feed host to allow CORS; otherwise download
 the ZIP and upload it. Parsing happens in a browser worker. The importer
 reads routes, trips, stops, stop_times, and optional shapes. It preserves
 rail route names/colours, shapes, and named stations, collapsing repeated
@@ -108,7 +116,8 @@ uses `https://map-api.example.com/api/`. This is a public URL, not a secret;
 no API keys belong in it. Leave the variable unset for the static edition.
 
 The Pages build validates this URL, writes it to `static/config.js`, and
-the editor uses it for matching requests. Basemap, overlay, and SVG context
+the editor uses it for rail/ferry matching requests. Road following uses
+cached Overpass data directly. Basemap, overlay, and SVG context
 requests go directly to Overpass. CORS must
 permit the frontend origin for JSON POST preflights. Existing same-origin
 OpenFantasyMap deployments keep working without this setting. Hosting
@@ -135,3 +144,21 @@ private branch or add a cross-repository secret for each hourly rebuild.
 The upstream main branch preserves the history from
 `claude/transit-line-mapping-gis-dxdcrd` and its descendant
 `claude/fantasy-map-mrtracker-roadmaps-kvjvks`.
+
+## Road following and cached geometry
+
+Choose **Manual**, **Follow rails**, or **Follow roads** before drawing.
+Manual remains the initial default; the browser remembers your chosen option.
+Road following is available for Mainline, Metro, Tram, BRT, Monorail, and
+Cycleway. It fetches bounded road geometry directly from Overpass on demand,
+including OSM node identities so bridges do not join roads below them just
+because their coordinates cross. It does not add roads to the vector basemap.
+
+Road queries are serialized and share public-service pacing/cooldown with
+rail and map requests. A four-viewport in-memory cache lasts five minutes and
+reuses containing query results for nearby segments. Responses remain bounded
+by the existing byte/feature/point limits. Private/no-access ways are excluded;
+cycling also excludes motorways and roads tagged bicycle=no. The result is a
+bidirectional alignment for designing lines, not traffic directions: oneway
+and turn restrictions are not applied. Missing/disconnected alignments fail
+without changing the manual control points.

@@ -1,5 +1,6 @@
 /** Pointer tools: route and segment clicks, marquee selection, node and station edits. */
 
+import { supportsLocalRoad } from "./road-matching.js";
 import { supportsLocalRail } from "./rail-matching.js";
 import { apiEnabled } from "./config.js";
 import { G } from "./geom.js";
@@ -127,7 +128,7 @@ export function segmentMenuItems(line, segmentIndex, latlng) {
   const coordinate = [latlng.lat, latlng.lng];
   const segment = line.segments[segmentIndex];
   const profile = segment ? segment.profile : "manual";
-  const allowed = modeRules(line.mode).snaps.filter(kind => apiEnabled || (kind === "corridor" && supportsLocalRail(line.mode)));
+  const allowed = modeRules(line.mode).snaps.filter(kind => apiEnabled || (kind === "corridor" && supportsLocalRail(line.mode)) || (kind === "road" && supportsLocalRoad(line.mode)));
   return [
     {
       label: "Insert node here",

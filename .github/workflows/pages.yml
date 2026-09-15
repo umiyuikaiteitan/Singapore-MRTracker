@@ -78,9 +78,16 @@ jobs:
 
       # The editor is pinned in this repository: no private-repo token is needed.
       - name: Generate the fantasy map editor
-        run: python3 scripts/build-fantasy-map.py site
+        run: python3 scripts/build-fantasy-map.py site --singapore-gtfs feed.zip
         env:
           OFM_API_BASE: ${{ vars.OFM_API_BASE }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate the Singapore MRT starter
+        run: node scripts/check-singapore-starter.mjs site/fantasy-map/singapore-mrt.zip
 
       - name: Report the site size
         run: |
