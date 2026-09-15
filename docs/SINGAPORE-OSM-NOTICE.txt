@@ -1,0 +1,16 @@
+Singapore MRT/LRT starter — reconstructed rail geometry
+
+Track shapes are derived from OpenStreetMap data © OpenStreetMap contributors,
+available under the Open Database License (ODbL) 1.0:
+https://www.openstreetmap.org/copyright
+https://opendatacommons.org/licenses/odbl/1-0/
+
+The accompanying singapore-mrt.zip includes these derived shapes in shapes.txt.
+Original route and stop information comes from the LTA DataMall train GTFS feed.
+Shapes supplied by LTA are preserved; only missing shapes are reconstructed.
+The dated OSM snapshot and reconstruction coverage are recorded in
+singapore-mrt-provenance.json. Unmatched patterns are explicitly listed there
+and remain disclosed stop-to-stop fallbacks in the editor.
+
+The reconstruction uses mapped active track topology and GTFS stop order. It is
+an inferred alignment, not an authoritative statement of operational routing.

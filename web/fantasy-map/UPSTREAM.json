@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/umiyuikaiteitan/OpenFantasyMap",
-  "revision": "ae1c21381c8cd0130941f2cd797698dd54a154e6",
+  "revision": "dba1ef87fad217d51e2065a43aa93ce543756804",
   "files": {
     "scripts/build-static.py": "c8bb9032fe459ad0c0f70ebad5736b1a0f6155dda8265c4ac13e3ead3515c162",
     "static/app.js": "571123cec02f80b0ee7a386f67dce1207b3401bbf290f10e9612ca0b65b64028",
@@ -15,8 +15,8 @@
     "static/modules/geojson-model.js": "42212ba3ff281552554b17cbfc5f54e6fb14b5baaa289bca5516eb9245a06819",
     "static/modules/geojson.js": "edee303afbb1325aa8adf5b09deb7f2532a54090787b75c8ee1f3a513447141c",
     "static/modules/geom.js": "e2e06c22231b0f5134f834b402e7b34cc6f1203e9d028b53e18316acd787df7c",
-    "static/modules/gtfs-import.js": "ae7087554c6e4592c523418e864c6caa91ff704ecf5390a42ebb71446d1f9f0a",
-    "static/modules/gtfs-model.js": "dca7eceda008f49ac42d505cca5ffb0d79fd53eb3e50b27354c843705f6a1d2c",
+    "static/modules/gtfs-import.js": "02df6b3d2b6a37d7036e687d6463da0c9e043c17668c04c2b38a2b1803da9255",
+    "static/modules/gtfs-model.js": "7058d2fd61a5c31f2c6854bb6fc0cf38aafaebbb672455e914e1b18d4857b1ec",
     "static/modules/gtfs-worker.js": "f576504983ed816efe39003c2f2891e3fe509d09fcbaddfb6fedf2ad7071b369",
     "static/modules/gtfs-zip.js": "7aca34c6f9201933b19182bf0051470b30bec40f7280ceac876240d49ac056a7",
     "static/modules/interactions.js": "1b6c38cf80e25ab545f2a9695b4a3d7cb587cee6ab874d3b698bd5398118ba17",

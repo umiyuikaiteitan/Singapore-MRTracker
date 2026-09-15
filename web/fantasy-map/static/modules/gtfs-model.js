@@ -42,6 +42,36 @@ function stationFraction(point,path,cumulative,minT){
   }
   return best&&best.gap<=1000?best.t:null;
 }
+// Collapse directional and short-turn copies within a route, preserving branches.
+// Parent stations unify platform IDs. Closed loops allow exact cyclic rotation
+// and reversal, while repeated-station patterns are never removed by containment.
+function uniquePatterns(patterns, stops, shapes) {
+  const physical = trip => trip.stops.map(call => stops.get(call.id)?.parent_station || call.id);
+  const candidates = [...patterns.values()].map(trip => ({trip, ids: physical(trip)}));
+  candidates.sort((a,b) => b.ids.length-a.ids.length
+    || Number(shapes.has(b.trip.shape_id))-Number(shapes.has(a.trip.shape_id))
+    || String(a.trip.trip_id).localeCompare(String(b.trip.trip_id)));
+  const retained=[];
+  for(const candidate of candidates){
+    const duplicate=retained.some(other=>{
+      if(candidate.trip.route_id!==other.trip.route_id)return false;
+      const a=candidate.ids,b=other.ids;
+      if(a.length===b.length&&a.length>2&&a[0]===a.at(-1)&&b[0]===b.at(-1)){
+        const loop=a.slice(0,-1),otherLoop=b.slice(0,-1);
+        if([loop,[...loop].reverse()].some(ids=>otherLoop.some((_,start)=>ids.every((id,i)=>id===otherLoop[(start+i)%otherLoop.length]))))return true;
+      }
+      const repeated=ids=>new Set(ids).size!==ids.length;
+      if(a.length!==b.length&&(repeated(a)||repeated(b)))return false;
+      return [a,[...a].reverse()].some(ids=>{
+        for(let start=0;start<=b.length-ids.length;start++)if(ids.every((id,i)=>id===b[start+i]))return true;
+        return false;
+      });
+    });
+    if(!duplicate)retained.push(candidate);
+  }
+  return retained.map(x=>x.trip);
+}
+
 export function buildGtfsNetwork(files) {
   const routes=new Map(),trips=new Map(),stops=new Map(),shapes=new Map();
   for(const row of table(files,'routes.txt',['route_id','route_type'])){const mode=railMode(row.route_type);if(mode)routes.set(row.route_id,{...row,mode});}
@@ -59,7 +89,7 @@ export function buildGtfsNetwork(files) {
     const key=JSON.stringify([trip.route_id,trip.shape_id||'',trip.stops.map(s=>s.id)]);
     if(!patterns.has(key))patterns.set(key,trip);
   }
-  if(patterns.size>250)throw new Error('Feed has more than 250 rail patterns; use a smaller regional feed');
+  if(patterns.size>2500)throw new Error('Feed has more than 2,500 raw rail patterns; use a smaller regional feed');
   const neededShapes=new Set([...patterns.values()].map(x=>x.shape_id).filter(Boolean));
   if(files['shapes.txt'])for(const row of table(files,'shapes.txt',['shape_id','shape_pt_lat','shape_pt_lon','shape_pt_sequence'])){
     if(!neededShapes.has(row.shape_id))continue;
@@ -68,8 +98,10 @@ export function buildGtfsNetwork(files) {
     if(!shapes.has(row.shape_id))shapes.set(row.shape_id,[]);
     shapes.get(row.shape_id).push({point,sequence});
   }
+  const selected=uniquePatterns(patterns,stops,shapes);
+  if(selected.length>250)throw new Error('Feed has more than 250 distinct rail patterns; use a smaller regional feed');
   const lines=[];let fallback=0,skipped=0,pointCount=0,stationCount=0;
-  for(const trip of patterns.values()){
+  for(const trip of selected){
     const route=routes.get(trip.route_id);
     const calls=trip.stops.map(call=>{const stop=stops.get(call.id);const point=stop?.coordinate||stops.get(stop?.parent_station)?.coordinate;return point?{...stop,coordinate:point}:null;});
     if(calls.some(x=>!x)||calls.length<2){skipped++;continue;}
@@ -89,5 +121,5 @@ export function buildGtfsNetwork(files) {
       nodes:[path[0],path.at(-1)],segments:[{profile:'rail',guide:path}],stations});
   }
   if(!lines.length)throw new Error('No rail patterns with usable stops and geometry were found');
-  return {lines,fallback,skipped};
+  return {lines,fallback,skipped,duplicates:patterns.size-selected.length};
 }

@@ -62,6 +62,7 @@ async function importGtfs(file, presetUrl=null){
     map.fitBounds(L.latLngBounds(lines.flatMap(line=>line.segments[0].guide)),{padding:[40,40]});
     status.textContent=`Added ${lines.length} rail patterns and ${lines.reduce((n,l)=>n+l.stations.length,0)} stations. Undo restores the previous project.`
       +(result.fallback?` ${result.fallback} pattern(s) had no shape; stops are joined with straight segments.`:'')
+      +(result.duplicates?` Omitted ${result.duplicates} duplicate direction or short-turn pattern(s).`:'')
       +(result.skipped?` Skipped ${result.skipped} pattern(s) with missing stops.`:'');
   }catch(error){status.textContent=error.message+(file?'':' If the feed host blocks browser downloads, download the ZIP and upload it here.');}
   finally{clearTimeout(timer);active=null;busy(false);fileInput.value='';}
