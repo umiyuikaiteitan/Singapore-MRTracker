@@ -76,15 +76,32 @@ jobs:
           MRT_MAP_LAYOUT: ${{ vars.MRT_MAP_LAYOUT }}
           MRT_MAP_SNAPSHOT_URL: ${{ vars.MRT_MAP_SNAPSHOT_URL }}
 
-      # The editor is pinned in this repository: no private-repo token is needed.
-      - name: Generate the fantasy map editor
-        run: python3 scripts/build-fantasy-map.py site --singapore-gtfs feed.zip
-        env:
-          OFM_API_BASE: ${{ vars.OFM_API_BASE }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Set OSM cache week
+        run: echo "OSM_CACHE_WEEK=$(date -u +%G-%V)" >> "$GITHUB_ENV"
+
+      - uses: actions/cache@v4
+        with:
+          path: .cache/singapore-rail.json
+          key: singapore-rail-${{ hashFiles('scripts/prepare-singapore-starter.py') }}-${{ env.OSM_CACHE_WEEK }}
+          restore-keys: singapore-rail-${{ hashFiles('scripts/prepare-singapore-starter.py') }}-
+
+      - name: Reconstruct Singapore track shapes from OSM
+        run: python3 scripts/prepare-singapore-starter.py feed.zip singapore-starter.zip
+
+      # The editor is pinned in this repository: no private-repo token is needed.
+      - name: Generate the fantasy map editor
+        run: python3 scripts/build-fantasy-map.py site --singapore-gtfs singapore-starter.zip
+        env:
+          OFM_API_BASE: ${{ vars.OFM_API_BASE }}
+
+      - name: Publish OSM provenance
+        run: |
+          cp singapore-starter.json site/fantasy-map/singapore-mrt-provenance.json
+          cp docs/SINGAPORE-OSM-NOTICE.txt site/fantasy-map/singapore-mrt-NOTICE.txt
 
       - name: Validate the Singapore MRT starter
         run: node scripts/check-singapore-starter.mjs site/fantasy-map/singapore-mrt.zip

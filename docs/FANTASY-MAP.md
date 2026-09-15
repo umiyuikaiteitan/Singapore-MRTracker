@@ -162,3 +162,31 @@ cycling also excludes motorways and roads tagged bicycle=no. The result is a
 bidirectional alignment for designing lines, not traffic directions: oneway
 and turn restrictions are not applied. Missing/disconnected alignments fail
 without changing the manual control points.
+
+
+### OSM reconstruction for the Singapore starter
+
+Before packaging the default starter, Pages reconstructs missing GTFS shapes
+from active OpenStreetMap tracks downloaded through Overpass. It matches the
+ordered stops to connected OSM node topology, uses matching route relations to
+restrict corridors when available, and preserves supplied GTFS shapes. It never
+joins disconnected OSM components. Each failed pattern stays shapeless and is
+listed in the published `singapore-mrt-provenance.json`; the importer discloses
+stop-to-stop fallbacks. Publication fails if any visible patterns
+are still missing shapes, or if the shipped importer rejects the result.
+
+A bounded 32 MiB Singapore query runs at most once per ISO week in hourly Pages
+builds. The Actions cache records successful or failed refresh attempts with the
+week, avoiding repeated retries of an immutable cache key. An outage may reuse a
+snapshot under 30 days old; provenance reports its age and failed refresh.
+
+The downloadable shapes are attributed to OpenStreetMap contributors with an
+ODbL notice at `singapore-mrt-NOTICE.txt`. Original LTA data is retained. The
+editor deduplicates opposite directions and contiguous short-turn copies within
+each route, while retaining distinct branches and non-equivalent loops.
+
+OSM reconstruction considers nearby parallel tracks across the complete stop
+sequence, with a separate distance-bounded graph search for each candidate.
+Generated shape and stop distance markers keep loops on the correct pass.
+Short-turn route IDs with matching agency, line names, mode and color are
+deduplicated together; physical branches remain separate.

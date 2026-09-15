@@ -40,6 +40,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python3 -m unittest discover -s tests -p 'test_fantasy_map.py'
+      - run: python3 -m unittest discover -s tests -p 'test_osm_starter.py'
   map-client:
     name: Check map snapshot playback
     runs-on: ubuntu-latest
@@ -48,4 +49,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --test tests/test_map_client.cjs
+      - run: node --test tests/test_map_client.cjs tests/test_gtfs_reconstruction.mjs
+
+  singapore-osm:
+    name: Check actual Singapore OSM reconstruction
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read the public starter feed
+        run: curl --fail --location --max-time 90 --max-filesize 33554432 https://umiyuikaiteitan.github.io/Singapore-MRTracker/fantasy-map/singapore-mrt.zip --output feed.zip
+      - name: Reconstruct and check the actual network
+        run: |
+          python3 - <<'PYTHON'
+          import zipfile
+          with zipfile.ZipFile('feed.zip') as source, zipfile.ZipFile('unshaped.zip', 'w', zipfile.ZIP_DEFLATED) as output:
+              for entry in source.infolist():
+                  if entry.filename != 'shapes.txt':
+                      output.writestr(entry.filename, source.read(entry))
+          PYTHON
+          python3 scripts/prepare-singapore-starter.py unshaped.zip singapore-starter.zip
+          python3 -c 'import json; assert json.load(open("singapore-starter.json"))["reconstructed"] > 0'
+          node scripts/check-singapore-starter.mjs singapore-starter.zip

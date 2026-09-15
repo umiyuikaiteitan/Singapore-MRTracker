@@ -42,6 +42,58 @@ function stationFraction(point,path,cumulative,minT){
   }
   return best&&best.gap<=1000?best.t:null;
 }
+// Distance markers disambiguate repeated track on loops and return services.
+function distanceFraction(value, shape, cumulative, stop) {
+  if(value===null||!shape||shape.some(row=>row.distance===null))return null;
+  if(shape.some((row,i)=>row.distance<0||(i&&row.distance<shape[i-1].distance)))return null;
+  for(let i=1;i<shape.length;i++){
+    const a=shape[i-1].distance,b=shape[i].distance;
+    if(value>=a&&value<=b&&b>a){
+      const f=(value-a)/(b-a),from=shape[i-1].point,to=shape[i].point;
+      const projected=[from[0]+f*(to[0]-from[0]),from[1]+f*(to[1]-from[1])];
+      if(distance(stop,projected)>1000)return null;
+      return (cumulative[i-1]+f*(cumulative[i]-cumulative[i-1]))/cumulative.at(-1);
+    }
+  }
+  return null;
+}
+// Collapse directional and short-turn copies within a route, preserving branches.
+// Parent stations unify platform IDs. Closed loops allow exact cyclic rotation
+// and reversal. Repeated-station candidates are never removed by containment;
+// a simple short turn may be contained by a loop.
+function uniquePatterns(patterns, stops, shapes, routes) {
+  const routeKey = trip => {
+    const r=routes.get(trip.route_id);
+    // Some agencies assign route IDs to individual short turns of one line.
+    return r.route_short_name?.trim()||r.route_long_name?.trim()?JSON.stringify([r.agency_id||'',r.mode,(r.route_short_name||'').trim().toLowerCase(),(r.route_long_name||'').trim().toLowerCase(),(r.route_color||'').trim().toUpperCase()]):trip.route_id;
+  };
+  const physical = trip => trip.stops.map(call => stops.get(call.id)?.parent_station || call.id);
+  const candidates = [...patterns.values()].map(trip => ({trip, ids: physical(trip)}));
+  candidates.sort((a,b) => b.ids.length-a.ids.length
+    || Number(shapes.has(b.trip.shape_id))-Number(shapes.has(a.trip.shape_id))
+    || String(a.trip.trip_id).localeCompare(String(b.trip.trip_id)));
+  const retained=[];
+  for(const candidate of candidates){
+    const duplicate=retained.some(other=>{
+      if(routeKey(candidate.trip)!==routeKey(other.trip))return false;
+      const a=candidate.ids,b=other.ids;
+      if(a.length===b.length&&a.length>2&&a[0]===a.at(-1)&&b[0]===b.at(-1)){
+        const loop=a.slice(0,-1),otherLoop=b.slice(0,-1);
+        if([loop,[...loop].reverse()].some(ids=>otherLoop.some((_,start)=>ids.every((id,i)=>id===otherLoop[(start+i)%otherLoop.length]))))return true;
+      }
+      const repeated=ids=>new Set(ids).size!==ids.length;
+      if(a.length!==b.length&&repeated(a))return false;
+      const haystack=b.length>2&&b[0]===b.at(-1)&&a.length<b.length?[...b.slice(0,-1),...b.slice(0,-1)]:b;
+      return [a,[...a].reverse()].some(ids=>{
+        for(let start=0;start<=haystack.length-ids.length;start++)if(ids.every((id,i)=>id===haystack[start+i]))return true;
+        return false;
+      });
+    });
+    if(!duplicate)retained.push(candidate);
+  }
+  return retained.map(x=>x.trip);
+}
+
 export function buildGtfsNetwork(files) {
   const routes=new Map(),trips=new Map(),stops=new Map(),shapes=new Map();
   for(const row of table(files,'routes.txt',['route_id','route_type'])){const mode=railMode(row.route_type);if(mode)routes.set(row.route_id,{...row,mode});}
@@ -51,7 +103,7 @@ export function buildGtfsNetwork(files) {
   for(const row of table(files,'stop_times.txt',['trip_id','stop_id','stop_sequence'])){
     const trip=trips.get(row.trip_id);if(!trip)continue;
     const sequence=number(row.stop_sequence);if(sequence===null||!Number.isInteger(sequence)||sequence<0)throw new Error('Invalid stop_sequence');
-    trip.stops.push({id:row.stop_id,sequence});
+    trip.stops.push({id:row.stop_id,sequence,distance:number(row.shape_dist_traveled)});
   }
   const patterns=new Map();
   for(const trip of trips.values()){
@@ -59,35 +111,43 @@ export function buildGtfsNetwork(files) {
     const key=JSON.stringify([trip.route_id,trip.shape_id||'',trip.stops.map(s=>s.id)]);
     if(!patterns.has(key))patterns.set(key,trip);
   }
-  if(patterns.size>250)throw new Error('Feed has more than 250 rail patterns; use a smaller regional feed');
+  if(patterns.size>2500)throw new Error('Feed has more than 2,500 raw rail patterns; use a smaller regional feed');
   const neededShapes=new Set([...patterns.values()].map(x=>x.shape_id).filter(Boolean));
   if(files['shapes.txt'])for(const row of table(files,'shapes.txt',['shape_id','shape_pt_lat','shape_pt_lon','shape_pt_sequence'])){
     if(!neededShapes.has(row.shape_id))continue;
     const point=coordinate(row.shape_pt_lat,row.shape_pt_lon),sequence=number(row.shape_pt_sequence);
     if(!point||sequence===null||!Number.isInteger(sequence)||sequence<0)throw new Error('Invalid GTFS shape coordinate or sequence');
     if(!shapes.has(row.shape_id))shapes.set(row.shape_id,[]);
-    shapes.get(row.shape_id).push({point,sequence});
+    shapes.get(row.shape_id).push({point,sequence,distance:number(row.shape_dist_traveled)});
   }
+  const selected=uniquePatterns(patterns,stops,shapes,routes);
+  if(selected.length>250)throw new Error('Feed has more than 250 distinct rail patterns; use a smaller regional feed');
   const lines=[];let fallback=0,skipped=0,pointCount=0,stationCount=0;
-  for(const trip of patterns.values()){
+  for(const trip of selected){
     const route=routes.get(trip.route_id);
-    const calls=trip.stops.map(call=>{const stop=stops.get(call.id);const point=stop?.coordinate||stops.get(stop?.parent_station)?.coordinate;return point?{...stop,coordinate:point}:null;});
+    const calls=trip.stops.map(call=>{const stop=stops.get(call.id);const point=stop?.coordinate||stops.get(stop?.parent_station)?.coordinate;return point?{...stop,coordinate:point,shapeDistance:call.distance}:null;});
     if(calls.some(x=>!x)||calls.length<2){skipped++;continue;}
-    const shape=shapes.get(trip.shape_id);
-    let path=shape?[...shape].sort((a,b)=>a.sequence-b.sequence).map(x=>x.point):calls.map(x=>x.coordinate);
-    path=path.filter((p,i)=>i===0||p[0]!==path[i-1][0]||p[1]!==path[i-1][1]);
+    const shape=shapes.get(trip.shape_id)?.slice().sort((a,b)=>a.sequence-b.sequence);
+    let path=shape?shape.map(x=>x.point):calls.map(x=>x.coordinate);
+    // Preserve shape row indexes for distance-marker interpolation.
+    if(!shape)path=path.filter((p,i)=>i===0||p[0]!==path[i-1][0]||p[1]!==path[i-1][1]);
     if(path.length<2){skipped++;continue;}
     if(path.length>10000||(pointCount+=path.length)>100000)throw new Error('GTFS rail geometry is too large; use a smaller feed');
     if((stationCount+=calls.length)>10000)throw new Error('GTFS has more than 10,000 rail stops across patterns');
     if(!shape)fallback++;
     const cumulative=[0];for(let i=1;i<path.length;i++)cumulative.push(cumulative.at(-1)+distance(path[i-1],path[i]));
     const stations=[];let lastT=0;
-    for(const stop of calls){const t=stationFraction(stop.coordinate,path,cumulative,lastT);if(t===null)throw new Error('Stops do not follow the shape for route '+trip.route_id);stations.push({name:stop.stop_name,code:stop.stop_code||undefined,t});lastT=t;}
+    for(const stop of calls){
+      const located=distanceFraction(stop.shapeDistance,shape,cumulative,stop.coordinate);
+      const t=located??stationFraction(stop.coordinate,path,cumulative,lastT);
+      if(t===null||!Number.isFinite(t)||t+1e-8<lastT)throw new Error('Stops do not follow the shape for route '+trip.route_id);
+      stations.push({name:stop.stop_name,code:stop.stop_code||undefined,t});lastT=t;
+    }
     const suffix=trip.trip_headsign?' → '+trip.trip_headsign:'';
     lines.push({name:(route.route_short_name||route.route_long_name||route.route_id)+suffix,mode:route.mode,
       color:/^[0-9a-f]{6}$/i.test(route.route_color||'')?'#'+route.route_color:undefined,
       nodes:[path[0],path.at(-1)],segments:[{profile:'rail',guide:path}],stations});
   }
   if(!lines.length)throw new Error('No rail patterns with usable stops and geometry were found');
-  return {lines,fallback,skipped};
+  return {lines,fallback,skipped,duplicates:patterns.size-selected.length};
 }

@@ -397,3 +397,7 @@ server or provider key. An optional
 `OFM_API_BASE` Actions variable enables a separately hosted matching API.
 See [FANTASY-MAP.md](docs/FANTASY-MAP.md) for hosting on `umiyui.dev`, the
 snapshot update procedure, and the boundary between static and API features.
+
+The Singapore fantasy-map starter reconstructs missing track shapes from cached
+OSM rail topology and removes duplicate directions/short-turns on import.
+Coverage and attribution accompany the published starter ZIP.
