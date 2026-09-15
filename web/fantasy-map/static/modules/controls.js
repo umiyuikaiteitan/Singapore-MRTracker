@@ -113,7 +113,6 @@ cyclewayToggle.addEventListener("change", () => {
 });
 
 const overlayToggle = document.getElementById("overlay-toggle");
-overlayToggle.disabled = !apiEnabled;
 overlayToggle.addEventListener("change", () => {
   state.overlayEnabled = overlayToggle.checked;
   drawOverlay();

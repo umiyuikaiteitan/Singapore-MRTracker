@@ -43,11 +43,23 @@ timetables, and `/fantasy-map/` after the Pages deployment completes.
 ## What works without an API
 
 Drawing and editing lines/stations, branches and interlines, radius checks,
-browser-local save/restore, GeoJSON import/export, and project-only SVG
-export work in the static edition. External basemap tiles need network
-access. The page explicitly disables street/corridor matching and OSM
-overlays when no API is configured. Imported matched geometry is retained;
-editing it in static mode does not re-query the matching service.
+browser-local save/restore, GeoJSON import/export, and SVG export work in
+the static edition. The browser requests OSM features directly from
+`https://overpass-api.de/api/interpreter` and renders roads, railways,
+waterways, parks, and optional station overlays on a dark vector basemap.
+No tile provider, provider account, or API key is required. SVG exports
+include the OSM context when available and still export the project during
+an outage. Only street/corridor matching needs an application API.
+Imported matched geometry is retained; editing it in static mode does not
+re-query the matching service.
+
+The public Overpass service needs internet access. Queries are limited to
+city-scale viewports (zoom 12 or closer, at most 0.45° by 0.65°), with local
+streets from zoom 16. Panning is debounced, obsolete requests are cancelled,
+responses are bounded, and four viewports are cached for five minutes.
+Busy responses trigger a cooldown; a visible retry action handles failures.
+Area fills cover closed ways, not multipolygon relations. Attribution stays
+visible in the browser and SVG exports.
 
 Projects remain in browser storage. Export GeoJSON for a portable backup.
 A project saved on the github.io origin will not automatically appear on
@@ -72,7 +84,8 @@ uses `https://map-api.example.com/api/`. This is a public URL, not a secret;
 no API keys belong in it. Leave the variable unset for the static edition.
 
 The Pages build validates this URL, writes it to `static/config.js`, and
-the editor uses it for every matching/overlay/export request. CORS must
+the editor uses it for matching requests. Basemap, overlay, and SVG context
+requests go directly to Overpass. CORS must
 permit the frontend origin for JSON POST preflights. Existing same-origin
 OpenFantasyMap deployments keep working without this setting. Hosting
 provider credentials and DNS changes are outside the repository build.
