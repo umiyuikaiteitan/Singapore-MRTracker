@@ -489,6 +489,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "mrt-display"
+version = "0.1.0"
+dependencies = [
+ "mrt-gtfs",
+ "mrt-gtfs-rt",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "mrt-display-service"
+version = "0.1.0"
+dependencies = [
+ "mrt-datamall",
+ "mrt-display",
+ "mrt-gtfs",
+ "mrt-gtfs-rt",
+ "serde_json",
+ "tiny_http",
+]
+
+[[package]]
 name = "mrt-gtfs"
 version = "0.1.0"
 dependencies = [

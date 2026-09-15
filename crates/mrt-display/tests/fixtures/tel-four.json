@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "layout_id": "fixture-mini-v1",
+  "led_count": 4,
+  "pixels": [
+    {"index": 0, "station": "TE1", "line": "TEL", "x_mm": 20, "y_mm": 20},
+    {"index": 1, "station": "TE2", "line": "TEL", "x_mm": 50, "y_mm": 20},
+    {"index": 2, "station": "TE3", "line": "TEL", "x_mm": 80, "y_mm": 20},
+    {"index": 3, "station": "TE4", "line": "TEL", "x_mm": 110, "y_mm": 20}
+  ],
+  "board_station": "TE1"
+}

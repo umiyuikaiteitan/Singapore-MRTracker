@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420.0mm" height="298.0mm" viewBox="0 0 420.0 298.0">
+<title>LED back panel: 1:1 mm red cut; blue hole labels</title>
+<style>text {font-family: sans-serif}</style>
+<g fill="none" stroke="#ff0000" stroke-width="0.01">
+<rect x="0.05" y="0.05" width="419.9" height="297.9" rx="3"/>
+<circle cx="6" cy="6" r="1.65"/>
+<circle cx="414.0" cy="6" r="1.65"/>
+<circle cx="6" cy="292.0" r="1.65"/>
+<circle cx="414.0" cy="292.0" r="1.65"/>
+<circle cx="210.0" cy="6" r="1.65"/>
+<circle cx="210.0" cy="292.0" r="1.65"/>
+<circle cx="14" cy="28" r="1.65"/>
+<circle cx="406.0" cy="28" r="1.65"/>
+<circle cx="14" cy="276.0" r="1.65"/>
+<circle cx="406.0" cy="276.0" r="1.65"/>
+<circle cx="210.0" cy="28" r="1.65"/>
+<circle cx="210.0" cy="276.0" r="1.65"/>
+<circle cx="360.0" cy="283.0" r="6"/>
+</g>
+</svg>

@@ -1,0 +1,10 @@
+reference,quantity,part,specification,assembly_notes,source
+U1,1,ESP32 DevKit ESP32-WROOM-32,3.3V SPI and Wi-Fi,Separate controller from LED item; WROVER pins16/17 unavailable,
+EPD1,1,Waveshare7.5in V2 B/W800x480 panel WITH matching driver HAT,Glass170.2x111.2mm; active163.2x97.92mm,Do not wire raw FPC to ESP32; use matching driver,https://files.waveshare.com/upload/6/60/7.5inch_e-Paper_V2_Specification.pdf
+PSU1,1,External USB5V supply,1A minimum,Supply DevKit USB;3.3V rail supplies driverHAT,
+MECH1,1,Printed shell,188x136x28mm PETG,epaper-shell.stl,
+MECH2,1,Laser-cut or printed front bezel,188x136x3mm;164.2x99mm aperture,epaper-front-panel-cut.svg,
+MECH3,1,Printed universal electronics mount,90x48x2mm,Adhesive insulation and cable ties; no assumed board hole pattern,
+MECH4,4,M3x8 screw,Front to printed2.6mm pilot bosses,Do not overtighten,
+MECH5,1,Low-pressure foam mounting tape,Perimeter support,Align active area to aperture; protect FPC bend radius,
+WIRE,8,Female jumper lead,26AWG short SPI leads,Use HAT pad LABELS and pin table,

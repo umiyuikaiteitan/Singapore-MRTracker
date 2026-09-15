@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="188mm" height="136mm" viewBox="0 0 188 136">
+<title>Separate e-paper bezel: red cut, units mm</title>
+<style>text {font-family: sans-serif}</style>
+<g fill="none" stroke="#ff0000" stroke-width="0.01">
+<rect x="0.05" y="0.05" width="187.9" height="135.9"/>
+<rect x="11.9" y="18.5" width="164.2" height="99"/>
+<circle cx="5" cy="5" r="1.65"/>
+<circle cx="5" cy="131" r="1.65"/>
+<circle cx="183" cy="5" r="1.65"/>
+<circle cx="183" cy="131" r="1.65"/>
+</g>
+</svg>

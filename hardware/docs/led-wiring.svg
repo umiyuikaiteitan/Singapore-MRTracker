@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980">
+<title>Singapore MRT all-station LED PCB external wiring</title>
+<style>text{font-family:DejaVu Sans,sans-serif;fill:#152b3e}.title{font-size:30px;font-weight:bold}.head{font-size:22px;font-weight:bold}.txt{font-size:18px}.small{font-size:16px}.box{fill:#f2f6fa;stroke:#597185;stroke-width:2}.wire{fill:none;stroke-width:4}</style>
+<rect width="1400" height="980" fill="white"/>
+<text x="40" y="48" class="title">SINGAPORE MRT · 146-STATION LED PCB</text>
+<text x="40" y="78" class="txt">External wiring / prototype v1 · E-paper is a separate device</text>
+<rect x="40" y="120" width="300" height="165" rx="12" class="box"/>
+<text x="60" y="152" class="head">EXTERNAL SUPPLY</text>
+<text x="60" y="185" class="txt">Regulated isolated 5 V / ≥12 A</text>
+<text x="60" y="216" class="txt" style="font-size:17px">Enclosed low-voltage terminals</text>
+<text x="60" y="247" class="txt">+5 V and GND distribution</text>
+<path d="M340,175 H630" class="wire" stroke="#d92d3a"/>
+<text x="450" y="130" class="small">ten paired row feeds</text>
+<rect x="630" y="100" width="720" height="230" rx="12" class="box"/>
+<text x="655" y="135" class="head">REPEAT FOR EACH ROW r = 1…10</text>
+<path d="M630,175 H685 M760,175 H1050" class="wire" stroke="#d92d3a"/>
+<rect x="685" y="160" width="75" height="30" fill="white" stroke="#d92d3a" stroke-width="3"/>
+<text x="690" y="213" class="small">1.5 A fuse</text>
+<text x="780" y="155" class="small">22 AWG +5 V</text>
+<text x="1065" y="181" class="txt">J_PWRr pin 1</text>
+<path d="M970,175 V222 M950,222 H990 M950,232 H990 M970,232 V275" stroke="#446172" class="wire"/>
+<text x="985" y="240" class="small">1000 µF / ≥10 V</text>
+<text x="942" y="216" class="small">+</text>
+<path d="M340,247 H420 V275 H1050" stroke="#243d52" class="wire"/>
+<text x="655" y="262" class="small">22 AWG paired GND return</text>
+<text x="1065" y="282" class="txt">J_PWRr pin 2</text>
+<text x="655" y="313" class="small">Every return must connect. PCB ground link is a signal reference, not the trunk.</text>
+<rect x="40" y="385" width="300" height="190" rx="12" class="box"/>
+<text x="60" y="420" class="head" style="font-size:20px">ESP32-WROOM DevKit</text>
+<text x="60" y="454" class="txt">Separate 1 A fused 5 V branch</text>
+<text x="60" y="490" class="txt">GPIO13 → 3.3 V pixel data</text>
+<text x="60" y="526" class="txt">GND → common supply GND</text>
+<path d="M340,485 H450" stroke="#218779" class="wire"/>
+<rect x="450" y="375" width="460" height="220" rx="12" class="box"/>
+<text x="475" y="411" class="head">SN74AHCT125N · GATE 1</text>
+<text x="475" y="447" class="txt">Pin 14 +5 V · Pin 7 GND</text>
+<text x="475" y="483" class="txt">Pin 2 A ← GPIO13 · Pin 1 OE → GND</text>
+<text x="475" y="519" class="txt">Pin 3 Y → 5 V DATA</text>
+<text x="475" y="551" class="small">100 nF at 14/7 · 100 kΩ from pin 2 to GND</text>
+<text x="475" y="576" class="small">Pins 4/10/13 +5V · 5/9/12 GND · 6/8/11 NC</text>
+<path d="M910,515 H960 M1035,515 H1090" stroke="#218779" class="wire"/>
+<rect x="960" y="500" width="75" height="30" fill="white" stroke="#218779" stroke-width="3"/>
+<text x="965" y="488" class="small">330 Ω</text>
+<rect x="1090" y="415" width="260" height="180" rx="12" class="box"/>
+<text x="1110" y="450" class="head">J_DATA_IN</text>
+<text x="1110" y="490" class="txt">Pin 1: shifted DATA0</text>
+<text x="1110" y="525" class="txt">Pin 2: common GND</text>
+<text x="1110" y="563" class="small">Short data + ground pair</text>
+<rect x="40" y="640" width="1310" height="275" rx="12" class="box"/>
+<text x="65" y="680" class="head">ON THE CARRIER: P1 → P2 → … → P146</text>
+<text x="65" y="718" class="txt">Every socket: pin 1 = its row +5 V · pin 2 = DIN · pin 3 = GND · pin 4 = DOUT</text>
+<text x="65" y="756" class="txt">Wire each socket to one WS2812B/SK6812 RGB breakout using the module’s printed pad labels.</text>
+<text x="65" y="794" class="txt">DATA0 → LED000 → DATA1 → LED001 → … → LED145 → DATA146 → optional J_DATA_OUT.</text>
+<text x="65" y="832" class="txt">Sixteen pixels per row; final row has two. Positive rails are isolated by row; data continues across rows.</text>
+<text x="65" y="870" class="txt">Worst-case LEDs: 8.76 A at 5 V. Firmware’s default 1000 mA estimate is intentionally a dim whole-board limit.</text>
+<text x="40" y="956" class="small">Prototype: verify polarity, module orientation, fuse sizing, rail voltage and temperature on the first article. No mains circuitry inside the display.</text>
+</svg>

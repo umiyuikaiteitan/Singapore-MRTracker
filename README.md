@@ -42,6 +42,8 @@ own.
 | `crates/mrt-publication-html` | Render those view models as self-contained HTML and standalone SVG. |
 | `crates/mrt-schedule-cli` | The generator: fetch, cache, build, and write timetables and diagrams. |
 | `crates/mrt-schedule-site` | Generate a browsable static site of timetables and diagrams for GitHub Pages. |
+| `crates/mrt-display` | Project station departures into versioned LED/e-ink frames with explicit freshness and provenance. |
+| `crates/mrt-display-service` | Serve physical displays on a LAN and keep the DataMall key on the host. |
 
 Other important paths:
 
@@ -160,6 +162,32 @@ See `docs/DEPLOY-PAGES.md` for the GitHub Pages workflow:
 
 ```sh
 cargo run --release -p mrt-board-static -- site data/gtfs_schedule.zip
+```
+
+### Build a physical LED network board or a separate e-ink display
+
+The [physical display guide](docs/PHYSICAL-DISPLAYS.md) connects the data
+source to two independent ESP32 devices:
+
+- A full-network PCB with one RGB LED for each of **146 operating MRT
+  stations**, including interchanges and the July 2026 Circle Line extension.
+- A standalone 7.5-inch e-ink departure board for a chosen station.
+
+[Hardware sources](hardware/README.md) include the routed PCB, Gerbers,
+drills, BOM, assembly artwork, and separate enclosure designs.
+[Firmware](firmware/README.md) has separate `led` and `epaper` builds.
+This is an unbuilt prototype; the fabrication notes identify the remaining
+bench and manufacturer checks.
+
+The LEDs indicate upcoming station departures, **not measured train
+positions**. Fresh predictions, approximate schedules, and stale data are
+distinguished throughout the pipeline. Try the adapter without credentials:
+
+```sh
+cargo run -p mrt-display-service -- \
+  --feed crates/mrt-gtfs/tests/fixtures/mini \
+  --layout crates/mrt-display/tests/fixtures/tel-four.json \
+  --offline --snapshot --at 1786312740
 ```
 
 ### Run the map UI
@@ -368,7 +396,7 @@ The library is the base for these planned applications:
   is still open, and it needs a DataMall account key to verify the feed
   against.
 - Station destination boards (draft in `crates/mrt-board-web`).
-- Physical LED panel drivers.
+- Bench validation of the physical LED PCB and standalone e-ink driver.
 - Ports of the core model to other languages.
 - A live overlay on the train diagram: scheduled against actual,
   from the GTFS-Realtime trip updates. The interface is written down

@@ -1,0 +1,1231 @@
+{
+  "schema_version": 1,
+  "layout_id": "singapore-mrt-v1",
+  "led_count": 146,
+  "board_station": "NS1",
+  "pixels": [
+    {
+      "index": 0,
+      "station": "NS1",
+      "station_aliases": [
+        "EW24"
+      ],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 1,
+      "station": "NS2",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 2,
+      "station": "NS3",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 3,
+      "station": "NS4",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 4,
+      "station": "NS5",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 5,
+      "station": "NS7",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 6,
+      "station": "NS8",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 7,
+      "station": "NS9",
+      "station_aliases": [
+        "TE2"
+      ],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 8,
+      "station": "NS10",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 9,
+      "station": "NS11",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 10,
+      "station": "NS12",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 11,
+      "station": "NS13",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 12,
+      "station": "NS14",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 13,
+      "station": "NS15",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 14,
+      "station": "NS16",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 15,
+      "station": "NS17",
+      "station_aliases": [
+        "CC15"
+      ],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 20.0
+    },
+    {
+      "index": 16,
+      "station": "NS18",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 17,
+      "station": "NS19",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 18,
+      "station": "NS20",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 19,
+      "station": "NS21",
+      "station_aliases": [
+        "DT11"
+      ],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 20,
+      "station": "NS22",
+      "station_aliases": [
+        "TE14"
+      ],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 21,
+      "station": "NS23",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 22,
+      "station": "NS24",
+      "station_aliases": [
+        "NE6",
+        "CC1"
+      ],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 23,
+      "station": "NS25",
+      "station_aliases": [
+        "EW13"
+      ],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 24,
+      "station": "NS26",
+      "station_aliases": [
+        "EW14"
+      ],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 25,
+      "station": "NS27",
+      "station_aliases": [
+        "CC33",
+        "TE20",
+        "CE2"
+      ],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 26,
+      "station": "NS28",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 27,
+      "station": "EW1",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 28,
+      "station": "EW2",
+      "station_aliases": [
+        "DT32"
+      ],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 29,
+      "station": "EW3",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 30,
+      "station": "EW4",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 31,
+      "station": "EW5",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 44.0
+    },
+    {
+      "index": 32,
+      "station": "EW6",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 33,
+      "station": "EW7",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 34,
+      "station": "EW8",
+      "station_aliases": [
+        "CC9"
+      ],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 35,
+      "station": "EW9",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 36,
+      "station": "EW10",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 37,
+      "station": "EW11",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 38,
+      "station": "EW12",
+      "station_aliases": [
+        "DT14"
+      ],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 39,
+      "station": "EW15",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 40,
+      "station": "EW16",
+      "station_aliases": [
+        "NE3",
+        "TE17"
+      ],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 41,
+      "station": "EW17",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 42,
+      "station": "EW18",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 43,
+      "station": "EW19",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 44,
+      "station": "EW20",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 45,
+      "station": "EW21",
+      "station_aliases": [
+        "CC22"
+      ],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 46,
+      "station": "EW22",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 47,
+      "station": "EW23",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 68.0
+    },
+    {
+      "index": 48,
+      "station": "EW25",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 49,
+      "station": "EW26",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 50,
+      "station": "EW27",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 51,
+      "station": "EW28",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 52,
+      "station": "EW29",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 53,
+      "station": "EW30",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 54,
+      "station": "EW31",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 55,
+      "station": "EW32",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 56,
+      "station": "EW33",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 57,
+      "station": "CG1",
+      "station_aliases": [
+        "DT35"
+      ],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 58,
+      "station": "CG2",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 59,
+      "station": "NE1",
+      "station_aliases": [
+        "CC29"
+      ],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 60,
+      "station": "NE4",
+      "station_aliases": [
+        "DT19"
+      ],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 61,
+      "station": "NE5",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 62,
+      "station": "NE7",
+      "station_aliases": [
+        "DT12"
+      ],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 63,
+      "station": "NE8",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 92.0
+    },
+    {
+      "index": 64,
+      "station": "NE9",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 65,
+      "station": "NE10",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 66,
+      "station": "NE11",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 67,
+      "station": "NE12",
+      "station_aliases": [
+        "CC13"
+      ],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 68,
+      "station": "NE13",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 69,
+      "station": "NE14",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 70,
+      "station": "NE15",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 71,
+      "station": "NE16",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 72,
+      "station": "NE17",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 73,
+      "station": "NE18",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 74,
+      "station": "CC2",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 75,
+      "station": "CC3",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 76,
+      "station": "CC4",
+      "station_aliases": [
+        "DT15"
+      ],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 77,
+      "station": "CC5",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 78,
+      "station": "CC6",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 79,
+      "station": "CC7",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 116.0
+    },
+    {
+      "index": 80,
+      "station": "CC8",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 81,
+      "station": "CC10",
+      "station_aliases": [
+        "DT26"
+      ],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 82,
+      "station": "CC11",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 83,
+      "station": "CC12",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 84,
+      "station": "CC14",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 85,
+      "station": "CC16",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 86,
+      "station": "CC17",
+      "station_aliases": [
+        "TE9"
+      ],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 87,
+      "station": "CC19",
+      "station_aliases": [
+        "DT9"
+      ],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 88,
+      "station": "CC20",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 89,
+      "station": "CC21",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 90,
+      "station": "CC23",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 91,
+      "station": "CC24",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 92,
+      "station": "CC25",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 93,
+      "station": "CC26",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 94,
+      "station": "CC27",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 95,
+      "station": "CC28",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 140.0
+    },
+    {
+      "index": 96,
+      "station": "CC30",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 97,
+      "station": "CC31",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 98,
+      "station": "CC32",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 99,
+      "station": "CC34",
+      "station_aliases": [
+        "DT16",
+        "CE1"
+      ],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 100,
+      "station": "DT1",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 101,
+      "station": "DT2",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 102,
+      "station": "DT3",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 103,
+      "station": "DT4",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 104,
+      "station": "DT5",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 105,
+      "station": "DT6",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 106,
+      "station": "DT7",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 107,
+      "station": "DT8",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 108,
+      "station": "DT10",
+      "station_aliases": [
+        "TE11"
+      ],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 109,
+      "station": "DT13",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 110,
+      "station": "DT17",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 111,
+      "station": "DT18",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 164.0
+    },
+    {
+      "index": 112,
+      "station": "DT20",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 113,
+      "station": "DT21",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 114,
+      "station": "DT22",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 115,
+      "station": "DT23",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 116,
+      "station": "DT24",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 117,
+      "station": "DT25",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 118,
+      "station": "DT27",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 119,
+      "station": "DT28",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 120,
+      "station": "DT29",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 121,
+      "station": "DT30",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 122,
+      "station": "DT31",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 123,
+      "station": "DT33",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 124,
+      "station": "DT34",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 125,
+      "station": "TE1",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 126,
+      "station": "TE3",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 127,
+      "station": "TE4",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 188.0
+    },
+    {
+      "index": 128,
+      "station": "TE5",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 20.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 129,
+      "station": "TE6",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 44.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 130,
+      "station": "TE7",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 68.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 131,
+      "station": "TE8",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 92.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 132,
+      "station": "TE12",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 116.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 133,
+      "station": "TE13",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 140.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 134,
+      "station": "TE15",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 164.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 135,
+      "station": "TE16",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 188.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 136,
+      "station": "TE18",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 212.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 137,
+      "station": "TE19",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 236.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 138,
+      "station": "TE22",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 260.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 139,
+      "station": "TE23",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 284.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 140,
+      "station": "TE24",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 308.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 141,
+      "station": "TE25",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 332.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 142,
+      "station": "TE26",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 143,
+      "station": "TE27",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 212.0
+    },
+    {
+      "index": 144,
+      "station": "TE28",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 380.0,
+      "y_mm": 236.0
+    },
+    {
+      "index": 145,
+      "station": "TE29",
+      "station_aliases": [],
+      "line": null,
+      "x_mm": 356.0,
+      "y_mm": 236.0
+    }
+  ]
+}

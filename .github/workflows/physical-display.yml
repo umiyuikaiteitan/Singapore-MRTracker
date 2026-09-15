@@ -1,0 +1,50 @@
+name: Physical display
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - 'firmware/**'
+      - 'hardware/**'
+      - '.github/workflows/physical-display.yml'
+  pull_request:
+    paths:
+      - 'firmware/**'
+      - 'hardware/**'
+      - '.github/workflows/physical-display.yml'
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install platformio==6.1.18
+      - name: Test expiry, replay and current limits
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -Ifirmware/include firmware/test/policy_test.cpp -o /tmp/mrt-policy-test
+          /tmp/mrt-policy-test
+      - name: Compile both independent devices
+        run: pio run -d firmware -e led -e epaper
+      - name: Test the production frame decoder
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -Ifirmware/include -Ifirmware/.pio/libdeps/led/ArduinoJson/src firmware/test/parser_test.cpp -o /tmp/mrt-parser-test
+          /tmp/mrt-parser-test
+
+  fabrication:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Regenerate fabrication sources
+        run: python hardware/scripts/generate.py
+      - name: Validate connectivity, clearances and station coverage
+        run: python hardware/scripts/validate.py
+      - name: Validate panel registration and printable meshes
+        run: python hardware/scripts/validate_mechanical.py
+      - name: Check tracked outputs are reproducible
+        run: git diff --exit-code -- hardware

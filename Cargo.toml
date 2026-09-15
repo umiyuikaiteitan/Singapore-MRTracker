@@ -13,6 +13,8 @@ members = [
     "crates/mrt-publication-html",
     "crates/mrt-schedule-cli",
     "crates/mrt-schedule-site",
+    "crates/mrt-display",
+    "crates/mrt-display-service",
 ]
 
 [workspace.package]

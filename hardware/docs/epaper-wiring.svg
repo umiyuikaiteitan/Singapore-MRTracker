@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="810" viewBox="0 0 1200 810">
+<title>Independent Waveshare 7.5 inch V2 e-paper device wiring</title>
+<style>text{font-family:DejaVu Sans,sans-serif;fill:#152b3e}.title{font-size:30px;font-weight:bold}.head{font-size:24px;font-weight:bold}.txt{font-size:20px}.small{font-size:18px}</style>
+<rect width="1200" height="810" fill="white"/>
+<text x="40" y="48" class="title">INDEPENDENT E-PAPER DEPARTURE BOARD</text>
+<text x="40" y="83" class="txt">Separate ESP32, separate USB supply, separate case · No connection to the LED PCB</text>
+<rect x="40" y="130" width="310" height="480" rx="12" fill="#f2f6fa" stroke="#597185" stroke-width="2"/>
+<rect x="780" y="130" width="380" height="480" rx="12" fill="#f2f6fa" stroke="#597185" stroke-width="2"/>
+<text x="65" y="169" class="head">ESP32-WROOM-32</text>
+<text x="65" y="206" class="txt">DevKit · 5 V USB / ≥1 A</text>
+<text x="805" y="169" class="head">WAVESHARE DRIVER HAT</text>
+<text x="805" y="206" class="txt">Matched to 7.5 inch V2 B/W</text>
+<text x="65" y="261" class="txt">3V3</text><path d="M320,254 H810" fill="none" stroke="#d92d3a" stroke-width="3"/><text x="835" y="261" class="txt">VCC</text><text x="65" y="305" class="txt">GND</text><path d="M320,298 H810" fill="none" stroke="#243d52" stroke-width="3"/><text x="835" y="305" class="txt">GND</text><text x="65" y="349" class="txt">GPIO23</text><path d="M320,342 H810" fill="none" stroke="#168473" stroke-width="3"/><text x="835" y="349" class="txt">DIN (MOSI)</text><text x="65" y="393" class="txt">GPIO18</text><path d="M320,386 H810" fill="none" stroke="#168473" stroke-width="3"/><text x="835" y="393" class="txt">CLK (SCK)</text><text x="65" y="437" class="txt">GPIO5</text><path d="M320,430 H810" fill="none" stroke="#8e5c9b" stroke-width="3"/><text x="835" y="437" class="txt">CS</text><text x="65" y="481" class="txt">GPIO17</text><path d="M320,474 H810" fill="none" stroke="#8e5c9b" stroke-width="3"/><text x="835" y="481" class="txt">DC</text><text x="65" y="525" class="txt">GPIO16</text><path d="M320,518 H810" fill="none" stroke="#8e5c9b" stroke-width="3"/><text x="835" y="525" class="txt">RST</text><text x="65" y="569" class="txt">GPIO4</text><path d="M320,562 H810" fill="none" stroke="#be731c" stroke-width="3"/><text x="835" y="569" class="txt">BUSY (input)</text><text x="40" y="655" class="txt">HAT → supplied FPC → 800 × 480 black/white glass. Never connect bare panel FPC directly to GPIO.</text>
+<text x="40" y="691" class="txt">Use 3.3 V-compatible HAT supply and logic; verify the purchased revision. No MISO wire.</text>
+<text x="40" y="727" class="txt">GPIO16/17 require a WROOM DevKit without PSRAM occupying these pins. Check a cold boot with GPIO5.</text>
+<text x="40" y="773" class="small">188 × 136 mm separate enclosure · 164.2 × 99 mm front aperture · Align the active area; support only the glass perimeter.</text>
+</svg>

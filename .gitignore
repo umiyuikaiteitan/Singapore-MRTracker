@@ -20,3 +20,7 @@ secrets/
 .idea/
 .vscode/
 *.swp
+
+# Python fabrication tooling.
+__pycache__/
+*.pyc

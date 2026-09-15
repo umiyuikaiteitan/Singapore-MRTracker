@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Singapore MRT · Physical display monitor</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101915;color:#e8f0e7;font:15px system-ui,sans-serif}main{max-width:1300px;margin:auto;padding:40px 30px}header{display:flex;justify-content:space-between;align-items:start;gap:30px}h1{font-size:32px;font-weight:550;margin:8px 0}p{color:#a9bbae;line-height:1.6}.eyebrow{font-size:11px;letter-spacing:2px;color:#b2d784}#status{padding:10px 15px;border:1px solid #536752;border-radius:30px;white-space:nowrap}nav{display:flex;gap:8px;margin:30px 0 20px}button{background:transparent;color:inherit;border:1px solid #536752;padding:12px 20px;border-radius:8px;cursor:pointer}button[aria-selected=true]{background:#b2d784;color:#102015;border-color:#b2d784}.surface{border:1px solid #3b4b3c;border-radius:14px;padding:24px;min-height:350px;background:#16271d}#map{width:100%;height:auto;max-height:750px}.hint{font-size:13px}#paper{background:#f4f1e5;color:#101010;max-width:900px;margin:auto;border:12px solid #242a27;border-radius:5px;padding:32px;min-height:490px}#paper h2{font:600 33px system-ui;margin:5px 0 20px}table{width:100%;border-collapse:collapse;font-size:21px}td{padding:13px 3px;border-bottom:1px solid #777}td:last-child{text-align:right;font-weight:700}.provenance{font-size:12px;font-weight:400}#notice{border-top:3px solid #111;padding-top:15px;margin-top:25px;font-size:15px}#paper p{color:#444}footer{display:flex;justify-content:space-between;gap:20px;margin-top:20px;color:#a9bbae;font-size:12px}[hidden]{display:none!important}@media(max-width:600px){main{padding:25px 14px}header{display:block}h1{font-size:26px}#status{display:inline-block}#paper{padding:15px}table{font-size:16px}}
+</style>
+<main>
+<header><div><div class="eyebrow">SINGAPORE MRTRACKER / DEVICE MONITOR</div><h1>Two displays. One honest data source.</h1><p>LEDs show upcoming departures at stations. They do not locate trains.</p></div><div id="status">Connecting</div></header>
+<nav aria-label="Display"><button id="led-tab" aria-selected="true">LED network PCB</button><button id="ink-tab" aria-selected="false">E-ink departure board</button></nav>
+<section id="led" class="surface"><svg id="map" role="img" aria-label="Station activity LED preview"></svg><p class="hint">Color follows the next departure’s line. Brightness encodes how soon it departs. Stale and unavailable frames turn the LEDs off.</p></section>
+<section id="ink" class="surface" hidden><div id="paper"><div class="eyebrow" style="color:#222">SINGAPORE MRT / DEPARTURES</div><h2 id="station">Waiting for data</h2><table><tbody id="rows"></tbody></table><div id="notice">No frame received.</div><p id="paper-time"></p></div><p class="hint">Separate e-ink device. This is a data preview; the physical panel refreshes less frequently.</p></section>
+<footer><span id="layout">Loading layout</span><span id="updated">No frame received</span></footer>
+</main>
+<script>
+'use strict';
+let layout,frame,lastFrame;const ns='http://www.w3.org/2000/svg';
+const el=id=>document.getElementById(id);
+for(const name of ['led','ink'])el(name+'-tab').onclick=()=>{for(const n of ['led','ink']){el(n).hidden=n!==name;el(n+'-tab').setAttribute('aria-selected',String(n===name));}};
+function node(tag,attrs,text){const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;return n;}
+function draw(){
+ if(!layout)return;const svg=el('map');svg.replaceChildren();
+ const maxX=Math.max(...layout.pixels.map(p=>p.x_mm))+15,maxY=Math.max(...layout.pixels.map(p=>p.y_mm))+20;
+ svg.setAttribute('viewBox',`0 0 ${maxX} ${maxY}`);
+ const fresh=frame&&Date.now()/1000<frame.valid_until;const lit=fresh&&!['stale','unavailable'].includes(frame.source_state);
+ const colors=new Map((lit?frame.pixels:[]).map(p=>[p.index,`rgb(${p.r},${p.g},${p.b})`]));
+ for(const p of layout.pixels){const color=colors.get(p.index)||'#233b2b';svg.append(node('circle',{cx:p.x_mm,cy:p.y_mm,r:2.9,fill:color,stroke:'#a9bbae','stroke-width':.3}));svg.append(node('text',{x:p.x_mm,y:p.y_mm+7,'text-anchor':'middle',fill:'#d8e4d7','font-size':3.4},p.station));}
+ el('status').textContent=!fresh?'Offline / frame expired':frame.source_state.toUpperCase();
+ if(!fresh&&lastFrame){el('notice').textContent='OFFLINE — frame expired. Previous departures are no longer current.';el('rows').replaceChildren();}
+}
+async function refresh(){try{
+ if(!layout){const r=await fetch('/v1/layout',{cache:'no-store'});if(!r.ok)throw Error('layout');layout=await r.json();el('layout').textContent=`${layout.layout_id} · ${layout.led_count} station LEDs`;}
+ const r=await fetch('/v1/frame',{cache:'no-store'});if(!r.ok)throw Error('frame');frame=await r.json();
+ if(frame.schema_version!==1||frame.layout_id!==layout.layout_id)throw Error('incompatible frame');
+ lastFrame=frame;el('station').textContent=frame.board.station_name;el('rows').replaceChildren();
+ for(const row of frame.board.rows){const tr=document.createElement('tr');for(const value of [row.line,row.destination,`${row.approximate?'~':''}${row.minutes} min`]){const td=document.createElement('td');td.textContent=value;tr.append(td);}const badge=document.createElement('div');badge.className='provenance';badge.textContent=row.realtime?'Predicted':'Scheduled';tr.lastChild.append(badge);el('rows').append(tr);}
+ el('notice').textContent=frame.board.notice;
+ const stamp=new Date(frame.generated_at*1000).toLocaleString('en-SG',{timeZone:'Asia/Singapore',hour12:false});el('updated').textContent='Frame '+stamp+' SGT';el('paper-time').textContent='As of '+stamp+' SGT';draw();
+ }catch{el('status').textContent='Connection unavailable';frame=null;draw();}}
+refresh();setInterval(refresh,15000);setInterval(draw,1000);
+</script>
+</html>

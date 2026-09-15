@@ -1,0 +1,22 @@
+reference,quantity,part,specification,assembly_notes,source
+PCB1,1,Singapore MRT v1 passive LED carrier,400x256mm; FR4 1.6mm; 2 layers; 2oz copper,Generated CAM; all146 station modules mount over this carrier,
+P1-P146,146,1x4 2.54mm female header OR soldered pigtail,1mm finished hole; 1.8mm pad,Pin1 row+5V;2 DIN;3 GND;4 DOUT,
+J_PWR1-J_PWR10,10,2-position screw terminal 5.08mm pitch,1.3mm hole; >=3A/contact; <=10mm body width,Upper pin+5V; lowerGND; separate fused feed per row,
+"J_DATA_IN,J_DATA_OUT",2,1x2 2.54mm header,1mm hole,Pin1 DATA; pin2 GND; output optional,
+LED000-LED145,146,Adafruit NeoPixel Mini Button PCB1612 or compatible RGB module,9.1x9.1mm nominal; 800kHz GRB; WS2812B/SK6812 RGB,30 packs of5; solder to MODULE PAD LABELS; notRGBW,https://www.adafruit.com/product/1612
+U1,1,ESP32 DevKit with ESP32-WROOM-32,External controller; GPIO13 LED,3.3V IO; mount on insulated bracket in rear space,
+U2,1,Texas Instruments SN74AHCT125N,PDIP14; external perfboard; 5V,1OE pin1GND;1A pin2GPIO13;1Y pin3output,https://www.ti.com/product/SN74AHCT125
+R1,1,330ohm series resistor,0.25W; external close to first pixel,U2pin3 to J_DATA_INpin1,
+R2,1,100kilohm pulldown,0.25W; external,U2pin2 toGND,
+C1-C10,10,1000uF electrolytic,10V minimum; external across each J_PWR,Observe polarity; close to connector,
+C11,1,100nF ceramic,X7R16V; external,Across U2pins14and7; short leads,
+F1-F10,10,Inline fuse and holder,1.5A DC rated,"One per row +5V wire, close to distribution block",
+F11,1,Controller branch fuse,1A DC rated,ESP32 USB/power branch separate from LED rows,
+PSU1,1,Regulated isolated external 5V supply,12A continuous minimum with enclosed low-voltage distribution,MaximumLED estimate8.76A; no mains wiring inside display,
+DIST1,1,Insulated power distribution block,12A minimum; one+5V and oneGND bank,"Ten paired row feeds; main16AWG, row22AWG",
+MECH1,1,Opaque front and back sheet set,420x298x3mm; acrylic or plywood,Cut SVG paths; print separate station overlay,
+MECH2,6,Printed 34mm panel spacers,M3 through-hole; 10mm outside diameter,M3x45 bolts and nuts through both panels,
+MECH3,146,Printed pixel cups,10.2mm pocket; 12.6mm outside,Trial fit module first; foam tape to front rear,
+MECH4,6,M3 standoffs for carrier,12mm female-female metal or printed equivalent,SixPCB mountingholes; M3x8 screws,
+MECH5,1,Diffuser film / opaque adhesive overlay,Cut locally,Use led-front-artwork.svg printed at100percent,
+WIRE,1,Insulated wire and strain relief,16AWG trunk;22AWG row power;26AWG data/pixels,All grounds paired and connected; short data pigtails,

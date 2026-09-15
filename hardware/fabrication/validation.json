@@ -1,0 +1,34 @@
+{
+  "result": "PASS",
+  "stations": 146,
+  "rows": 10,
+  "pcb_mm": [
+    400.0,
+    256.0
+  ],
+  "pads": 608,
+  "tracks": 776,
+  "connected_nets": 158,
+  "clearance_rule_mm": 0.25,
+  "checks": [
+    "inventory alias coverage",
+    "contiguous pixels",
+    "pad annular rings",
+    "copper-to-edge",
+    "copper-to-mounting-hole",
+    "same-layer copper clearance",
+    "all net connectivity",
+    "pixel daisy-chain pinout",
+    "deterministic KiCad/Gerber/drill parity",
+    "Gerber pad flashes",
+    "fabrication ZIP parity"
+  ],
+  "not_verified": [
+    "KiCad parser/ERC/DRC (kicad-cli unavailable)",
+    "manufacturer CAM acceptance",
+    "physical assembly/fit",
+    "power/thermal measurements",
+    "signal integrity"
+  ],
+  "errors": []
+}

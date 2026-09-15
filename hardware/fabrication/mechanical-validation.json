@@ -1,0 +1,75 @@
+{
+  "result": "PASS",
+  "led_apertures": 146,
+  "pcb_mounting_holes": 6,
+  "front_back_registration": true,
+  "epaper_boss_registration": true,
+  "meshes": [
+    {
+      "file": "mechanical/led-spacers-and-cups.stl",
+      "triangles": 6144,
+      "closed_edges": true,
+      "min_mm": [
+        -6.3,
+        -5.0,
+        0.0
+      ],
+      "max_mm": [
+        118.3,
+        46.3,
+        34.0
+      ]
+    },
+    {
+      "file": "mechanical/epaper-shell.stl",
+      "triangles": 1308,
+      "closed_edges": true,
+      "min_mm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_mm": [
+        188.0,
+        136.0,
+        28.0
+      ]
+    },
+    {
+      "file": "mechanical/epaper-front.stl",
+      "triangles": 816,
+      "closed_edges": true,
+      "min_mm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_mm": [
+        188.0,
+        136.0,
+        3.0
+      ]
+    },
+    {
+      "file": "mechanical/epaper-electronics-mount.stl",
+      "triangles": 484,
+      "closed_edges": true,
+      "min_mm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_mm": [
+        90.0,
+        48.0,
+        2.0
+      ]
+    }
+  ],
+  "not_verified": [
+    "Physical fit",
+    "printer shrinkage",
+    "laser kerf",
+    "purchased component tolerances"
+  ]
+}

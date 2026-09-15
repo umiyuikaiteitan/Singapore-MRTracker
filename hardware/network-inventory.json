@@ -1,0 +1,1874 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-09-15",
+  "scope": "Unique passenger MRT stations in the latest verified LTA operating network; excludes LRT and stations without a confirmed passenger opening.",
+  "station_count": 146,
+  "current_station_code_count": 174,
+  "accepted_station_code_count": 176,
+  "ordering": "First encounter in NSL, EWL, NEL, CCL, DTL, TEL code order; array position is stable for this hardware revision. Interchanges occur once.",
+  "sources": [
+    {
+      "id": "lta-system-map-2026-07-21",
+      "title": "LTA System Map 2026, SM-26-01-EN, revision 21 July 2026",
+      "url": "https://www.lta.gov.sg/content/dam/ltagov/getting_around/public_transport/rail_network/pdf/SM_EN_%28Ver210726%29_CCL6.pdf",
+      "accessed": "2026-09-15",
+      "sha256": "ef985c8df9c8adea0c25119336a1974ed167b092e78fb1497ab91523f4f376e4"
+    },
+    {
+      "id": "lta-ccl6-opening",
+      "title": "Circle Line Stage 6 to Open for Public Preview on 4 July 2026",
+      "url": "https://www.lta.gov.sg/content/ltagov/en/newsroom/2026/5/news-releases/circle-line-stage-6-to-open-for-public-preview-on-4-july-2026.html",
+      "published": "2026-05-14",
+      "accessed": "2026-09-15"
+    },
+    {
+      "id": "lta-hume-opening",
+      "title": "Hume Station to Open on 28 February 2025",
+      "url": "https://www.lta.gov.sg/content/ltagov/en/newsroom/2025/1/news-releases/hume_station_to_open.html",
+      "published": "2025-01-24",
+      "accessed": "2026-09-15"
+    },
+    {
+      "id": "lta-punggol-coast-opening",
+      "title": "Factsheet: Punggol Coast Station Welcomes Commuters from 10 December 2024",
+      "url": "https://www.lta.gov.sg/content/ltagov/en/newsroom/2024/12/news-releases/punggol_coast_station_welcomes_commuters.html",
+      "published": "2024-12-10",
+      "accessed": "2026-09-15"
+    },
+    {
+      "id": "lta-tel-project",
+      "title": "Thomson-East Coast Line",
+      "url": "https://www.lta.gov.sg/content/ltagov/en/upcoming_projects/rail_expansion/thomson_east_coast_line.html",
+      "accessed": "2026-09-15"
+    },
+    {
+      "id": "lta-dtl-extension",
+      "title": "Downtown Line 2 & 3 Extensions",
+      "url": "https://www.lta.gov.sg/content/ltagov/en/upcoming_projects/rail_expansion/downtown_line_2_and_3_extensions.html",
+      "accessed": "2026-09-15"
+    },
+    {
+      "id": "lta-tel-dtl-integration",
+      "title": "Train Service Adjustments along Thomson-East Coast Line and Downtown Line to Facilitate Rail Expansion Works",
+      "url": "https://www.lta.gov.sg/content/ltagov/en/newsroom/2026/4/news-releases/train-service-adjustments-tel-and-dtl-to-facilitate-rail-expansion-works.html",
+      "published": "2026-04-28",
+      "accessed": "2026-09-15"
+    },
+    {
+      "id": "lta-dtl-map-2025",
+      "title": "LTA System Map of Downtown Line, Hume opening Annex A",
+      "url": "https://www.lta.gov.sg/content/dam/ltagov/news/press/2025/250124_DTL_system_map_AnnexA.pdf",
+      "published": "2025-01-24",
+      "accessed": "2026-09-15"
+    }
+  ],
+  "caveats": [
+    "The verified July 2026 LTA map includes the three CCL6 stations; LTA announced passenger opening on 2026-07-12.",
+    "TEL5 and DTL3e are marked under construction on that map. No precise passenger opening date was located in the primary sources checked on 2026-09-15. TE30, TE31, DT36 and DT37 remain explicitly excluded pending confirmation; the as_of field is the review date, not a claim of continuously verified service status.",
+    "CE2 and CE1 are accepted legacy aliases for CC33 Marina Bay and CC34 Bayfront respectively. They do not add physical stations or line memberships.",
+    "MRT interchanges share one physical LED. Nearby stations that require leaving the paid area remain separate unless LTA designates them as one named interchange; Newton, Tampines and Bukit Panjang follow the official interchange grouping.",
+    "LRT codes and stops are outside this MRT-only inventory, including LRT aliases at Choa Chu Kang, Bukit Panjang, Sengkang and Punggol.",
+    "No geographic coordinates are claimed. line_paths encodes schematic adjacency, not train service patterns, operational routing, journey times or track geometry."
+  ],
+  "excluded_stations": [
+    {
+      "codes": [
+        "NS6"
+      ],
+      "name": "Sungei Kadut",
+      "reason": "Future NSL interchange; not in operating map."
+    },
+    {
+      "codes": [
+        "NE2"
+      ],
+      "name": null,
+      "reason": "Reserved/unopened code; not in operating map."
+    },
+    {
+      "codes": [
+        "CC18"
+      ],
+      "name": "Bukit Brown",
+      "reason": "Unopened station; not in operating map."
+    },
+    {
+      "codes": [
+        "TE10"
+      ],
+      "name": "Mount Pleasant",
+      "reason": "LTA states opening will follow surrounding developments; date to be advised."
+    },
+    {
+      "codes": [
+        "TE21"
+      ],
+      "name": "Marina South",
+      "reason": "LTA states opening will follow surrounding developments; date to be advised."
+    },
+    {
+      "codes": [
+        "TE22A"
+      ],
+      "name": "Founders' Memorial",
+      "reason": "LTA states opening will follow the Founders Memorial; not in operating map."
+    },
+    {
+      "codes": [
+        "TE30"
+      ],
+      "name": "Bedok South",
+      "reason": "TEL5: under construction on latest verified system map; passenger opening date unconfirmed."
+    },
+    {
+      "codes": [
+        "TE31",
+        "DT37"
+      ],
+      "name": "Sungei Bedok",
+      "reason": "TEL5/DTL3e: under construction on latest verified system map; passenger opening date unconfirmed."
+    },
+    {
+      "codes": [
+        "DT36"
+      ],
+      "name": "Xilin",
+      "reason": "DTL3e: under construction on latest verified system map; passenger opening date unconfirmed."
+    }
+  ],
+  "line_station_counts": {
+    "NSL": 27,
+    "EWL": 35,
+    "NEL": 17,
+    "CCL": 33,
+    "DTL": 35,
+    "TEL": 27
+  },
+  "line_paths": {
+    "NSL": [
+      [
+        "NS1",
+        "NS2",
+        "NS3",
+        "NS4",
+        "NS5",
+        "NS7",
+        "NS8",
+        "NS9",
+        "NS10",
+        "NS11",
+        "NS12",
+        "NS13",
+        "NS14",
+        "NS15",
+        "NS16",
+        "NS17",
+        "NS18",
+        "NS19",
+        "NS20",
+        "NS21",
+        "NS22",
+        "NS23",
+        "NS24",
+        "NS25",
+        "NS26",
+        "NS27",
+        "NS28"
+      ]
+    ],
+    "EWL": [
+      [
+        "EW1",
+        "EW2",
+        "EW3",
+        "EW4",
+        "EW5",
+        "EW6",
+        "EW7",
+        "EW8",
+        "EW9",
+        "EW10",
+        "EW11",
+        "EW12",
+        "EW13",
+        "EW14",
+        "EW15",
+        "EW16",
+        "EW17",
+        "EW18",
+        "EW19",
+        "EW20",
+        "EW21",
+        "EW22",
+        "EW23",
+        "EW24",
+        "EW25",
+        "EW26",
+        "EW27",
+        "EW28",
+        "EW29",
+        "EW30",
+        "EW31",
+        "EW32",
+        "EW33"
+      ],
+      [
+        "EW4",
+        "CG1",
+        "CG2"
+      ]
+    ],
+    "NEL": [
+      [
+        "NE1",
+        "NE3",
+        "NE4",
+        "NE5",
+        "NE6",
+        "NE7",
+        "NE8",
+        "NE9",
+        "NE10",
+        "NE11",
+        "NE12",
+        "NE13",
+        "NE14",
+        "NE15",
+        "NE16",
+        "NE17",
+        "NE18"
+      ]
+    ],
+    "CCL": [
+      [
+        "CC1",
+        "CC2",
+        "CC3",
+        "CC4"
+      ],
+      [
+        "CC4",
+        "CC5",
+        "CC6",
+        "CC7",
+        "CC8",
+        "CC9",
+        "CC10",
+        "CC11",
+        "CC12",
+        "CC13",
+        "CC14",
+        "CC15",
+        "CC16",
+        "CC17",
+        "CC19",
+        "CC20",
+        "CC21",
+        "CC22",
+        "CC23",
+        "CC24",
+        "CC25",
+        "CC26",
+        "CC27",
+        "CC28",
+        "CC29",
+        "CC30",
+        "CC31",
+        "CC32",
+        "CC33",
+        "CC34",
+        "CC4"
+      ]
+    ],
+    "DTL": [
+      [
+        "DT1",
+        "DT2",
+        "DT3",
+        "DT4",
+        "DT5",
+        "DT6",
+        "DT7",
+        "DT8",
+        "DT9",
+        "DT10",
+        "DT11",
+        "DT12",
+        "DT13",
+        "DT14",
+        "DT15",
+        "DT16",
+        "DT17",
+        "DT18",
+        "DT19",
+        "DT20",
+        "DT21",
+        "DT22",
+        "DT23",
+        "DT24",
+        "DT25",
+        "DT26",
+        "DT27",
+        "DT28",
+        "DT29",
+        "DT30",
+        "DT31",
+        "DT32",
+        "DT33",
+        "DT34",
+        "DT35"
+      ]
+    ],
+    "TEL": [
+      [
+        "TE1",
+        "TE2",
+        "TE3",
+        "TE4",
+        "TE5",
+        "TE6",
+        "TE7",
+        "TE8",
+        "TE9",
+        "TE11",
+        "TE12",
+        "TE13",
+        "TE14",
+        "TE15",
+        "TE16",
+        "TE17",
+        "TE18",
+        "TE19",
+        "TE20",
+        "TE22",
+        "TE23",
+        "TE24",
+        "TE25",
+        "TE26",
+        "TE27",
+        "TE28",
+        "TE29"
+      ]
+    ]
+  },
+  "stations": [
+    {
+      "station": "NS1",
+      "name": "Jurong East",
+      "codes": [
+        "NS1",
+        "EW24"
+      ],
+      "lines": [
+        "NSL",
+        "EWL"
+      ]
+    },
+    {
+      "station": "NS2",
+      "name": "Bukit Batok",
+      "codes": [
+        "NS2"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS3",
+      "name": "Bukit Gombak",
+      "codes": [
+        "NS3"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS4",
+      "name": "Choa Chu Kang",
+      "codes": [
+        "NS4"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS5",
+      "name": "Yew Tee",
+      "codes": [
+        "NS5"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS7",
+      "name": "Kranji",
+      "codes": [
+        "NS7"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS8",
+      "name": "Marsiling",
+      "codes": [
+        "NS8"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS9",
+      "name": "Woodlands",
+      "codes": [
+        "NS9",
+        "TE2"
+      ],
+      "lines": [
+        "NSL",
+        "TEL"
+      ]
+    },
+    {
+      "station": "NS10",
+      "name": "Admiralty",
+      "codes": [
+        "NS10"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS11",
+      "name": "Sembawang",
+      "codes": [
+        "NS11"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS12",
+      "name": "Canberra",
+      "codes": [
+        "NS12"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS13",
+      "name": "Yishun",
+      "codes": [
+        "NS13"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS14",
+      "name": "Khatib",
+      "codes": [
+        "NS14"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS15",
+      "name": "Yio Chu Kang",
+      "codes": [
+        "NS15"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS16",
+      "name": "Ang Mo Kio",
+      "codes": [
+        "NS16"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS17",
+      "name": "Bishan",
+      "codes": [
+        "NS17",
+        "CC15"
+      ],
+      "lines": [
+        "NSL",
+        "CCL"
+      ]
+    },
+    {
+      "station": "NS18",
+      "name": "Braddell",
+      "codes": [
+        "NS18"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS19",
+      "name": "Toa Payoh",
+      "codes": [
+        "NS19"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS20",
+      "name": "Novena",
+      "codes": [
+        "NS20"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS21",
+      "name": "Newton",
+      "codes": [
+        "NS21",
+        "DT11"
+      ],
+      "lines": [
+        "NSL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "NS22",
+      "name": "Orchard",
+      "codes": [
+        "NS22",
+        "TE14"
+      ],
+      "lines": [
+        "NSL",
+        "TEL"
+      ]
+    },
+    {
+      "station": "NS23",
+      "name": "Somerset",
+      "codes": [
+        "NS23"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "NS24",
+      "name": "Dhoby Ghaut",
+      "codes": [
+        "NS24",
+        "NE6",
+        "CC1"
+      ],
+      "lines": [
+        "NSL",
+        "NEL",
+        "CCL"
+      ]
+    },
+    {
+      "station": "NS25",
+      "name": "City Hall",
+      "codes": [
+        "NS25",
+        "EW13"
+      ],
+      "lines": [
+        "NSL",
+        "EWL"
+      ]
+    },
+    {
+      "station": "NS26",
+      "name": "Raffles Place",
+      "codes": [
+        "NS26",
+        "EW14"
+      ],
+      "lines": [
+        "NSL",
+        "EWL"
+      ]
+    },
+    {
+      "station": "NS27",
+      "name": "Marina Bay",
+      "codes": [
+        "NS27",
+        "CC33",
+        "TE20",
+        "CE2"
+      ],
+      "lines": [
+        "NSL",
+        "CCL",
+        "TEL"
+      ]
+    },
+    {
+      "station": "NS28",
+      "name": "Marina South Pier",
+      "codes": [
+        "NS28"
+      ],
+      "lines": [
+        "NSL"
+      ]
+    },
+    {
+      "station": "EW1",
+      "name": "Pasir Ris",
+      "codes": [
+        "EW1"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW2",
+      "name": "Tampines",
+      "codes": [
+        "EW2",
+        "DT32"
+      ],
+      "lines": [
+        "EWL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "EW3",
+      "name": "Simei",
+      "codes": [
+        "EW3"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW4",
+      "name": "Tanah Merah",
+      "codes": [
+        "EW4"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW5",
+      "name": "Bedok",
+      "codes": [
+        "EW5"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW6",
+      "name": "Kembangan",
+      "codes": [
+        "EW6"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW7",
+      "name": "Eunos",
+      "codes": [
+        "EW7"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW8",
+      "name": "Paya Lebar",
+      "codes": [
+        "EW8",
+        "CC9"
+      ],
+      "lines": [
+        "EWL",
+        "CCL"
+      ]
+    },
+    {
+      "station": "EW9",
+      "name": "Aljunied",
+      "codes": [
+        "EW9"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW10",
+      "name": "Kallang",
+      "codes": [
+        "EW10"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW11",
+      "name": "Lavender",
+      "codes": [
+        "EW11"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW12",
+      "name": "Bugis",
+      "codes": [
+        "EW12",
+        "DT14"
+      ],
+      "lines": [
+        "EWL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "EW15",
+      "name": "Tanjong Pagar",
+      "codes": [
+        "EW15"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW16",
+      "name": "Outram Park",
+      "codes": [
+        "EW16",
+        "NE3",
+        "TE17"
+      ],
+      "lines": [
+        "EWL",
+        "NEL",
+        "TEL"
+      ]
+    },
+    {
+      "station": "EW17",
+      "name": "Tiong Bahru",
+      "codes": [
+        "EW17"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW18",
+      "name": "Redhill",
+      "codes": [
+        "EW18"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW19",
+      "name": "Queenstown",
+      "codes": [
+        "EW19"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW20",
+      "name": "Commonwealth",
+      "codes": [
+        "EW20"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW21",
+      "name": "Buona Vista",
+      "codes": [
+        "EW21",
+        "CC22"
+      ],
+      "lines": [
+        "EWL",
+        "CCL"
+      ]
+    },
+    {
+      "station": "EW22",
+      "name": "Dover",
+      "codes": [
+        "EW22"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW23",
+      "name": "Clementi",
+      "codes": [
+        "EW23"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW25",
+      "name": "Chinese Garden",
+      "codes": [
+        "EW25"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW26",
+      "name": "Lakeside",
+      "codes": [
+        "EW26"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW27",
+      "name": "Boon Lay",
+      "codes": [
+        "EW27"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW28",
+      "name": "Pioneer",
+      "codes": [
+        "EW28"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW29",
+      "name": "Joo Koon",
+      "codes": [
+        "EW29"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW30",
+      "name": "Gul Circle",
+      "codes": [
+        "EW30"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW31",
+      "name": "Tuas Crescent",
+      "codes": [
+        "EW31"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW32",
+      "name": "Tuas West Road",
+      "codes": [
+        "EW32"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "EW33",
+      "name": "Tuas Link",
+      "codes": [
+        "EW33"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "CG1",
+      "name": "Expo",
+      "codes": [
+        "CG1",
+        "DT35"
+      ],
+      "lines": [
+        "EWL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "CG2",
+      "name": "Changi Airport",
+      "codes": [
+        "CG2"
+      ],
+      "lines": [
+        "EWL"
+      ]
+    },
+    {
+      "station": "NE1",
+      "name": "HarbourFront",
+      "codes": [
+        "NE1",
+        "CC29"
+      ],
+      "lines": [
+        "NEL",
+        "CCL"
+      ]
+    },
+    {
+      "station": "NE4",
+      "name": "Chinatown",
+      "codes": [
+        "NE4",
+        "DT19"
+      ],
+      "lines": [
+        "NEL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "NE5",
+      "name": "Clarke Quay",
+      "codes": [
+        "NE5"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE7",
+      "name": "Little India",
+      "codes": [
+        "NE7",
+        "DT12"
+      ],
+      "lines": [
+        "NEL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "NE8",
+      "name": "Farrer Park",
+      "codes": [
+        "NE8"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE9",
+      "name": "Boon Keng",
+      "codes": [
+        "NE9"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE10",
+      "name": "Potong Pasir",
+      "codes": [
+        "NE10"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE11",
+      "name": "Woodleigh",
+      "codes": [
+        "NE11"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE12",
+      "name": "Serangoon",
+      "codes": [
+        "NE12",
+        "CC13"
+      ],
+      "lines": [
+        "NEL",
+        "CCL"
+      ]
+    },
+    {
+      "station": "NE13",
+      "name": "Kovan",
+      "codes": [
+        "NE13"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE14",
+      "name": "Hougang",
+      "codes": [
+        "NE14"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE15",
+      "name": "Buangkok",
+      "codes": [
+        "NE15"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE16",
+      "name": "Sengkang",
+      "codes": [
+        "NE16"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE17",
+      "name": "Punggol",
+      "codes": [
+        "NE17"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "NE18",
+      "name": "Punggol Coast",
+      "codes": [
+        "NE18"
+      ],
+      "lines": [
+        "NEL"
+      ]
+    },
+    {
+      "station": "CC2",
+      "name": "Bras Basah",
+      "codes": [
+        "CC2"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC3",
+      "name": "Esplanade",
+      "codes": [
+        "CC3"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC4",
+      "name": "Promenade",
+      "codes": [
+        "CC4",
+        "DT15"
+      ],
+      "lines": [
+        "CCL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "CC5",
+      "name": "Nicoll Highway",
+      "codes": [
+        "CC5"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC6",
+      "name": "Stadium",
+      "codes": [
+        "CC6"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC7",
+      "name": "Mountbatten",
+      "codes": [
+        "CC7"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC8",
+      "name": "Dakota",
+      "codes": [
+        "CC8"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC10",
+      "name": "MacPherson",
+      "codes": [
+        "CC10",
+        "DT26"
+      ],
+      "lines": [
+        "CCL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "CC11",
+      "name": "Tai Seng",
+      "codes": [
+        "CC11"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC12",
+      "name": "Bartley",
+      "codes": [
+        "CC12"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC14",
+      "name": "Lorong Chuan",
+      "codes": [
+        "CC14"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC16",
+      "name": "Marymount",
+      "codes": [
+        "CC16"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC17",
+      "name": "Caldecott",
+      "codes": [
+        "CC17",
+        "TE9"
+      ],
+      "lines": [
+        "CCL",
+        "TEL"
+      ]
+    },
+    {
+      "station": "CC19",
+      "name": "Botanic Gardens",
+      "codes": [
+        "CC19",
+        "DT9"
+      ],
+      "lines": [
+        "CCL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "CC20",
+      "name": "Farrer Road",
+      "codes": [
+        "CC20"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC21",
+      "name": "Holland Village",
+      "codes": [
+        "CC21"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC23",
+      "name": "one-north",
+      "codes": [
+        "CC23"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC24",
+      "name": "Kent Ridge",
+      "codes": [
+        "CC24"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC25",
+      "name": "Haw Par Villa",
+      "codes": [
+        "CC25"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC26",
+      "name": "Pasir Panjang",
+      "codes": [
+        "CC26"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC27",
+      "name": "Labrador Park",
+      "codes": [
+        "CC27"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC28",
+      "name": "Telok Blangah",
+      "codes": [
+        "CC28"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC30",
+      "name": "Keppel",
+      "codes": [
+        "CC30"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC31",
+      "name": "Cantonment",
+      "codes": [
+        "CC31"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC32",
+      "name": "Prince Edward Road",
+      "codes": [
+        "CC32"
+      ],
+      "lines": [
+        "CCL"
+      ]
+    },
+    {
+      "station": "CC34",
+      "name": "Bayfront",
+      "codes": [
+        "CC34",
+        "DT16",
+        "CE1"
+      ],
+      "lines": [
+        "CCL",
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT1",
+      "name": "Bukit Panjang",
+      "codes": [
+        "DT1"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT2",
+      "name": "Cashew",
+      "codes": [
+        "DT2"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT3",
+      "name": "Hillview",
+      "codes": [
+        "DT3"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT4",
+      "name": "Hume",
+      "codes": [
+        "DT4"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT5",
+      "name": "Beauty World",
+      "codes": [
+        "DT5"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT6",
+      "name": "King Albert Park",
+      "codes": [
+        "DT6"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT7",
+      "name": "Sixth Avenue",
+      "codes": [
+        "DT7"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT8",
+      "name": "Tan Kah Kee",
+      "codes": [
+        "DT8"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT10",
+      "name": "Stevens",
+      "codes": [
+        "DT10",
+        "TE11"
+      ],
+      "lines": [
+        "DTL",
+        "TEL"
+      ]
+    },
+    {
+      "station": "DT13",
+      "name": "Rochor",
+      "codes": [
+        "DT13"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT17",
+      "name": "Downtown",
+      "codes": [
+        "DT17"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT18",
+      "name": "Telok Ayer",
+      "codes": [
+        "DT18"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT20",
+      "name": "Fort Canning",
+      "codes": [
+        "DT20"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT21",
+      "name": "Bencoolen",
+      "codes": [
+        "DT21"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT22",
+      "name": "Jalan Besar",
+      "codes": [
+        "DT22"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT23",
+      "name": "Bendemeer",
+      "codes": [
+        "DT23"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT24",
+      "name": "Geylang Bahru",
+      "codes": [
+        "DT24"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT25",
+      "name": "Mattar",
+      "codes": [
+        "DT25"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT27",
+      "name": "Ubi",
+      "codes": [
+        "DT27"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT28",
+      "name": "Kaki Bukit",
+      "codes": [
+        "DT28"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT29",
+      "name": "Bedok North",
+      "codes": [
+        "DT29"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT30",
+      "name": "Bedok Reservoir",
+      "codes": [
+        "DT30"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT31",
+      "name": "Tampines West",
+      "codes": [
+        "DT31"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT33",
+      "name": "Tampines East",
+      "codes": [
+        "DT33"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "DT34",
+      "name": "Upper Changi",
+      "codes": [
+        "DT34"
+      ],
+      "lines": [
+        "DTL"
+      ]
+    },
+    {
+      "station": "TE1",
+      "name": "Woodlands North",
+      "codes": [
+        "TE1"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE3",
+      "name": "Woodlands South",
+      "codes": [
+        "TE3"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE4",
+      "name": "Springleaf",
+      "codes": [
+        "TE4"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE5",
+      "name": "Lentor",
+      "codes": [
+        "TE5"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE6",
+      "name": "Mayflower",
+      "codes": [
+        "TE6"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE7",
+      "name": "Bright Hill",
+      "codes": [
+        "TE7"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE8",
+      "name": "Upper Thomson",
+      "codes": [
+        "TE8"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE12",
+      "name": "Napier",
+      "codes": [
+        "TE12"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE13",
+      "name": "Orchard Boulevard",
+      "codes": [
+        "TE13"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE15",
+      "name": "Great World",
+      "codes": [
+        "TE15"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE16",
+      "name": "Havelock",
+      "codes": [
+        "TE16"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE18",
+      "name": "Maxwell",
+      "codes": [
+        "TE18"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE19",
+      "name": "Shenton Way",
+      "codes": [
+        "TE19"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE22",
+      "name": "Gardens by the Bay",
+      "codes": [
+        "TE22"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE23",
+      "name": "Tanjong Rhu",
+      "codes": [
+        "TE23"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE24",
+      "name": "Katong Park",
+      "codes": [
+        "TE24"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE25",
+      "name": "Tanjong Katong",
+      "codes": [
+        "TE25"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE26",
+      "name": "Marine Parade",
+      "codes": [
+        "TE26"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE27",
+      "name": "Marine Terrace",
+      "codes": [
+        "TE27"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE28",
+      "name": "Siglap",
+      "codes": [
+        "TE28"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    },
+    {
+      "station": "TE29",
+      "name": "Bayshore",
+      "codes": [
+        "TE29"
+      ],
+      "lines": [
+        "TEL"
+      ]
+    }
+  ]
+}

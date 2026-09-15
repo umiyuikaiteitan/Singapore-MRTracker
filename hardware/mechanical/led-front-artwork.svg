@@ -1,0 +1,631 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420.0mm" height="298.0mm" viewBox="0 0 420.0 298.0">
+<title>Singapore MRT full-network station matrix face artwork</title>
+<style>text {font-family: sans-serif}</style>
+<rect width="420.0" height="298.0" rx="3" fill="#111c28"/>
+<text x="14" y="14" fill="white" font-size="6" font-weight="bold">SINGAPORE MRT</text>
+<text x="407" y="13" fill="#a5b7c7" font-size="3.1" text-anchor="end">DEPARTURE ACTIVITY · SCHEMATIC MATRIX</text>
+<rect x="20.0" y="32.0" width="10.0" height="1.5" fill="#d9282e"/>
+<rect x="30.0" y="32.0" width="10.0" height="1.5" fill="#008d5e"/>
+<circle cx="30.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS1/EW24</text>
+<text x="30.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Jurong East</text>
+<rect x="44.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="54.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS2</text>
+<text x="54.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bukit Batok</text>
+<rect x="68.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="78.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS3</text>
+<text x="78.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bukit Gombak</text>
+<rect x="92.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="102.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS4</text>
+<text x="102.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Choa Chu Kang</text>
+<rect x="116.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="126.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS5</text>
+<text x="126.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Yew Tee</text>
+<rect x="140.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="150.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS7</text>
+<text x="150.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Kranji</text>
+<rect x="164.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="174.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS8</text>
+<text x="174.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Marsiling</text>
+<rect x="188.0" y="32.0" width="10.0" height="1.5" fill="#d9282e"/>
+<rect x="198.0" y="32.0" width="10.0" height="1.5" fill="#9d6337"/>
+<circle cx="198.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS9/TE2</text>
+<text x="198.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Woodlands</text>
+<rect x="212.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="222.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS10</text>
+<text x="222.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Admiralty</text>
+<rect x="236.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="246.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS11</text>
+<text x="246.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Sembawang</text>
+<rect x="260.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="270.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS12</text>
+<text x="270.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Canberra</text>
+<rect x="284.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="294.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS13</text>
+<text x="294.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Yishun</text>
+<rect x="308.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="318.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS14</text>
+<text x="318.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Khatib</text>
+<rect x="332.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="342.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS15</text>
+<text x="342.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Yio Chu Kang</text>
+<rect x="356.0" y="32.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="366.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS16</text>
+<text x="366.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Ang Mo Kio</text>
+<rect x="380.0" y="32.0" width="10.0" height="1.5" fill="#d9282e"/>
+<rect x="390.0" y="32.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<circle cx="390.0" cy="44.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="44.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="36.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS17/CC15</text>
+<text x="390.0" y="50.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bishan</text>
+<rect x="380.0" y="56.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="390.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS18</text>
+<text x="390.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Braddell</text>
+<rect x="356.0" y="56.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="366.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS19</text>
+<text x="366.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Toa Payoh</text>
+<rect x="332.0" y="56.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="342.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS20</text>
+<text x="342.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Novena</text>
+<rect x="308.0" y="56.0" width="10.0" height="1.5" fill="#d9282e"/>
+<rect x="318.0" y="56.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="318.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS21/DT11</text>
+<text x="318.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Newton</text>
+<rect x="284.0" y="56.0" width="10.0" height="1.5" fill="#d9282e"/>
+<rect x="294.0" y="56.0" width="10.0" height="1.5" fill="#9d6337"/>
+<circle cx="294.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS22/TE14</text>
+<text x="294.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Orchard</text>
+<rect x="260.0" y="56.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="270.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS23</text>
+<text x="270.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Somerset</text>
+<rect x="236.0" y="56.0" width="6.666666666666667" height="1.5" fill="#d9282e"/>
+<rect x="242.66666666666666" y="56.0" width="6.666666666666667" height="1.5" fill="#8d2790"/>
+<rect x="249.33333333333334" y="56.0" width="6.666666666666667" height="1.5" fill="#ef9d13"/>
+<circle cx="246.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS24/NE6/CC1</text>
+<text x="246.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Dhoby Ghaut</text>
+<rect x="212.0" y="56.0" width="10.0" height="1.5" fill="#d9282e"/>
+<rect x="222.0" y="56.0" width="10.0" height="1.5" fill="#008d5e"/>
+<circle cx="222.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS25/EW13</text>
+<text x="222.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">City Hall</text>
+<rect x="188.0" y="56.0" width="10.0" height="1.5" fill="#d9282e"/>
+<rect x="198.0" y="56.0" width="10.0" height="1.5" fill="#008d5e"/>
+<circle cx="198.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS26/EW14</text>
+<text x="198.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Raffles Place</text>
+<rect x="164.0" y="56.0" width="6.666666666666667" height="1.5" fill="#d9282e"/>
+<rect x="170.66666666666666" y="56.0" width="6.666666666666667" height="1.5" fill="#ef9d13"/>
+<rect x="177.33333333333334" y="56.0" width="6.666666666666667" height="1.5" fill="#9d6337"/>
+<circle cx="174.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS27/CC33/TE20/CE2</text>
+<text x="174.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Marina Bay</text>
+<rect x="140.0" y="56.0" width="20.0" height="1.5" fill="#d9282e"/>
+<circle cx="150.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NS28</text>
+<text x="150.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Marina South Pier</text>
+<rect x="116.0" y="56.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="126.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW1</text>
+<text x="126.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Pasir Ris</text>
+<rect x="92.0" y="56.0" width="10.0" height="1.5" fill="#008d5e"/>
+<rect x="102.0" y="56.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="102.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW2/DT32</text>
+<text x="102.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tampines</text>
+<rect x="68.0" y="56.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="78.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW3</text>
+<text x="78.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Simei</text>
+<rect x="44.0" y="56.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="54.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW4</text>
+<text x="54.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tanah Merah</text>
+<rect x="20.0" y="56.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="30.0" cy="68.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="68.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="60.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW5</text>
+<text x="30.0" y="74.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bedok</text>
+<rect x="20.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="30.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW6</text>
+<text x="30.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Kembangan</text>
+<rect x="44.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="54.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW7</text>
+<text x="54.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Eunos</text>
+<rect x="68.0" y="80.0" width="10.0" height="1.5" fill="#008d5e"/>
+<rect x="78.0" y="80.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<circle cx="78.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW8/CC9</text>
+<text x="78.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Paya Lebar</text>
+<rect x="92.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="102.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW9</text>
+<text x="102.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Aljunied</text>
+<rect x="116.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="126.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW10</text>
+<text x="126.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Kallang</text>
+<rect x="140.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="150.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW11</text>
+<text x="150.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Lavender</text>
+<rect x="164.0" y="80.0" width="10.0" height="1.5" fill="#008d5e"/>
+<rect x="174.0" y="80.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="174.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW12/DT14</text>
+<text x="174.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bugis</text>
+<rect x="188.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="198.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW15</text>
+<text x="198.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tanjong Pagar</text>
+<rect x="212.0" y="80.0" width="6.666666666666667" height="1.5" fill="#008d5e"/>
+<rect x="218.66666666666666" y="80.0" width="6.666666666666667" height="1.5" fill="#8d2790"/>
+<rect x="225.33333333333334" y="80.0" width="6.666666666666667" height="1.5" fill="#9d6337"/>
+<circle cx="222.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW16/NE3/TE17</text>
+<text x="222.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Outram Park</text>
+<rect x="236.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="246.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW17</text>
+<text x="246.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tiong Bahru</text>
+<rect x="260.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="270.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW18</text>
+<text x="270.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Redhill</text>
+<rect x="284.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="294.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW19</text>
+<text x="294.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Queenstown</text>
+<rect x="308.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="318.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW20</text>
+<text x="318.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Commonwealth</text>
+<rect x="332.0" y="80.0" width="10.0" height="1.5" fill="#008d5e"/>
+<rect x="342.0" y="80.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<circle cx="342.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW21/CC22</text>
+<text x="342.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Buona Vista</text>
+<rect x="356.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="366.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW22</text>
+<text x="366.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Dover</text>
+<rect x="380.0" y="80.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="390.0" cy="92.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="92.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="84.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW23</text>
+<text x="390.0" y="98.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Clementi</text>
+<rect x="380.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="390.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW25</text>
+<text x="390.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Chinese Garden</text>
+<rect x="356.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="366.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW26</text>
+<text x="366.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Lakeside</text>
+<rect x="332.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="342.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW27</text>
+<text x="342.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Boon Lay</text>
+<rect x="308.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="318.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW28</text>
+<text x="318.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Pioneer</text>
+<rect x="284.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="294.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW29</text>
+<text x="294.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Joo Koon</text>
+<rect x="260.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="270.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW30</text>
+<text x="270.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Gul Circle</text>
+<rect x="236.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="246.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW31</text>
+<text x="246.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tuas Crescent</text>
+<rect x="212.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="222.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW32</text>
+<text x="222.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tuas West Road</text>
+<rect x="188.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="198.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">EW33</text>
+<text x="198.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tuas Link</text>
+<rect x="164.0" y="104.0" width="10.0" height="1.5" fill="#008d5e"/>
+<rect x="174.0" y="104.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="174.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CG1/DT35</text>
+<text x="174.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Expo</text>
+<rect x="140.0" y="104.0" width="20.0" height="1.5" fill="#008d5e"/>
+<circle cx="150.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CG2</text>
+<text x="150.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Changi Airport</text>
+<rect x="116.0" y="104.0" width="10.0" height="1.5" fill="#8d2790"/>
+<rect x="126.0" y="104.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<circle cx="126.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE1/CC29</text>
+<text x="126.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">HarbourFront</text>
+<rect x="92.0" y="104.0" width="10.0" height="1.5" fill="#8d2790"/>
+<rect x="102.0" y="104.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="102.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE4/DT19</text>
+<text x="102.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Chinatown</text>
+<rect x="68.0" y="104.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="78.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE5</text>
+<text x="78.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Clarke Quay</text>
+<rect x="44.0" y="104.0" width="10.0" height="1.5" fill="#8d2790"/>
+<rect x="54.0" y="104.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="54.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE7/DT12</text>
+<text x="54.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Little India</text>
+<rect x="20.0" y="104.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="30.0" cy="116.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="116.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="108.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE8</text>
+<text x="30.0" y="122.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Farrer Park</text>
+<rect x="20.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="30.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE9</text>
+<text x="30.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Boon Keng</text>
+<rect x="44.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="54.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE10</text>
+<text x="54.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Potong Pasir</text>
+<rect x="68.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="78.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE11</text>
+<text x="78.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Woodleigh</text>
+<rect x="92.0" y="128.0" width="10.0" height="1.5" fill="#8d2790"/>
+<rect x="102.0" y="128.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<circle cx="102.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE12/CC13</text>
+<text x="102.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Serangoon</text>
+<rect x="116.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="126.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE13</text>
+<text x="126.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Kovan</text>
+<rect x="140.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="150.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE14</text>
+<text x="150.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Hougang</text>
+<rect x="164.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="174.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE15</text>
+<text x="174.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Buangkok</text>
+<rect x="188.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="198.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE16</text>
+<text x="198.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Sengkang</text>
+<rect x="212.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="222.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE17</text>
+<text x="222.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Punggol</text>
+<rect x="236.0" y="128.0" width="20.0" height="1.5" fill="#8d2790"/>
+<circle cx="246.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">NE18</text>
+<text x="246.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Punggol Coast</text>
+<rect x="260.0" y="128.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="270.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC2</text>
+<text x="270.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bras Basah</text>
+<rect x="284.0" y="128.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="294.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC3</text>
+<text x="294.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Esplanade</text>
+<rect x="308.0" y="128.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<rect x="318.0" y="128.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="318.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC4/DT15</text>
+<text x="318.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Promenade</text>
+<rect x="332.0" y="128.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="342.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC5</text>
+<text x="342.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Nicoll Highway</text>
+<rect x="356.0" y="128.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="366.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC6</text>
+<text x="366.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Stadium</text>
+<rect x="380.0" y="128.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="390.0" cy="140.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="140.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="132.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC7</text>
+<text x="390.0" y="146.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Mountbatten</text>
+<rect x="380.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="390.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC8</text>
+<text x="390.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Dakota</text>
+<rect x="356.0" y="152.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<rect x="366.0" y="152.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="366.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC10/DT26</text>
+<text x="366.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">MacPherson</text>
+<rect x="332.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="342.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC11</text>
+<text x="342.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tai Seng</text>
+<rect x="308.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="318.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC12</text>
+<text x="318.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bartley</text>
+<rect x="284.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="294.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC14</text>
+<text x="294.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Lorong Chuan</text>
+<rect x="260.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="270.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC16</text>
+<text x="270.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Marymount</text>
+<rect x="236.0" y="152.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<rect x="246.0" y="152.0" width="10.0" height="1.5" fill="#9d6337"/>
+<circle cx="246.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC17/TE9</text>
+<text x="246.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Caldecott</text>
+<rect x="212.0" y="152.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<rect x="222.0" y="152.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="222.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC19/DT9</text>
+<text x="222.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Botanic Gardens</text>
+<rect x="188.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="198.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC20</text>
+<text x="198.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Farrer Road</text>
+<rect x="164.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="174.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC21</text>
+<text x="174.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Holland Village</text>
+<rect x="140.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="150.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC23</text>
+<text x="150.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">one-north</text>
+<rect x="116.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="126.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC24</text>
+<text x="126.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Kent Ridge</text>
+<rect x="92.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="102.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC25</text>
+<text x="102.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Haw Par Villa</text>
+<rect x="68.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="78.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC26</text>
+<text x="78.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Pasir Panjang</text>
+<rect x="44.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="54.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC27</text>
+<text x="54.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Labrador Park</text>
+<rect x="20.0" y="152.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="30.0" cy="164.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="164.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="156.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC28</text>
+<text x="30.0" y="170.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Telok Blangah</text>
+<rect x="20.0" y="176.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="30.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC30</text>
+<text x="30.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Keppel</text>
+<rect x="44.0" y="176.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="54.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC31</text>
+<text x="54.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Cantonment</text>
+<rect x="68.0" y="176.0" width="20.0" height="1.5" fill="#ef9d13"/>
+<circle cx="78.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC32</text>
+<text x="78.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Prince Edward</text>
+<text x="78.0" y="196.6" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Road</text>
+<rect x="92.0" y="176.0" width="10.0" height="1.5" fill="#ef9d13"/>
+<rect x="102.0" y="176.0" width="10.0" height="1.5" fill="#0077b5"/>
+<circle cx="102.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">CC34/DT16/CE1</text>
+<text x="102.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bayfront</text>
+<rect x="116.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="126.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT1</text>
+<text x="126.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bukit Panjang</text>
+<rect x="140.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="150.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT2</text>
+<text x="150.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Cashew</text>
+<rect x="164.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="174.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT3</text>
+<text x="174.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Hillview</text>
+<rect x="188.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="198.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT4</text>
+<text x="198.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Hume</text>
+<rect x="212.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="222.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT5</text>
+<text x="222.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Beauty World</text>
+<rect x="236.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="246.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT6</text>
+<text x="246.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">King Albert Park</text>
+<rect x="260.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="270.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT7</text>
+<text x="270.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Sixth Avenue</text>
+<rect x="284.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="294.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT8</text>
+<text x="294.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tan Kah Kee</text>
+<rect x="308.0" y="176.0" width="10.0" height="1.5" fill="#0077b5"/>
+<rect x="318.0" y="176.0" width="10.0" height="1.5" fill="#9d6337"/>
+<circle cx="318.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT10/TE11</text>
+<text x="318.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Stevens</text>
+<rect x="332.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="342.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT13</text>
+<text x="342.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Rochor</text>
+<rect x="356.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="366.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT17</text>
+<text x="366.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Downtown</text>
+<rect x="380.0" y="176.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="390.0" cy="188.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="188.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="180.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT18</text>
+<text x="390.0" y="194.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Telok Ayer</text>
+<rect x="380.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="390.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT20</text>
+<text x="390.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Fort Canning</text>
+<rect x="356.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="366.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT21</text>
+<text x="366.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bencoolen</text>
+<rect x="332.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="342.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT22</text>
+<text x="342.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Jalan Besar</text>
+<rect x="308.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="318.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT23</text>
+<text x="318.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bendemeer</text>
+<rect x="284.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="294.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT24</text>
+<text x="294.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Geylang Bahru</text>
+<rect x="260.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="270.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT25</text>
+<text x="270.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Mattar</text>
+<rect x="236.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="246.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT27</text>
+<text x="246.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Ubi</text>
+<rect x="212.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="222.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT28</text>
+<text x="222.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Kaki Bukit</text>
+<rect x="188.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="198.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT29</text>
+<text x="198.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bedok North</text>
+<rect x="164.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="174.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT30</text>
+<text x="174.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bedok Reservoir</text>
+<rect x="140.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="150.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT31</text>
+<text x="150.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tampines West</text>
+<rect x="116.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="126.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT33</text>
+<text x="126.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tampines East</text>
+<rect x="92.0" y="200.0" width="20.0" height="1.5" fill="#0077b5"/>
+<circle cx="102.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">DT34</text>
+<text x="102.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Upper Changi</text>
+<rect x="68.0" y="200.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="78.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE1</text>
+<text x="78.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Woodlands North</text>
+<rect x="44.0" y="200.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="54.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE3</text>
+<text x="54.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Woodlands South</text>
+<rect x="20.0" y="200.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="30.0" cy="212.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="212.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="204.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE4</text>
+<text x="30.0" y="218.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Springleaf</text>
+<rect x="20.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="30.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="30.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="30.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE5</text>
+<text x="30.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Lentor</text>
+<rect x="44.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="54.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="54.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="54.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE6</text>
+<text x="54.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Mayflower</text>
+<rect x="68.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="78.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="78.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="78.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE7</text>
+<text x="78.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bright Hill</text>
+<rect x="92.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="102.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="102.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="102.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE8</text>
+<text x="102.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Upper Thomson</text>
+<rect x="116.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="126.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="126.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="126.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE12</text>
+<text x="126.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Napier</text>
+<rect x="140.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="150.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="150.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="150.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE13</text>
+<text x="150.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Orchard Boulevard</text>
+<rect x="164.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="174.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="174.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="174.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE15</text>
+<text x="174.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Great World</text>
+<rect x="188.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="198.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="198.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="198.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE16</text>
+<text x="198.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Havelock</text>
+<rect x="212.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="222.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="222.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="222.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE18</text>
+<text x="222.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Maxwell</text>
+<rect x="236.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="246.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="246.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="246.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE19</text>
+<text x="246.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Shenton Way</text>
+<rect x="260.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="270.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="270.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="270.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE22</text>
+<text x="270.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Gardens by the</text>
+<text x="270.0" y="244.6" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bay</text>
+<rect x="284.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="294.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="294.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="294.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE23</text>
+<text x="294.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tanjong Rhu</text>
+<rect x="308.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="318.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="318.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="318.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE24</text>
+<text x="318.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Katong Park</text>
+<rect x="332.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="342.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="342.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="342.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE25</text>
+<text x="342.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Tanjong Katong</text>
+<rect x="356.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="366.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE26</text>
+<text x="366.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Marine Parade</text>
+<rect x="380.0" y="224.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="390.0" cy="236.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="236.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="228.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE27</text>
+<text x="390.0" y="242.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Marine Terrace</text>
+<rect x="380.0" y="248.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="390.0" cy="260.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="390.0" cy="260.0" r="2.75" fill="#fff"/>
+<text x="390.0" y="252.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE28</text>
+<text x="390.0" y="266.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Siglap</text>
+<rect x="356.0" y="248.0" width="20.0" height="1.5" fill="#9d6337"/>
+<circle cx="366.0" cy="260.0" r="3.8" fill="none" stroke="#70879d" stroke-width=".4"/><circle cx="366.0" cy="260.0" r="2.75" fill="#fff"/>
+<text x="366.0" y="252.5" fill="#ffffff" font-size="2.05" text-anchor="middle">TE29</text>
+<text x="366.0" y="266.0" fill="#d7e4ee" font-size="2.35" text-anchor="middle">Bayshore</text>
+<rect x="20" y="287.0" width="9" height="2" fill="#d9282e"/><text x="32" y="289.2" fill="white" font-size="3">NSL</text>
+<rect x="69" y="287.0" width="9" height="2" fill="#008d5e"/><text x="81" y="289.2" fill="white" font-size="3">EWL</text>
+<rect x="118" y="287.0" width="9" height="2" fill="#8d2790"/><text x="130" y="289.2" fill="white" font-size="3">NEL</text>
+<rect x="167" y="287.0" width="9" height="2" fill="#ef9d13"/><text x="179" y="289.2" fill="white" font-size="3">CCL</text>
+<rect x="216" y="287.0" width="9" height="2" fill="#0077b5"/><text x="228" y="289.2" fill="white" font-size="3">DTL</text>
+<rect x="265" y="287.0" width="9" height="2" fill="#9d6337"/><text x="277" y="289.2" fill="white" font-size="3">TEL</text>
+<text x="20" y="262.0" fill="#ffffff" font-size="3.2" font-weight="bold">STATION DEPARTURE ACTIVITY</text>
+<text x="20" y="269.0" fill="#a5b7c7" font-size="3">Dim: scheduled departure · Brighter: fresh prediction · Offline: lights blank</text>
+<text x="20" y="275.0" fill="#a5b7c7" font-size="2.6">Lights show departures at stations. They do not indicate measured train positions.</text>
+<text x="407.0" y="289.2" fill="#a5b7c7" font-size="2.6" text-anchor="end">146 stations · LED 000–145</text>
+</svg>
