@@ -1,5 +1,6 @@
 /** Street and corridor matching: the /api/route-snap round trip for one segment. */
 
+import { supportsLocalRoad, requestRoadMatch } from "./road-matching.js";
 import { supportsLocalRail, requestRailMatch } from "./rail-matching.js";
 import { apiEnabled, postApi } from "./config.js";
 import { G } from "./geom.js";
@@ -11,6 +12,7 @@ import { beginSnap, snapIsCurrent } from "./snap-guard.js";
 // --------------------------------------------------------- snapping
 
 async function requestSnap(start, end, snapKind, line) {
+  if (snapKind === "road" && supportsLocalRoad(line.mode)) return requestRoadMatch(start, end, line.mode);
   if (!apiEnabled && snapKind === "corridor" && supportsLocalRail(line.mode)) return requestRailMatch(start, end, line.mode);
   return postApi("route-snap", {
     start,
@@ -27,7 +29,7 @@ async function requestSnap(start, end, snapKind, line) {
  * anchored between them.
  */
 export async function snapSegment(line, index, snapKind) {
-  if (!apiEnabled && !(snapKind === "corridor" && supportsLocalRail(line.mode))) {
+  if (!apiEnabled && !(snapKind === "corridor" && supportsLocalRail(line.mode)) && !(snapKind === "road" && supportsLocalRoad(line.mode))) {
     toast("This matching mode needs the optional matching service.");
     return;
   }
@@ -69,9 +71,38 @@ export async function snapSegment(line, index, snapKind) {
     state.notice = notes.join(", ");
     afterGeometryChange(target);
   } catch (error) {
+    const target = lineById(line.id);
+    const currentIndex = target ? target.segments.indexOf(segmentRef) : -1;
+    if (currentIndex >= 0 && snapIsCurrent(token, target.nodes[currentIndex], target.nodes[currentIndex + 1])) {
+      segmentRef.profile = "manual";
+      segmentRef.guide = [];
+      afterGeometryChange(target);
+    }
     toast(`${snapKind === "road" ? "Street" : "Corridor"} matching failed: ${error.message}. Segment stays manual.`);
   } finally {
     state.pendingSnaps -= 1;
     setStatus();
   }
+}
+
+/** Re-follow each affected matched segment once after a node/group drag. */
+export function rematchAdjacentSegments(line, moved) {
+  const touched = new Set(moved.flatMap(index => [index - 1, index]));
+  return Promise.all([...touched].map(index => {
+    const profile = line.segments[index]?.profile;
+    if (profile === "road" || profile === "rail") return snapSegment(line, index, profile === "road" ? "road" : "corridor");
+  }));
+}
+
+const pendingNudges = new WeakMap();
+/** Coalesce a burst of keyboard nudges before requesting another alignment. */
+export function scheduleRematchAdjacentSegments(line, moved) {
+  const pending = pendingNudges.get(line) || { moved: new Set(), timer: null };
+  moved.forEach(index => pending.moved.add(index));
+  clearTimeout(pending.timer);
+  pending.timer = setTimeout(() => {
+    pendingNudges.delete(line);
+    if (lineById(line.id) === line) rematchAdjacentSegments(line, [...pending.moved]);
+  }, 250);
+  pendingNudges.set(line, pending);
 }

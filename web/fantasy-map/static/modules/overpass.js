@@ -18,27 +18,27 @@ export function buildQuery(bounds, zoom = 13, profile = "boundaries") {
   if (north - south > 0.45 || east - west > 0.65 || zoom < 12) {
     throw new Error("Zoom in to load OSM data (city scale or closer)");
   }
-  if (!["rails", "boundaries"].includes(profile)) throw new Error("Unknown OSM query profile");
+  if (!["rails", "boundaries", "roads"].includes(profile)) throw new Error("Unknown OSM query profile");
   const detail = profile;
   const bbox = bounds.join(",");
   return { key: detail + ":" + bbox, detail, query: `[out:json][timeout:20][maxsize:67108864];
 (
-  way["railway"~"^(rail|narrow_gauge|subway|light_rail|tram|monorail|funicular|disused|abandoned)$"](${bbox});
+  ${profile === "roads" ? `way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|busway|cycleway|path|footway|pedestrian|track)(_link)?$"](${bbox});` : `way["railway"~"^(rail|narrow_gauge|subway|light_rail|tram|monorail|funicular|disused|abandoned)$"](${bbox});`}
   ${profile === "boundaries" ? `wr["boundary"="administrative"](${bbox});
   wr["natural"~"^(coastline|water|wood|scrub|heath|grassland|wetland|bare_rock|sand|beach|glacier)$"](${bbox});
   wr["landuse"~"^(forest|grass|meadow|farmland|orchard|vineyard|reservoir)$"](${bbox});
   wr["leisure"="park"](${bbox});` : ""}
 );
-out tags geom(${bbox});` };
+out ${profile === "roads" ? "body" : "tags"} geom(${bbox});` };
 }
 
 export function emptyFeatures() { return { railways: [], borders: [], terrain: [] }; }
 
-export function parseFeatures(body) {
+export function parseFeatures(body, profile = "boundaries") {
   if (!body || typeof body !== "object" || !Array.isArray(body.elements)) throw new Error("Overpass returned an invalid map response");
   if (body.remark) throw new Error("Overpass could not finish this viewport; zoom in or retry later");
   if (body.elements.length > 20000) throw new Error("Too many OSM features; zoom in");
-  const result = emptyFeatures();
+  const result = profile === "roads" ? { roads: [] } : emptyFeatures();
   const seen = new Set();
   let pointCount = 0, featureCount = 0;
   function append(raw, id, name, category, kind) {
@@ -64,6 +64,29 @@ export function parseFeatures(body) {
       if (value) run.push(value); else flush();
     }
     flush();
+  }
+  if (profile === "roads") {
+    for (const element of body.elements) {
+      if (element?.type !== "way" || !element.tags?.highway || !Array.isArray(element.geometry) || !Array.isArray(element.nodes)) continue;
+      const raw = element.geometry;
+      pointCount += raw.length;
+      if (pointCount > 150000) throw new Error("OSM geometry is too detailed; zoom in");
+      if (raw.length !== element.nodes.length) throw new Error("OSM road geometry has inconsistent node references");
+      let coordinates = [], nodeIds = [];
+      const flush = () => {
+        if (coordinates.length >= 2) {
+          if (++featureCount > 20000) throw new Error("Too many OSM features; zoom in");
+          result.roads.push({id: "way/" + element.id, kind: element.tags.highway, tags: element.tags, coordinates, nodeIds});
+        }
+        coordinates = []; nodeIds = [];
+      };
+      raw.forEach((point, i) => {
+        const value = coordinate(point), id = element.nodes[i];
+        if (value && Number.isSafeInteger(id)) { coordinates.push(value); nodeIds.push(id); } else flush();
+      });
+      flush();
+    }
+    return result;
   }
   for (const element of body.elements) {
     if (!element || !["way", "relation"].includes(element.type)) continue;
@@ -156,7 +179,7 @@ export function createOverpassClient({ fetchImpl = globalThis.fetch, now = Date.
           await response.body?.cancel();
           throw new Error("Overpass is unavailable (" + response.status + "); retry later");
         }
-        const features = parseFeatures(await readJson(response, controller.signal));
+        const features = parseFeatures(await readJson(response, controller.signal), profile);
         controller.signal.throwIfAborted();
         cache.set(request.key, { at: now(), bounds: [...bounds], detail: request.detail, features });
         while (cache.size > MAX_ENTRIES) cache.delete(cache.keys().next().value);
@@ -171,3 +194,5 @@ export function createOverpassClient({ fetchImpl = globalThis.fetch, now = Date.
 const serviceGate = { lastStarted: -Infinity, retryAt: 0 };
 export const overpass = createOverpassClient({ gate: serviceGate });
 export const matchingOverpass = createOverpassClient({ gate: serviceGate });
+
+export const roadOverpass = createOverpassClient({ gate: serviceGate });

@@ -1,4 +1,5 @@
 /** GTFS import is additive and commits as one undoable editor operation. */
+import { config } from './config.js';
 import { MAX_ZIP_BYTES } from './gtfs-zip.js';
 import { makeLine, uid } from './model.js';
 import { state, pushHistory, invalidate, clearSelection } from './state.js';
@@ -8,15 +9,16 @@ import { updateRadiusControl, updateToolButtons } from './controls.js';
 
 const fileInput=document.getElementById('gtfs-file');
 const choose=document.getElementById('import-gtfs');
+const singapore=document.getElementById('start-singapore-mrt');
 const loadUrl=document.getElementById('load-gtfs-url');
 const urlInput=document.getElementById('gtfs-url');
 const cancel=document.getElementById('cancel-gtfs');
 const status=document.getElementById('gtfs-status');
 let active=null;
-function busy(value){choose.disabled=loadUrl.disabled=urlInput.disabled=value;cancel.hidden=!value;}
+function busy(value){choose.disabled=singapore.disabled=loadUrl.disabled=urlInput.disabled=value;cancel.hidden=!value;}
 async function fetchZip(url,signal){
-  const parsed=new URL(url);
-  if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw new Error('Use a public HTTPS GTFS ZIP URL without embedded credentials');
+  const parsed=new URL(url,document.baseURI);
+  if((parsed.protocol!=='https:' && !(parsed.protocol==='http:' && parsed.origin===new URL(document.baseURI).origin))||parsed.username||parsed.password)throw new Error('Use a public HTTPS GTFS ZIP URL without embedded credentials');
   const response=await fetch(parsed,{credentials:'omit',signal});
   if(!response.ok){await response.body?.cancel();throw new Error('GTFS download failed ('+response.status+')');}
   if(Number(response.headers.get('Content-Length'))>MAX_ZIP_BYTES){await response.body?.cancel();throw new Error('GTFS ZIP must be 32 MiB or smaller');}
@@ -38,14 +40,15 @@ function parseInWorker(buffer,signal){
     worker.postMessage(buffer,[buffer]);
   });
 }
-async function importGtfs(file){
+async function importGtfs(file, presetUrl=null){
   if(active)return;
   const controller=new AbortController();active=controller;busy(true);
   const timer=setTimeout(()=>controller.abort(new Error('GTFS import timed out; try a smaller feed')),90000);
   try{
+    if(!file&&!presetUrl&&!urlInput.value.trim())throw new Error('Enter a public GTFS ZIP URL');
     status.textContent=file?'Reading GTFS ZIP…':'Downloading GTFS ZIP…';
     if(file&&file.size>MAX_ZIP_BYTES)throw new Error('GTFS ZIP must be 32 MiB or smaller');
-    const buffer=file?await file.arrayBuffer():await fetchZip(urlInput.value.trim(),controller.signal);
+    const buffer=file?await file.arrayBuffer():await fetchZip(presetUrl || urlInput.value.trim(),controller.signal);
     controller.signal.throwIfAborted();status.textContent='Building rail lines and stations…';
     const result=await parseInWorker(buffer,controller.signal);
     controller.signal.throwIfAborted();
@@ -66,4 +69,5 @@ async function importGtfs(file){
 choose.addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',()=>{if(fileInput.files[0])importGtfs(fileInput.files[0]);});
 loadUrl.addEventListener('click',()=>importGtfs(null));
+singapore.addEventListener('click',()=>importGtfs(null,config.singaporeGtfsUrl));
 cancel.addEventListener('click',()=>active?.abort(new Error('GTFS import cancelled')));

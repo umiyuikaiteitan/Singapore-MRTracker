@@ -391,7 +391,8 @@ The library is the base for these planned applications:
 The Pages build includes OpenFantasyMap at `/fantasy-map/`, linked from the
 board, with a Singapore starting view. Drawing, local projects, GeoJSON
 import/export, GTFS-Static rail-network import, selectable OSM tiles/Overpass
-views, local rail following, and SVG export work without an application
+views, selectable rail/road following with cached Overpass data, a one-click
+Singapore MRT starter, and SVG export work without an application
 server or provider key. An optional
 `OFM_API_BASE` Actions variable enables a separately hosted matching API.
 See [FANTASY-MAP.md](docs/FANTASY-MAP.md) for hosting on `umiyui.dev`, the

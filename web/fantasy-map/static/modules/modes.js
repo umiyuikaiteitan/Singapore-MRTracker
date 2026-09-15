@@ -9,11 +9,11 @@
  * - `dash`/`weight`: base rendering style.
  */
 export const MODES = {
-  Mainline: { snaps: ["corridor"], radius: 400 },
-  Metro: { snaps: ["corridor"], radius: 150 },
+  Mainline: { snaps: ["corridor", "road"], radius: 400 },
+  Metro: { snaps: ["corridor", "road"], radius: 150 },
   Tram: { snaps: ["corridor", "road"], radius: 50 },
   BRT: { snaps: ["road"], radius: 60 },
-  Monorail: { snaps: ["corridor"], radius: 100 },
+  Monorail: { snaps: ["corridor", "road"], radius: 100 },
   Cableway: { snaps: [], radius: 1000, straight: true, dash: "2 8" },
   Ferry: { snaps: ["corridor"], radius: 500, dash: "10 8" },
   Cycleway: { snaps: ["road"], radius: 25, weight: 3 },

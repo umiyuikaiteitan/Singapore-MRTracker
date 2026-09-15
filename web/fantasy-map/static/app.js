@@ -29,7 +29,7 @@ import "./modules/gtfs-import.js";
 // ------------------------------------------------------------ boot
 
 load();
-if (!apiEnabled) state.snapMode = "manual";
+if (!["manual", "road", "corridor"].includes(state.snapMode)) state.snapMode = "manual";
 document.getElementById("hosting-notice").hidden = apiEnabled;
 const boardLink = document.getElementById("board-link");
 if (config.boardHref) {
