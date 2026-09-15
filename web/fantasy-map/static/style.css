@@ -284,3 +284,8 @@ button.danger:hover { border-color: var(--danger); color: var(--danger-text); }
 }
 
 #retry-basemap { pointer-events: auto; }
+
+#basemap-mode { width: 100%; margin-top: 6px; }
+
+#gtfs-url { width: 100%; margin: 6px 0; }
+#gtfs-status { overflow-wrap: anywhere; }

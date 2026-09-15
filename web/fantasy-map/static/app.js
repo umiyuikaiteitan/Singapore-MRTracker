@@ -24,6 +24,7 @@ import {
 // they load; nothing here calls into them directly.
 import "./modules/interactions.js";
 import "./modules/overlay.js";
+import "./modules/gtfs-import.js";
 
 // ------------------------------------------------------------ boot
 

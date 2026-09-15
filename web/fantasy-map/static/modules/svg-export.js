@@ -1,6 +1,6 @@
 /** Rendering the current display, viewport-sized, to a standalone SVG file. */
 
-import { getViewportFeatures } from "./basemap.js";
+import { getViewportFeatures, getBasemapMode } from "./basemap.js";
 import { G } from "./geom.js";
 import { labelSide, labelHidden, stationLabelText } from "./model.js";
 import { state, lineGeometry } from "./state.js";
@@ -59,15 +59,13 @@ function stationLabelMarkup(point, station) {
   );
 }
 
-const roadStrokeWidth = (kind) =>
-  kind === "motorway" ? 5 : kind === "trunk" ? 4.2 : kind === "primary" ? 3.4 : 2.6;
-
 /** Render the current display (viewport-sized) to a standalone SVG. */
 export async function exportSvg() {
   const button = document.getElementById("export-svg");
   button.disabled = true;
   try {
-    let featureData = { roads: [], railways: [], stations: [], areas: [], waterways: [] };
+    const exportMode = getBasemapMode();
+    let featureData = { railways: [], borders: [], terrain: [] };
     let hasOsm = false;
     try {
       featureData = await getViewportFeatures();
@@ -76,24 +74,11 @@ export async function exportSvg() {
       // An unavailable public service must not prevent exporting the project.
     }
     const size = map.getSize();
-    const roads = [...featureData.roads].sort(
-      (a, b) => roadStrokeWidth(a.kind) - roadStrokeWidth(b.kind),
-    );
-    const roadMarkup = roads
-      .map((road) => {
-        const path = svgPath(road.coordinates);
-        const width = roadStrokeWidth(road.kind);
-        return (
-          `<path d="${path}" stroke="#172235" stroke-width="${width + 2.4}" />` +
-          `<path d="${path}" stroke="#52657b" stroke-width="${width}" opacity=".82"><title>${escapeXml(road.name)}</title></path>`
-        );
-      })
-      .join("");
-    const areaMarkup = featureData.areas.map(area =>
-      `<path d="${svgPath(area.coordinates)} Z" fill="${area.kind === "water" ? "#183648" : "#1a302b"}" />`
+    const terrainMarkup = featureData.terrain.map(terrain =>
+      `<path d="${svgPath(terrain.coordinates)}" stroke="#53877a" stroke-width="1"><title>${escapeXml(terrain.name)}</title></path>`
     ).join("");
-    const waterMarkup = featureData.waterways.map(water =>
-      `<path d="${svgPath(water.coordinates)}" stroke="#285064" stroke-width="2" />`
+    const borderMarkup = featureData.borders.map(border =>
+      `<path d="${svgPath(border.coordinates)}" stroke="#a18db3" stroke-width="1.3" stroke-dasharray="6 4"><title>${escapeXml(border.name)}</title></path>`
     ).join("");
     const railMarkup = featureData.railways
       .map((railway) => {
@@ -123,12 +108,6 @@ export async function exportSvg() {
             `<path d="${path}" stroke="${escapeXml(line.color)}" stroke-width="${baseStyle.weight}"${dash}><title>${escapeXml(line.name)}</title></path>`,
           ];
         });
-      })
-      .join("");
-    const existingStations = featureData.stations
-      .map((station) => {
-        const point = map.latLngToContainerPoint(station.coordinate);
-        return `<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.6" fill="#d8e4ef" stroke="#101722" stroke-width="1.8"><title>${escapeXml(station.name)}</title></circle>`;
       })
       .join("");
     const userStations = state.lines
@@ -164,15 +143,14 @@ export async function exportSvg() {
 <title>OpenFantasyMap export</title>
 <desc>${hasOsm ? "Display-sized map of OpenStreetMap features and authored transit services." : "Authored transit lines and stations; OSM base features are not included."}</desc>
 <rect width="100%" height="100%" fill="#0b121d"/>
-<g>${areaMarkup}</g>
-<g fill="none" stroke-linecap="round" stroke-linejoin="round">${waterMarkup}${roadMarkup}</g>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">${terrainMarkup}${borderMarkup}</g>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round">${railMarkup}</g>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round">${transitMarkup}</g>
-<g>${existingStations}${userStations}</g>
+<g>${userStations}</g>
 <text x="${size.x - 12}" y="${size.y - 12}" text-anchor="end" fill="#8b9aab" font-family="sans-serif" font-size="10">© OpenStreetMap contributors · OpenFantasyMap</text>
 </svg>`;
     downloadFile(svg, `transit-map-${size.x}x${size.y}.svg`, "image/svg+xml");
-    toast(`SVG rendered at ${size.x} × ${size.y}${hasOsm ? " with OSM context" : " — project only; OSM unavailable"}.`);
+    toast(`SVG rendered at ${size.x} × ${size.y}${hasOsm ? (exportMode === "tiles" ? " with OSM rail lines; tile background omitted" : " with OSM context") : exportMode === "tiles" ? " — project only; tile background omitted" : " — project only; OSM unavailable"}.`);
   } catch (error) {
     toast(`SVG render failed: ${error.message}`);
   } finally {
