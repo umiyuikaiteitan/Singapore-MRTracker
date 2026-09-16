@@ -1,5 +1,10 @@
 # OpenFantasyMap on umiyui.dev
 
+## Shared aesthetic guidance
+
+Read [STYLE_GUIDE.md](STYLE_GUIDE.md) before visual or UI-copy changes. It transfers Yui's Network SouthEast-inspired direction to OpenFantasyMap and all MRTracker subpages, with explicit protection for map data, operational notices, and attribution. Root `AGENTS.md` and `web/AGENTS.md` make it discoverable outside the editor snapshot; keep those files and the guide when refreshing `web/fantasy-map/`.
+
+
 The existing Pages workflow now packages a third section:
 
 | Location | Application |
