@@ -6,12 +6,12 @@
 
 .panels {
   display: grid;
-  gap: 1.75rem;
+  gap: 2rem;
 }
 
 .panel {
   border: 1px solid var(--rule);
-  border-radius: 0.4rem;
+  border-radius: 0;
   overflow: hidden;
   break-inside: avoid;
 }
@@ -21,21 +21,19 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.4rem 0.9rem;
-  padding: 0.6rem 0.9rem;
+  padding: 0.7rem 1rem;
   background: var(--line-color, var(--accent));
   color: var(--line-text, var(--accent-text));
 }
 
 .panel-head .line-name {
   font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .panel-head .direction {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .panel-head .platform {
@@ -44,7 +42,7 @@
   font-weight: 700;
   padding: 0.1rem 0.55rem;
   border: 2px solid currentColor;
-  border-radius: 0.25rem;
+  border-radius: 0;
 }
 
 .panel-destinations {
@@ -52,8 +50,8 @@
   padding: 0.35rem 0.9rem;
   border-bottom: 1px solid var(--rule);
   background: var(--panel-bg);
-  font-size: 0.82rem;
-  color: var(--muted);
+  font-size: 0.88rem;
+  color: var(--fg);
 }
 
 /* The columns of one panel. Print and wide screens split the hours;
@@ -114,8 +112,7 @@
 
 .hours th[scope="col"] {
   font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   color: var(--muted);
   text-align: left;
   padding: 0.2rem 0.3rem;
@@ -143,7 +140,7 @@
   background: var(--hour-bg);
   color: var(--hour-fg);
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 700;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -174,7 +171,6 @@
   align-items: baseline;
   gap: 0.12rem;
   padding: 0.05rem 0.1rem;
-  border-radius: 0.15rem;
 }
 
 .dep .min {
@@ -185,21 +181,21 @@
 }
 
 .dep .sec {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--muted);
 }
 
 .dep .dest {
-  font-size: 0.66rem;
-  line-height: 1;
+  font-size: 0.78rem;
+  line-height: 1.1;
   color: var(--muted);
   max-width: 5.5rem;
   overflow-wrap: anywhere;
 }
 
 .dep .train-name {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -241,7 +237,7 @@
   gap: 0.3rem 0.75rem;
   padding: 0.4rem 0.65rem;
   border: 2px dotted var(--accent);
-  border-radius: 0.3rem;
+  border-radius: 0;
   background: var(--panel-bg);
   font-size: 0.9rem;
 }
@@ -259,7 +255,7 @@
 .no-departures {
   padding: 1.25rem;
   border: 1px dashed var(--rule);
-  border-radius: 0.4rem;
+  border-radius: 0;
   color: var(--muted);
 }
 

@@ -56,7 +56,7 @@ pub fn theme_block(theme: &ThemeConfig, accent: Option<&str>, accent_text: Optio
         .filter_map(|name| escape::css_font_family(name))
         .collect();
     let font_stack = if fonts.is_empty() {
-        "system-ui, sans-serif".to_string()
+        "Helvetica, \"Helvetica Neue\", Arial, sans-serif".to_string()
     } else {
         fonts.join(", ")
     };

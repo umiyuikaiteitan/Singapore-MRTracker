@@ -31,6 +31,34 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      - name: Build fixture interface previews
+        run: python3 scripts/prepare-interface-preview.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install the pinned browser test runtime
+        run: |
+          npm install --prefix "$RUNNER_TEMP/interface-tests" --no-save playwright@1.62.1
+          PLAYWRIGHT_BROWSERS_PATH="$RUNNER_TEMP/playwright-browsers" \
+            "$RUNNER_TEMP/interface-tests/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Check generated interfaces
+        env:
+          NODE_PATH: ${{ runner.temp }}/interface-tests/node_modules
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
+        run: node scripts/check-interfaces.cjs .interface-preview/site .interface-screenshots
+
+      - name: Upload interface screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interface-smoke-screenshots
+          path: .interface-screenshots
+          include-hidden-files: true
+          if-no-files-found: warn
+
   fantasy-map:
     name: Check fantasy map packaging
     runs-on: ubuntu-latest
