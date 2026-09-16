@@ -93,11 +93,13 @@ async function main() {
   const host = server();
   await new Promise((resolve, reject) => host.listen(0, "127.0.0.1", resolve).once("error", reject));
   const base = `http://127.0.0.1:${host.address().port}`;
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ serviceWorkers: "block" });
-  const page = await context.newPage();
-  await page.route("https://tile.openstreetmap.org/**", route => route.abort());
+  let browser;
+  let page;
   try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({ serviceWorkers: "block" });
+    page = await context.newPage();
+    await page.route("https://tile.openstreetmap.org/**", route => route.abort());
     for (const width of [375, 1440]) {
       await capture(page, "board", width, async () => {
         await page.goto(`${base}/`, { waitUntil: "networkidle" });
@@ -108,20 +110,31 @@ async function main() {
       });
 
       let timetablePageUrl;
+      let diagramPageUrl;
       await capture(page, "timetables", width, async () => {
         await page.goto(`${base}/timetables/`, { waitUntil: "networkidle" });
         const search = await visible(page, "#station-search", "station search");
-        await search.fill("NS 1");
+        await search.fill("EW 24");
         assert.equal(await page.locator(".station-row:not([hidden])").count(), 1, "station code search should resolve punctuation-insensitively");
         await search.fill("");
         const timetableHref = await (await visible(page, ".station-row a", "timetable link")).getAttribute("href");
         assert.ok(timetableHref, "timetable link should have a destination");
         timetablePageUrl = new URL(timetableHref, page.url()).href;
+        const diagramHref = await (await visible(page, ".line-card a", "train diagram link")).getAttribute("href");
+        assert.ok(diagramHref, "train diagram link should have a destination");
+        diagramPageUrl = new URL(diagramHref, page.url()).href;
       });
 
       await capture(page, "timetable-page", width, async () => {
         await page.goto(timetablePageUrl, { waitUntil: "networkidle" });
         await visible(page, ".site-nav", "generated-page navigation");
+      });
+
+      await capture(page, "train-diagram", width, async () => {
+        await page.goto(diagramPageUrl, { waitUntil: "networkidle" });
+        await visible(page, ".site-nav", "train-diagram navigation");
+        await visible(page, "h1", "train-diagram heading");
+        await visible(page, "svg", "train-diagram drawing");
       });
 
       await capture(page, "schematic", width, async () => {
@@ -159,10 +172,10 @@ async function main() {
     assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), "rgb(255, 255, 255)", "timetable print background should be white");
     await page.screenshot({ path: path.join(shots, "timetables-print.png"), fullPage: true });
   } catch (error) {
-    await page.screenshot({ path: path.join(shots, "failure.png"), fullPage: true }).catch(() => {});
+    if (page) await page.screenshot({ path: path.join(shots, "failure.png"), fullPage: true }).catch(() => {});
     throw error;
   } finally {
-    await browser.close();
+    await browser?.close();
     await new Promise(resolve => host.close(resolve));
   }
 }

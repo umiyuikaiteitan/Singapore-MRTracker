@@ -15,6 +15,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 MINI_GTFS = ROOT / "crates/mrt-gtfs/tests/fixtures/mini"
+MARKER = ".mrtracker-interface-preview"
+MARKER_CONTENT = "Owned by scripts/prepare-interface-preview.py\n"
 
 
 def run(*command: str, env: dict[str, str] | None = None) -> None:
@@ -85,8 +87,18 @@ def main() -> None:
     if output == ROOT or ROOT not in output.parents:
         raise SystemExit("output must be a directory inside the repository")
     if output.exists():
+        marker = output / MARKER
+        if (
+            marker.is_symlink()
+            or not marker.is_file()
+            or marker.read_text(encoding="utf-8") != MARKER_CONTENT
+        ):
+            raise SystemExit(
+                f"refusing to replace {output}: helper ownership marker is missing"
+            )
         shutil.rmtree(output)
     output.mkdir(parents=True)
+    (output / MARKER).write_text(MARKER_CONTENT, encoding="utf-8")
     feed = output / "mini-gtfs.zip"
     make_feed(feed)
 

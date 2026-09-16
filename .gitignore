@@ -25,3 +25,5 @@ secrets/
 __pycache__/
 *.pyc
 /preview/
+/.interface-preview/
+/.interface-screenshots/
