@@ -1,17 +1,17 @@
 {
   "repository": "https://github.com/umiyuikaiteitan/OpenFantasyMap",
-  "revision": "5b592f41c00118f53495a91212d5c6b042cb17fa",
+  "revision": "5d57fd1461cb468958bcfb4b0f8d55c245fe0903",
   "files": {
     "scripts/build-static.py": "c8bb9032fe459ad0c0f70ebad5736b1a0f6155dda8265c4ac13e3ead3515c162",
     "static/app.js": "571123cec02f80b0ee7a386f67dce1207b3401bbf290f10e9612ca0b65b64028",
     "static/config.js": "837741ad14c42e3d18965e751706d5d821929aafa86ee555b9e8c1b9ff3da204",
     "static/geometry.js": "cb622c9ac878051c70af67e408983a04559c2eb25e7b1c576bd27aa020c683be",
-    "static/index.html": "61db4c306eefddee2add9c060dfd1b49727dc397d6e3517240c7e2534b457ff6",
+    "static/index.html": "7f021272550e4621b67cf9515aacd91dd46a43a3e2c6cbca6017ce3060947a75",
     "static/modules/alignment-graph.js": "1a930093755f7b8319ae5287b9dc2012e53d88b4a9def7035e1ed485f4f23757",
     "static/modules/basemap.js": "498c7b02c7f4ecb856fc0a42ec690bbc1e48fe76525ecf0fbfaa7f9328bfcca0",
     "static/modules/config.js": "b42734723897afec7354894a12390067d2305ff0759232bee3533f064fde3e95",
     "static/modules/context-menu.js": "ca58df3ea1c5a7e490e93face5660984eaa658ab3908c73da8c590791ab74d47",
-    "static/modules/controls.js": "90734b51ce0d9376b0c568b9a47517d62c28b945b43bccbafb34f6c21b454ab0",
+    "static/modules/controls.js": "de2061adcd971cfded088d931dde202a570a465e868ac3a7da8b68a97a8475e6",
     "static/modules/geojson-model.js": "42212ba3ff281552554b17cbfc5f54e6fb14b5baaa289bca5516eb9245a06819",
     "static/modules/geojson.js": "edee303afbb1325aa8adf5b09deb7f2532a54090787b75c8ee1f3a513447141c",
     "static/modules/geom.js": "e2e06c22231b0f5134f834b402e7b34cc6f1203e9d028b53e18316acd787df7c",
@@ -26,7 +26,7 @@
     "static/modules/overlay.js": "2c1ccb61b3eae266916b0287e53c287470218c178db2a871cdfa9c5d27203358",
     "static/modules/overpass.js": "97593776a374bccfe57cb4110a5dfb96f41abe287c6c42ed0063d03680ba57ba",
     "static/modules/rail-matching.js": "724a9b2127c595c7c797ad661531cddf5194059cef879afbcfa3a99af48a2b26",
-    "static/modules/render.js": "0453aeb3cba20abf5b69f327f03242bf99ceaa55b855a620cb18cc94964ff6d2",
+    "static/modules/render.js": "d5766ff65d254492d180ffd8a1ec9aec036f8d6e0023ec264acbfdae755b5421",
     "static/modules/road-matching.js": "8688d0a1c43c70d31710d7ae616d78ae15af02933887e6360cb7122a60ee494e",
     "static/modules/snap-guard.js": "7e96e7ddb4e73e21cd4084f02acc6e7233d0214194a4f5cd8015d02cb17a33f3",
     "static/modules/snapping.js": "d0eeb2ce2635e01a29e916a8186a346e7b80a26446e80218f9c3c1e1c729544e",
@@ -34,7 +34,7 @@
     "static/modules/svg-export.js": "7b0c877a4c9b762e07df6afeaf7522a79ccc2a3edd4f761b8b530daa5adde23f",
     "static/modules/topology.js": "587f726904a08f1114dfb69d2d4a32eb0f60e22843e2df30dd630736efec6f43",
     "static/modules/ui.js": "e2e0ae1a7d64ba7b693cfd9bcf211c20e2af429616b387463cac54fe6cede724",
-    "static/style.css": "e950eac9de938a3249ee20e95a058295547a332758d3820e356f7b4f7deec90f",
+    "static/style.css": "85876a730a9d02e79359a5a799b565583fd1656b468064c19066c89ff9c4c601",
     "static/vendor/leaflet.css": "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6",
     "static/vendor/leaflet.js": "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a"
   }

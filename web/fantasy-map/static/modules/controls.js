@@ -27,6 +27,7 @@ import { exportSvg } from "./svg-export.js";
 export function updateToolButtons() {
   document.querySelectorAll("#tools button").forEach((button) => {
     button.classList.toggle("active", button.dataset.tool === state.tool);
+    button.setAttribute("aria-pressed", String(button.dataset.tool === state.tool));
   });
   const line = activeLine();
   const allowed = line ? modeRules(line.mode).snaps : ["road", "corridor"];

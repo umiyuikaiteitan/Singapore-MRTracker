@@ -30,10 +30,14 @@
    * schematic sits on nothing, because it makes no geographic claim
    * and a basemap would imply one. */
   --void: #0b0b0d;
-  --chrome: #17181c;
-  --rule: #2a2b31;
+  --chrome: #003d85;
+  --paper: #ffffff;
+  --ink: #131b26;
+  --brand-red: #d52b1e;
+  --focus: #ffdf45;
+  --rule: #cbd3dc;
   --text: #e8e8e8;
-  --muted: #85858d;
+  --muted: #131b26;
   /* The colour a line loses its identity to when the operator reports
    * it disrupted. It is a neutral grey and nothing else: the line is
    * still drawn, it just no longer claims to be running. */
@@ -51,17 +55,17 @@
    * must not reference the file. This stack names widely installed
    * faces and ends in a generic family, exactly as the publication
    * pages do. */
-  --font: "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
+  --font: Helvetica, "Helvetica Neue", Arial, sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
-/* One column, full height, dark. The map is the page; the chrome
+/* One column, full height, with a dark schematic. The map is the page; the chrome
  * above and the legend below stay out of its way. */
 body {
   margin: 0;
-  background: var(--void);
-  color: var(--text);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font);
   font-size: 15px;
   line-height: 1.4;
@@ -78,16 +82,17 @@ body {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px 18px;
-  padding: 12px 16px;
+  padding: 24px 32px;
   background: var(--chrome);
-  border-bottom: 1px solid var(--rule);
+  color: var(--paper);
+  border-bottom: 6px solid var(--brand-red);
 }
 
 .chrome h1 {
   margin: 0;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: .4px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -.03em;
 }
 
 /* The deployment mode. A half-hourly static build is a schedule
@@ -130,7 +135,7 @@ body {
 
 /* The drawing fills the space it is given and never scrolls the page
  * sideways; the viewBox does the fitting. */
-main { padding: 10px 12px 0; }
+main { padding: 16px; background: var(--void); color: var(--text); }
 svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
 
 /* The dual-stroke ribbon, from OpenFantasyMap, adapted to a void
@@ -253,7 +258,7 @@ svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
   font-size: 13px;
   color: var(--muted);
 }
-.notice.disrupted { border-left-color: var(--red); color: var(--text); }
+.notice.disrupted { border-left-color: var(--red); color: var(--ink); }
 
 /* The note under the legend states what "live" means here, because a
  * moving dot invites a reader to believe it is a measurement. */
@@ -272,13 +277,33 @@ svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
 .diagnostics-block { margin: 14px 16px 24px; font-size: 12.5px; color: var(--muted); }
 .diagnostics-block summary { cursor: default; }
 .diagnostics { margin: 8px 0 0; padding-left: 1.1rem; }
-.diagnostics code { color: var(--text); }
-.diagnostics .subject { color: #6f7076; }
+.diagnostics code { color: var(--ink); }
+.diagnostics .subject { color: var(--ink); }
 .no-diagnostics { margin: 8px 0 0; }
 
 /* The dated line. On screen it sits with the diagnostics; in print it
  * is the only thing that says when the drawing was made. */
 .dated { margin: 10px 16px 0; font-size: 12.5px; color: var(--muted); }
+
+
+/* White chrome surrounds the dark schematic; data colours remain unchanged. */
+.chrome .deployment, .chrome .status, .chrome .controls { color: var(--paper); font-size: 14px; }
+.controls label { min-height: 44px; }
+.controls input { width: 18px; height: 18px; accent-color: var(--focus); }
+.legend, .notices, .honesty, .diagnostics-block, .dated { margin-inline: 32px; font-size: 14px; }
+.legend { padding-inline: 0; padding-top: 20px; }
+.legend b.green { color: #176536; }
+.legend b.amber { color: #735600; }
+.legend b.red { color: #a62319; }
+a { color: #003d85; text-underline-offset: .2em; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+summary { min-height: 44px; padding-block: 10px; }
+@media (max-width: 650px) {
+ .chrome { padding: 20px; align-items: flex-start; }
+ .chrome h1 { width: 100%; }
+ .status { margin-left: 0; }
+ .legend, .notices, .honesty, .diagnostics-block, .dated { margin-inline: 20px; }
+}
 
 /* Print.
  *
@@ -289,7 +314,9 @@ svg.map { display: block; width: 100%; height: auto; max-height: 78vh; }
 @media print {
   :root { --void: #ffffff; --text: #000000; --muted: #333333; }
   body { background: #fff; color: #000; }
-  .chrome { background: transparent; border-bottom: 1px solid #999; }
+  .chrome { background: transparent; color: #000; border-bottom: 1px solid #999; }
+  .chrome .deployment { color: #000; }
+  main { background: #fff; }
   .no-print, .status, .controls, .legend, .diagnostics-block { display: none !important; }
   .trains { display: none !important; }
   .casing { stroke: #ffffff; }

@@ -80,9 +80,8 @@ theme:
   # System and openly licensed families only. The generator embeds no
   # font file and copies no branding.
   font_stack:
-    - Noto Sans
-    - Noto Sans JP
-    - Hiragino Kaku Gothic ProN
+    - Helvetica
+    - Helvetica Neue
     - Arial
     - sans-serif
   hour_cell: "#1b2a5e"

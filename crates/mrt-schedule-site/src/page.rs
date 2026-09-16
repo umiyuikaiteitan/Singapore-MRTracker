@@ -82,7 +82,7 @@ pub fn theme_block(config: &PublicationConfig) -> String {
         .filter_map(|name| escape::css_font_family(name))
         .collect();
     let font_stack = if fonts.is_empty() {
-        "system-ui, sans-serif".to_string()
+        "Helvetica, \"Helvetica Neue\", Arial, sans-serif".to_string()
     } else {
         fonts.join(", ")
     };

@@ -498,7 +498,7 @@ function renderLineList() {
 
     const visibility = document.createElement("button");
     visibility.className = "icon-button";
-    visibility.textContent = line.visible ? "👁" : "🚫";
+    visibility.textContent = line.visible ? "Hide" : "Show";
     visibility.title = "Toggle visibility";
     visibility.addEventListener("click", (event) => {
       event.stopPropagation();

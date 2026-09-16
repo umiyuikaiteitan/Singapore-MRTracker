@@ -375,16 +375,10 @@ pub struct ThemeConfig {
 impl Default for ThemeConfig {
     fn default() -> Self {
         ThemeConfig {
-            font_stack: [
-                "Noto Sans",
-                "Noto Sans JP",
-                "Hiragino Kaku Gothic ProN",
-                "Arial",
-                "sans-serif",
-            ]
-            .iter()
-            .map(|s| (*s).to_string())
-            .collect(),
+            font_stack: ["Helvetica", "Helvetica Neue", "Arial", "sans-serif"]
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect(),
             hour_cell: "#1b2a5e".to_string(),
             hour_cell_text: "#ffffff".to_string(),
             row_alternate: "#eef1f8".to_string(),

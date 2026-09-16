@@ -5,61 +5,126 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MRTracker board</title>
 <style>
-  @font-face {
-    font-family: "LTA Identity";
-    src: url("assets/lta-identity.ttf") format("truetype");
-  }
   :root {
-    --bg: #0b0b0d;
-    --fascia: #17181c;
-    --amber: #e5d500;
-    --green: #35d461;
-    --red: #ff4b3a;
-    --text: #e8e8e8;
+    --font-body: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    --font-heading: var(--font-body);
+    --blue: #003d85;
+    --red: #d52b1e;
+    --paper: #ffffff;
+    --ink: #131b26;
+    --surface: #f1f4f7;
+    --rule: #cbd3dc;
+    --focus: #ffdf45;
+    --amber: #756200;
+    --green: #16743a;
+    --display-red: #b42318;
   }
-  * { box-sizing: border-box; }
+  *,
+  *::before,
+  *::after { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: "LTA Identity", "Helvetica Neue", Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
     min-height: 100vh;
-    padding: 24px 12px;
   }
-  .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .masthead {
+    color: var(--paper);
+    background: var(--blue);
+    border-bottom: 8px solid var(--red);
+  }
+  .masthead-inner,
+  .route-nav-inner,
+  main {
+    width: min(1120px, 100%);
+    margin-inline: auto;
+  }
+  .masthead-inner { padding: 24px 40px 20px; }
+  .product-name {
+    margin: 0;
+    font: 700 clamp(28px, 5vw, 42px)/1 var(--font-heading);
+    letter-spacing: -.02em;
+  }
+  .product-context { margin: 8px 0 0; font-size: 16px; }
+  .route-nav { background: var(--paper); border-bottom: 1px solid var(--rule); }
+  .route-nav-inner {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 40px 8px;
+    overflow-x: auto;
+  }
   .section-link {
-    background: var(--fascia);
-    color: var(--text);
-    border: 1px solid #33343a;
-    border-radius: 6px;
-    padding: 6px 10px;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-width: 128px;
+    min-height: 76px;
+    place-items: start center;
+    padding: 16px 16px 24px;
+    border-bottom: 4px solid var(--blue);
+    color: var(--ink);
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
     text-decoration: none;
   }
-  .section-link:hover { border-color: var(--amber); color: var(--amber); }
+  .section-link::after {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    border: 4px solid var(--blue);
+    border-radius: 50%;
+    background: var(--paper);
+    content: "";
+    transform: translateX(-50%);
+  }
+  .section-link:hover { color: var(--blue); text-decoration: underline; text-underline-offset: 4px; }
+  .section-link[aria-current="page"] { color: var(--blue); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  .section-link[aria-current="page"]::after { border-color: var(--red); }
+  main { padding: 32px 40px 48px; }
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 16px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+  .controls label { font-weight: 700; }
   select {
-    background: var(--fascia);
-    color: var(--text);
-    border: 1px solid #33343a;
-    border-radius: 6px;
+    min-height: 44px;
+    max-width: 100%;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid #657182;
+    border-radius: 0;
+    background: var(--paper);
+    color: var(--ink);
     font: inherit;
-    padding: 6px 10px;
+  }
+  a:focus-visible,
+  select:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
   }
   .fascia {
-    background: var(--fascia);
-    border-radius: 14px;
-    padding: 18px 22px 22px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.55);
-    width: min(960px, 100%);
+    width: 100%;
+    padding: 20px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
   }
-  .head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-  .head h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: .5px; }
+  .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .head h1 { margin: 0; font: 700 clamp(24px, 4vw, 32px)/1.15 var(--font-heading); }
   .chip {
     display: inline-block;
-    border-radius: 999px;
-    padding: 3px 12px;
+    margin: 2px 0;
+    border-radius: 2px;
+    padding: 4px 10px;
     font-size: 15px;
     font-weight: 700;
     color: #fff;
@@ -69,9 +134,13 @@
     display: flex;
     align-items: center;
     gap: 7px;
+    min-width: 0;
+    max-width: 100%;
     font-size: 14px;
-    color: #9a9aa2;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
   }
+  #statusText { overflow-wrap: anywhere; }
   /* The freshness lamp of the live status feed. */
   .lamp {
     width: 9px;
@@ -80,48 +149,71 @@
     background: #55565e;
     flex: none;
   }
-  .lamp.ok { background: var(--green); box-shadow: 0 0 7px rgba(53,212,97,.7); }
-  .lamp.stale { background: var(--amber); box-shadow: 0 0 7px rgba(229,213,0,.7); }
-  .lamp.down { background: var(--red); box-shadow: 0 0 7px rgba(255,75,58,.7); }
+  .lamp.ok { background: var(--green); }
+  .lamp.stale { background: var(--amber); }
+  .lamp.down { background: var(--display-red); }
   .lamp.beat { animation: beat .7s ease-out 1; }
   @keyframes beat { from { transform: scale(2); } to { transform: scale(1); } }
   @media (prefers-reduced-motion: reduce) { .lamp.beat { animation: none; } }
-  canvas { display: block; width: 100%; height: auto; background: #000; border-radius: 8px; }
-  .legend { margin-top: 10px; font-size: 13px; color: #85858d; }
+  canvas { display: block; width: 100%; height: auto; border: 8px solid #22252a; background: #000; }
+  .legend { margin-top: 12px; color: var(--ink); font-size: 14px; line-height: 1.5; }
   .legend b.amber { color: var(--amber); }
   .legend b.green { color: var(--green); }
-  .legend b.red { color: var(--red); }
+  .legend b.red { color: var(--display-red); }
+  @media (max-width: 680px) {
+    .masthead-inner,
+    main { padding-right: 20px; padding-left: 20px; }
+    .route-nav-inner { padding-inline: 20px; }
+    .section-link { min-width: 112px; padding-inline: 10px; }
+    .controls { align-items: stretch; flex-direction: column; }
+    select { width: 100%; }
+    .fascia { padding: 16px; }
+    .status { width: 100%; margin-left: 0; }
+    canvas { border-width: 4px; }
+  }
 </style>
 </head>
 <body>
-  <div class="controls">
-    <label for="station">Station</label>
-    <select id="station"></select>
-    <!-- The published timetables and train diagrams sit beside this
-         board, under the same domain. -->
-    <a class="section-link" href="timetables/">Timetables &amp; diagrams</a>
-    <a class="section-link" href="map/">Live train map</a>
-    <a class="section-link" href="fantasy-map/">Fantasy map editor</a>
-  </div>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <p class="product-name">MRTracker</p>
+      <p class="product-context">Singapore railway departures</p>
+    </div>
+  </header>
+  <nav class="route-nav" aria-label="MRTracker sections">
+    <div class="route-nav-inner">
+      <a class="section-link" href="./" aria-current="page">Departure board</a>
+      <a class="section-link" href="timetables/">Timetables &amp; diagrams</a>
+      <a class="section-link" href="map/">Live train map</a>
+      <a class="section-link" href="fantasy-map/">Fantasy map editor</a>
+    </div>
+  </nav>
 
-  <div class="fascia">
-    <div class="head">
-      <h1 id="name">&nbsp;</h1>
-      <span id="codes"></span>
-      <span class="status" id="status">
-        <span class="lamp" id="lamp"></span>
-        <span id="statusText">starting up</span>
-      </span>
+  <main>
+    <div class="controls">
+      <label for="station">Station</label>
+      <select id="station"></select>
     </div>
-    <canvas id="panel"></canvas>
-    <div class="legend">
-      <b class="amber">destination</b> ·
-      <b class="green">on time</b> ·
-      <b class="amber">early</b> ·
-      <b class="red">delayed, cancelled, or alert</b> ·
-      ~ headway-based time
-    </div>
-  </div>
+
+    <section class="fascia" aria-label="Station departure board">
+      <div class="head">
+        <h1 id="name">&nbsp;</h1>
+        <span id="codes"></span>
+        <span class="status" id="status">
+          <span class="lamp" id="lamp"></span>
+          <span id="statusText">starting up</span>
+        </span>
+      </div>
+      <canvas id="panel"></canvas>
+      <div class="legend">
+        <b class="amber">destination</b> ·
+        <b class="green">on time</b> ·
+        <b class="amber">early</b> ·
+        <b class="red">delayed, cancelled, or alert</b> ·
+        ~ headway-based time
+      </div>
+    </section>
+  </main>
 
 <script>
 "use strict";

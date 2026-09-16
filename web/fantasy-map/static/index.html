@@ -20,19 +20,19 @@
       <section class="panel">
         <h2>Tool</h2>
         <div class="tool-row" id="tools">
-          <button data-tool="select" title="Select and move nodes or stations (V)">Select</button>
-          <button data-tool="draw" title="Click the map to add route nodes (D)">Draw</button>
-          <button data-tool="station" title="Click a route to add a station (S)">Station</button>
-          <button data-tool="polygon" title="Draw a polygon station; Enter closes it (P)">Area station</button>
+          <button type="button" data-tool="select" title="Select and move nodes or stations (V)">Select</button>
+          <button type="button" data-tool="draw" title="Click the map to add route nodes (D)">Draw</button>
+          <button type="button" data-tool="station" title="Click a route to add a station (S)">Station</button>
+          <button type="button" data-tool="polygon" title="Draw a polygon station; Enter closes it (P)">Area station</button>
         </div>
       </section>
 
       <section class="panel">
         <h2>Follow an alignment</h2>
         <div class="tool-row" id="snap-modes">
-          <button data-snap="manual" title="Straight segments between nodes">Manual</button>
-          <button data-snap="road" title="New segments follow cached OSM road geometry">Follow roads</button>
-          <button data-snap="corridor" title="New segments follow the mode's own corridor: tracks, ferry routes, aerialways">Follow rails</button>
+          <button type="button" data-snap="manual" title="Straight segments between nodes">Manual</button>
+          <button type="button" data-snap="road" title="New segments follow cached OSM road geometry">Follow roads</button>
+          <button type="button" data-snap="corridor" title="New segments follow the mode's own corridor: tracks, ferry routes, aerialways">Follow rails</button>
         </div>
         <p class="hint">Choose Manual, Follow rails, or Follow roads before drawing. Road following traces geometry; it does not apply traffic directions or turn restrictions.</p>
         <label class="slider-row">
